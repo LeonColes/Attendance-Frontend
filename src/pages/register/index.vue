@@ -1,10 +1,8 @@
 <script lang="ts" setup>
 import { onMounted, reactive, ref } from 'vue'
-// 改用uni.showToast
-// import { useToast } from 'wot-design-uni'
 import { registerStudent, registerTeacher } from '@/api/auth'
+import CustomNavBar from '@/components/CustomNavBar.vue'
 
-// const toast = useToast()
 const loading = ref(false)
 const role = ref('student')
 const confirmPassword = ref('')
@@ -137,6 +135,12 @@ function goLogin() {
 }
 </script>
 
+<script lang="ts">
+export default {
+  // 不需要单独引用mixin，因为已经在main.ts中全局注册了滚动事件处理
+}
+</script>
+
 <template>
   <view class="page-container">
     <view class="wave-bg">
@@ -145,19 +149,13 @@ function goLogin() {
       <view class="wave wave3" />
     </view>
 
-    <view class="content-wrapper">
-      <view class="header animate__fadeInDown" :style="{ height: `${navBarHeight}px` }">
-        <view class="custom-navbar" :style="{ paddingTop: `${statusBarHeight}px` }">
-          <view class="navbar-left" @click="goBack">
-            <wd-icon name="arrow-left" size="44rpx" color="#ffffff" />
-          </view>
-          <view class="navbar-title">
-            用户注册
-          </view>
-          <view class="navbar-right" />
-        </view>
-      </view>
+    <!-- 使用自定义导航栏组件 -->
+    <CustomNavBar
+      title="用户注册"
+      @back="goBack"
+    />
 
+    <view class="content-wrapper">
       <view class="form-container animate__fadeInUp">
         <wd-toast />
 
@@ -379,45 +377,6 @@ function goLogin() {
   width: 100%;
   min-height: 100vh;
   padding-bottom: 40rpx;
-}
-
-.header {
-  animation-duration: 1s;
-  animation-fill-mode: both;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.custom-navbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 30rpx;
-  background: rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(10px);
-  height: 44px;
-}
-
-.navbar-left {
-  width: 80rpx;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  height: 44px;
-}
-
-.navbar-title {
-  flex: 1;
-  text-align: center;
-  font-size: 36rpx;
-  font-weight: bold;
-  color: white;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.navbar-right {
-  width: 80rpx;
 }
 
 .form-container {
