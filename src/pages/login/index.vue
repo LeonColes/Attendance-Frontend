@@ -1,9 +1,24 @@
 <script lang="ts" setup>
-import { reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useUserStore } from '@/store/user'
 
 const userStore = useUserStore()
 const loading = ref(false)
+
+// 设备信息相关
+const statusBarHeight = ref(0)
+const safeAreaInsetTop = ref(0)
+
+// 获取设备信息
+onMounted(() => {
+  const sysInfo = uni.getSystemInfoSync()
+  // 状态栏高度
+  statusBarHeight.value = sysInfo.statusBarHeight || 20
+  // 安全区域顶部高度
+  if (sysInfo.safeArea) {
+    safeAreaInsetTop.value = sysInfo.safeArea.top
+  }
+})
 
 const formData = reactive({
   username: '',
@@ -70,7 +85,7 @@ function goRegister() {
       <view class="wave wave3" />
     </view>
 
-    <view class="content-wrapper">
+    <view class="content-wrapper" :style="{ paddingTop: `${safeAreaInsetTop + 30}px` }">
       <view class="logo-container animate__fadeInDown">
         <image class="logo" src="/static/logo.png" mode="aspectFit" />
         <view class="title">
@@ -90,7 +105,13 @@ function goRegister() {
             <text>用户名</text>
           </view>
           <view class="input-wrapper">
-            <wd-input v-model="formData.username" placeholder="请输入用户名" clearable custom-class="custom-input" />
+            <wd-input
+              v-model="formData.username"
+              placeholder="请输入用户名"
+              clearable
+              width="100%"
+              custom-class="custom-input"
+            />
           </view>
         </view>
 
@@ -100,7 +121,14 @@ function goRegister() {
             <text>密码</text>
           </view>
           <view class="input-wrapper">
-            <wd-input v-model="formData.password" type="text" password placeholder="请输入密码" clearable custom-class="custom-input" />
+            <wd-input
+              v-model="formData.password"
+              placeholder="请输入密码"
+              show-password
+              clearable
+              width="100%"
+              custom-class="custom-input"
+            />
           </view>
         </view>
 
@@ -199,7 +227,7 @@ function goRegister() {
   justify-content: center;
   width: 100%;
   min-height: 100vh;
-  padding: 50rpx;
+  padding: 30px;
 }
 
 .logo-container {
@@ -270,6 +298,7 @@ function goRegister() {
 
   .input-wrapper {
     position: relative;
+    width: 100%;
   }
 
   .input-icon {
@@ -289,10 +318,23 @@ function goRegister() {
     transition: all 0.3s ease;
     font-size: 32rpx !important;
     box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05) !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
 
     &:focus {
       box-shadow: 0 0 0 2px rgba(106, 17, 203, 0.2);
     }
+  }
+
+  .password-icon {
+    position: absolute;
+    right: 20rpx;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    color: #666;
+    padding: 16rpx;
+    cursor: pointer;
   }
 
   .button-item {

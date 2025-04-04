@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 // 改用uni.showToast
 // import { useToast } from 'wot-design-uni'
 import { registerStudent, registerTeacher } from '@/api/auth'
@@ -8,6 +8,24 @@ import { registerStudent, registerTeacher } from '@/api/auth'
 const loading = ref(false)
 const role = ref('student')
 const confirmPassword = ref('')
+
+// 设备信息相关
+const statusBarHeight = ref(0)
+const navBarHeight = ref(90)
+const safeAreaInsetTop = ref(0)
+
+// 获取设备信息
+onMounted(() => {
+  const sysInfo = uni.getSystemInfoSync()
+  // 状态栏高度
+  statusBarHeight.value = sysInfo.statusBarHeight || 20
+  // 安全区域顶部高度
+  if (sysInfo.safeArea) {
+    safeAreaInsetTop.value = sysInfo.safeArea.top
+  }
+  // 导航栏总高度 = 状态栏高度 + 固定高度(44px)
+  navBarHeight.value = statusBarHeight.value + 44
+})
 
 const formData = reactive({
   username: '',
@@ -128,8 +146,16 @@ function goLogin() {
     </view>
 
     <view class="content-wrapper">
-      <view class="header animate__fadeInDown">
-        <wd-navbar title="用户注册" left-text="返回" custom-class="custom-navbar" title-class="navbar-title" @click-left="goBack" />
+      <view class="header animate__fadeInDown" :style="{ height: `${navBarHeight}px` }">
+        <view class="custom-navbar" :style="{ paddingTop: `${statusBarHeight}px` }">
+          <view class="navbar-left" @click="goBack">
+            <wd-icon name="arrow-left" size="44rpx" color="#ffffff" />
+          </view>
+          <view class="navbar-title">
+            用户注册
+          </view>
+          <view class="navbar-right" />
+        </view>
       </view>
 
       <view class="form-container animate__fadeInUp">
@@ -183,7 +209,13 @@ function goLogin() {
               <text>用户名</text>
             </view>
             <view class="input-wrapper">
-              <wd-input v-model="formData.username" placeholder="请输入用户名" clearable custom-class="custom-input" />
+              <wd-input
+                v-model="formData.username"
+                placeholder="请输入用户名"
+                clearable
+                width="100%"
+                custom-class="custom-input"
+              />
             </view>
           </view>
 
@@ -193,7 +225,14 @@ function goLogin() {
               <text>密码</text>
             </view>
             <view class="input-wrapper">
-              <wd-input v-model="formData.password" type="text" password placeholder="请输入密码" clearable custom-class="custom-input" />
+              <wd-input
+                v-model="formData.password"
+                placeholder="请输入密码"
+                show-password
+                clearable
+                width="100%"
+                custom-class="custom-input"
+              />
             </view>
           </view>
 
@@ -203,7 +242,14 @@ function goLogin() {
               <text>确认密码</text>
             </view>
             <view class="input-wrapper">
-              <wd-input v-model="confirmPassword" type="text" password placeholder="请确认密码" clearable custom-class="custom-input" />
+              <wd-input
+                v-model="confirmPassword"
+                placeholder="请确认密码"
+                show-password
+                clearable
+                width="100%"
+                custom-class="custom-input"
+              />
             </view>
           </view>
         </view>
@@ -219,7 +265,13 @@ function goLogin() {
               <text>姓名</text>
             </view>
             <view class="input-wrapper">
-              <wd-input v-model="formData.fullName" placeholder="请输入姓名" clearable custom-class="custom-input" />
+              <wd-input
+                v-model="formData.fullName"
+                placeholder="请输入姓名"
+                clearable
+                width="100%"
+                custom-class="custom-input"
+              />
             </view>
           </view>
 
@@ -229,7 +281,13 @@ function goLogin() {
               <text>邮箱</text>
             </view>
             <view class="input-wrapper">
-              <wd-input v-model="formData.email" placeholder="请输入邮箱" clearable custom-class="custom-input" />
+              <wd-input
+                v-model="formData.email"
+                placeholder="请输入邮箱"
+                clearable
+                width="100%"
+                custom-class="custom-input"
+              />
             </view>
           </view>
         </view>
@@ -332,14 +390,34 @@ function goLogin() {
 }
 
 .custom-navbar {
-  background: rgba(255, 255, 255, 0.1) !important;
-  backdrop-filter: blur(20px) !important;
-  box-shadow: 0 4rpx 30rpx rgba(0, 0, 0, 0.1) !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 30rpx;
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  height: 44px;
+}
+
+.navbar-left {
+  width: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  height: 44px;
 }
 
 .navbar-title {
-  color: white !important;
-  font-weight: bold !important;
+  flex: 1;
+  text-align: center;
+  font-size: 36rpx;
+  font-weight: bold;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.navbar-right {
+  width: 80rpx;
 }
 
 .form-container {
@@ -492,6 +570,7 @@ function goLogin() {
 
   .input-wrapper {
     position: relative;
+    width: 100%;
   }
 
   .custom-input {
@@ -502,6 +581,8 @@ function goLogin() {
     transition: all 0.3s ease;
     font-size: 32rpx !important;
     box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05) !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
 
     &:focus {
       box-shadow: 0 0 0 2px rgba(106, 17, 203, 0.2) !important;
