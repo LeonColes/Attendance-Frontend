@@ -1,0 +1,54 @@
+{
+  "pages": [
+    {
+      "path": "pages/index",
+      "type": "home",
+      "layout": "tabbar",
+      "name": "home",
+      "style": {
+        "navigationBarTitleText": "home"
+      }
+    },
+    {
+      "path": "pages/hi",
+      "type": "page",
+      "layout": "tabbar",
+      "name": "hi",
+      "style": {
+        "navigationBarTitleText": "hi"
+      }
+    },
+    {
+      "path": "pages/setting",
+      "type": "page",
+      "layout": "tabbar",
+      "name": "hi",
+      "style": {
+        "navigationBarTitleText": "hi"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTitleText": "Wot-Demo",
+    "navigationBarTextStyle": "white",
+    "navigationStyle": "custom"
+  },
+  "tabBar": {
+    "custom": true,
+    "height": "0",
+    "color": "#bfbfbf",
+    "selectedColor": "#0165FF",
+    "list": [
+      {
+        "pagePath": "pages/index"
+      },
+      {
+        "pagePath": "pages/hi"
+      },
+      {
+        "pagePath": "pages/setting"
+      }
+    ]
+  },
+  "subPackages": []
+}
