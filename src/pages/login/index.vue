@@ -85,16 +85,26 @@ function goRegister() {
         <wd-toast />
 
         <view class="form-item">
-          <wd-icon name="person" custom-class="input-icon" />
-          <wd-input v-model="formData.username" placeholder="请输入用户名" clearable custom-class="custom-input" />
+          <view class="input-label">
+            <wd-icon name="person" custom-class="label-icon" />
+            <text>用户名</text>
+          </view>
+          <view class="input-wrapper">
+            <wd-input v-model="formData.username" placeholder="请输入用户名" clearable custom-class="custom-input" />
+          </view>
         </view>
 
         <view class="form-item">
-          <wd-icon name="lock" custom-class="input-icon" />
-          <wd-input v-model="formData.password" type="text" password placeholder="请输入密码" clearable custom-class="custom-input" />
+          <view class="input-label">
+            <wd-icon name="lock" custom-class="label-icon" />
+            <text>密码</text>
+          </view>
+          <view class="input-wrapper">
+            <wd-input v-model="formData.password" type="text" password placeholder="请输入密码" clearable custom-class="custom-input" />
+          </view>
         </view>
 
-        <view class="form-item">
+        <view class="form-item button-item">
           <wd-button type="primary" block :loading="loading" custom-class="login-btn" @click="handleLogin">
             登录
           </wd-button>
@@ -111,7 +121,7 @@ function goRegister() {
       </view>
 
       <view class="footer">
-        <text>© 2024 智能考勤助手</text>
+        <text>© 2025 智能考勤助手</text>
       </view>
     </view>
   </view>
@@ -197,13 +207,13 @@ function goRegister() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 60rpx;
+  margin-bottom: 80rpx;
   animation-duration: 1s;
   animation-fill-mode: both;
 
   .logo {
-    width: 180rpx;
-    height: 180rpx;
+    width: 200rpx;
+    height: 200rpx;
     border-radius: 50%;
     box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.1);
     background-color: white;
@@ -212,22 +222,23 @@ function goRegister() {
 
   .title {
     margin-top: 30rpx;
-    font-size: 44rpx;
+    font-size: 48rpx;
     font-weight: bold;
     color: white;
     text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.3);
   }
 
   .subtitle {
-    margin-top: 16rpx;
-    font-size: 28rpx;
+    margin-top: 20rpx;
+    font-size: 30rpx;
     color: rgba(255, 255, 255, 0.8);
   }
 }
 
 .form-container {
-  width: 100%;
-  padding: 40rpx;
+  width: 85%;
+  max-width: 650rpx;
+  padding: 50rpx 40rpx;
   border-radius: 24rpx;
   background-color: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(10px);
@@ -237,7 +248,27 @@ function goRegister() {
   animation-delay: 0.2s;
 
   .form-item {
-    margin-bottom: 30rpx;
+    margin-bottom: 40rpx;
+    position: relative;
+  }
+
+  .input-label {
+    display: flex;
+    align-items: center;
+    font-size: 30rpx;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 16rpx;
+    padding-left: 8rpx;
+
+    .label-icon {
+      color: #6a11cb;
+      margin-right: 10rpx;
+      font-size: 32rpx;
+    }
+  }
+
+  .input-wrapper {
     position: relative;
   }
 
@@ -251,25 +282,33 @@ function goRegister() {
   }
 
   .custom-input {
-    padding-left: 60rpx !important;
-    border-radius: 50rpx !important;
-    height: 90rpx !important;
+    padding: 0 30rpx !important;
+    border-radius: 16rpx !important;
+    height: 100rpx !important;
     background-color: #f5f7fa !important;
     transition: all 0.3s ease;
+    font-size: 32rpx !important;
+    box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05) !important;
 
     &:focus {
       box-shadow: 0 0 0 2px rgba(106, 17, 203, 0.2);
     }
   }
 
+  .button-item {
+    margin-top: 50rpx;
+  }
+
   .login-btn {
-    height: 90rpx !important;
+    height: 96rpx !important;
     border-radius: 50rpx !important;
     background: linear-gradient(45deg, #6a11cb, #2575fc) !important;
     border: none !important;
     box-shadow: 0 8rpx 16rpx rgba(37, 117, 252, 0.3) !important;
-    font-size: 32rpx !important;
+    font-size: 34rpx !important;
+    font-weight: bold !important;
     transition: all 0.3s ease;
+    letter-spacing: 8rpx;
 
     &:active {
       transform: scale(0.98);
@@ -280,11 +319,12 @@ function goRegister() {
   .form-links {
     display: flex;
     justify-content: space-between;
-    margin-top: 20rpx;
+    margin-top: 40rpx;
+    padding: 0 16rpx;
 
     .link {
       color: #6a11cb;
-      font-size: 28rpx;
+      font-size: 30rpx;
       position: relative;
       transition: all 0.3s ease;
 
@@ -299,7 +339,7 @@ function goRegister() {
         transition: width 0.3s ease;
       }
 
-      &:hover:after {
+      &:hover:after, &:active:after {
         width: 100%;
       }
     }
@@ -307,9 +347,9 @@ function goRegister() {
 }
 
 .footer {
-  margin-top: 60rpx;
+  margin-top: 80rpx;
   color: rgba(255, 255, 255, 0.7);
-  font-size: 24rpx;
+  font-size: 26rpx;
 }
 
 // 添加简单的动画类

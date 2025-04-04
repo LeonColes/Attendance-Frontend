@@ -143,48 +143,98 @@ function goLogin() {
           <view class="selector-label">
             选择角色
           </view>
-          <wd-radio-group v-model="role" custom-class="radio-group">
-            <wd-radio value="student" label="student" custom-class="custom-radio">
-              <view class="radio-content">
-                <wd-icon name="person" custom-class="radio-icon" />
-                <text>学生</text>
+          <view class="role-cards">
+            <view
+              class="role-card"
+              :class="{ active: role === 'student' }"
+              @click="role = 'student'"
+            >
+              <view class="role-icon-container">
+                <wd-icon name="person" class="role-icon" />
               </view>
-            </wd-radio>
-            <wd-radio value="teacher" label="teacher" custom-class="custom-radio">
-              <view class="radio-content">
-                <wd-icon name="tutorial" custom-class="radio-icon" />
-                <text>教师</text>
+              <view class="role-name">
+                学生
               </view>
-            </wd-radio>
-          </wd-radio-group>
+            </view>
+
+            <view
+              class="role-card"
+              :class="{ active: role === 'teacher' }"
+              @click="role = 'teacher'"
+            >
+              <view class="role-icon-container">
+                <wd-icon name="tutorial" class="role-icon" />
+              </view>
+              <view class="role-name">
+                教师
+              </view>
+            </view>
+          </view>
         </view>
 
-        <view class="form-item">
-          <wd-icon name="person" custom-class="input-icon" />
-          <wd-input v-model="formData.username" placeholder="请输入用户名" clearable custom-class="custom-input" />
+        <view class="form-section">
+          <view class="section-title">
+            账号信息
+          </view>
+
+          <view class="form-item">
+            <view class="input-label">
+              <wd-icon name="person" custom-class="label-icon" />
+              <text>用户名</text>
+            </view>
+            <view class="input-wrapper">
+              <wd-input v-model="formData.username" placeholder="请输入用户名" clearable custom-class="custom-input" />
+            </view>
+          </view>
+
+          <view class="form-item">
+            <view class="input-label">
+              <wd-icon name="lock" custom-class="label-icon" />
+              <text>密码</text>
+            </view>
+            <view class="input-wrapper">
+              <wd-input v-model="formData.password" type="text" password placeholder="请输入密码" clearable custom-class="custom-input" />
+            </view>
+          </view>
+
+          <view class="form-item">
+            <view class="input-label">
+              <wd-icon name="check" custom-class="label-icon" />
+              <text>确认密码</text>
+            </view>
+            <view class="input-wrapper">
+              <wd-input v-model="confirmPassword" type="text" password placeholder="请确认密码" clearable custom-class="custom-input" />
+            </view>
+          </view>
         </view>
 
-        <view class="form-item">
-          <wd-icon name="lock" custom-class="input-icon" />
-          <wd-input v-model="formData.password" type="text" password placeholder="请输入密码" clearable custom-class="custom-input" />
+        <view class="form-section">
+          <view class="section-title">
+            个人信息
+          </view>
+
+          <view class="form-item">
+            <view class="input-label">
+              <wd-icon name="tickets" custom-class="label-icon" />
+              <text>姓名</text>
+            </view>
+            <view class="input-wrapper">
+              <wd-input v-model="formData.fullName" placeholder="请输入姓名" clearable custom-class="custom-input" />
+            </view>
+          </view>
+
+          <view class="form-item">
+            <view class="input-label">
+              <wd-icon name="mail" custom-class="label-icon" />
+              <text>邮箱</text>
+            </view>
+            <view class="input-wrapper">
+              <wd-input v-model="formData.email" placeholder="请输入邮箱" clearable custom-class="custom-input" />
+            </view>
+          </view>
         </view>
 
-        <view class="form-item">
-          <wd-icon name="check" custom-class="input-icon" />
-          <wd-input v-model="confirmPassword" type="text" password placeholder="请确认密码" clearable custom-class="custom-input" />
-        </view>
-
-        <view class="form-item">
-          <wd-icon name="tickets" custom-class="input-icon" />
-          <wd-input v-model="formData.fullName" placeholder="请输入姓名" clearable custom-class="custom-input" />
-        </view>
-
-        <view class="form-item">
-          <wd-icon name="mail" custom-class="input-icon" />
-          <wd-input v-model="formData.email" placeholder="请输入邮箱" clearable custom-class="custom-input" />
-        </view>
-
-        <view class="form-item">
+        <view class="form-item button-item">
           <wd-button type="primary" block :loading="loading" custom-class="register-btn" @click="handleRegister">
             注册
           </wd-button>
@@ -308,45 +358,109 @@ function goLogin() {
     font-weight: bold;
     color: #6a11cb;
     text-align: center;
-    margin-bottom: 30rpx;
+    margin-bottom: 40rpx;
+  }
+
+  .form-section {
+    margin-bottom: 40rpx;
+    padding: 30rpx;
+    background-color: rgba(255, 255, 255, 0.6);
+    border-radius: 16rpx;
+    box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+
+    .section-title {
+      font-size: 28rpx;
+      font-weight: bold;
+      color: #444;
+      margin-bottom: 20rpx;
+      position: relative;
+      padding-left: 20rpx;
+
+      &:before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 8rpx;
+        height: 30rpx;
+        background: linear-gradient(to bottom, #6a11cb, #2575fc);
+        border-radius: 4rpx;
+      }
+    }
   }
 
   .role-selector {
-    margin: 30rpx 0;
+    margin-bottom: 40rpx;
 
     .selector-label {
       font-size: 28rpx;
-      color: #666;
-      margin-bottom: 16rpx;
+      font-weight: 500;
+      color: #333;
+      margin-bottom: 20rpx;
+      text-align: center;
     }
 
-    .radio-group {
+    .role-cards {
       display: flex;
-      justify-content: space-around;
-    }
+      justify-content: space-evenly;
+      margin: 0 20rpx;
 
-    .custom-radio {
-      padding: 20rpx 30rpx !important;
-      background-color: #f5f7fa !important;
-      border-radius: 16rpx !important;
-      margin: 0 10rpx !important;
-      transition: all 0.3s ease;
+      .role-card {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 180rpx;
+        padding: 30rpx 20rpx;
+        background-color: #f5f7fa;
+        border-radius: 16rpx;
+        box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+        border: 2rpx solid transparent;
 
-      &.is-checked {
-        background-color: rgba(106, 17, 203, 0.1) !important;
-        box-shadow: 0 4rpx 16rpx rgba(106, 17, 203, 0.1) !important;
-      }
-    }
+        &.active {
+          background-color: rgba(106, 17, 203, 0.1);
+          border-color: #6a11cb;
+          transform: translateY(-4rpx);
+          box-shadow: 0 8rpx 24rpx rgba(106, 17, 203, 0.2);
 
-    .radio-content {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+          .role-icon-container {
+            background: linear-gradient(45deg, #6a11cb, #2575fc);
 
-      .radio-icon {
-        font-size: 44rpx !important;
-        margin-bottom: 10rpx;
-        color: #6a11cb;
+            .role-icon {
+              color: white;
+            }
+          }
+
+          .role-name {
+            color: #6a11cb;
+            font-weight: bold;
+          }
+        }
+
+        .role-icon-container {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          width: 80rpx;
+          height: 80rpx;
+          border-radius: 50%;
+          background-color: #eaedf2;
+          margin-bottom: 16rpx;
+          transition: all 0.3s ease;
+
+          .role-icon {
+            font-size: 40rpx;
+            color: #6a11cb;
+          }
+        }
+
+        .role-name {
+          font-size: 28rpx;
+          color: #444;
+          transition: all 0.3s ease;
+        }
       }
     }
   }
@@ -354,37 +468,60 @@ function goLogin() {
   .form-item {
     margin-bottom: 30rpx;
     position: relative;
-  }
 
-  .input-icon {
-    position: absolute;
-    left: 20rpx;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 1;
-    color: #6a11cb;
-  }
-
-  .custom-input {
-    padding-left: 60rpx !important;
-    border-radius: 50rpx !important;
-    height: 90rpx !important;
-    background-color: #f5f7fa !important;
-    transition: all 0.3s ease;
-
-    &:focus {
-      box-shadow: 0 0 0 2px rgba(106, 17, 203, 0.2);
+    &:last-child {
+      margin-bottom: 0;
     }
   }
 
+  .input-label {
+    display: flex;
+    align-items: center;
+    font-size: 30rpx;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 16rpx;
+    padding-left: 8rpx;
+
+    .label-icon {
+      color: #6a11cb;
+      margin-right: 10rpx;
+      font-size: 32rpx;
+    }
+  }
+
+  .input-wrapper {
+    position: relative;
+  }
+
+  .custom-input {
+    padding: 0 30rpx !important;
+    border-radius: 16rpx !important;
+    height: 100rpx !important;
+    background-color: white !important;
+    transition: all 0.3s ease;
+    font-size: 32rpx !important;
+    box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05) !important;
+
+    &:focus {
+      box-shadow: 0 0 0 2px rgba(106, 17, 203, 0.2) !important;
+    }
+  }
+
+  .button-item {
+    margin-top: 50rpx;
+  }
+
   .register-btn {
-    height: 90rpx !important;
+    height: 100rpx !important;
     border-radius: 50rpx !important;
     background: linear-gradient(45deg, #6a11cb, #2575fc) !important;
     border: none !important;
     box-shadow: 0 8rpx 16rpx rgba(37, 117, 252, 0.3) !important;
-    font-size: 32rpx !important;
+    font-size: 34rpx !important;
+    font-weight: bold !important;
     transition: all 0.3s ease;
+    letter-spacing: 8rpx;
 
     &:active {
       transform: scale(0.98);
@@ -395,11 +532,11 @@ function goLogin() {
   .form-links {
     display: flex;
     justify-content: center;
-    margin-top: 20rpx;
+    margin-top: 40rpx;
 
     .link {
       color: #6a11cb;
-      font-size: 28rpx;
+      font-size: 30rpx;
       position: relative;
       transition: all 0.3s ease;
 
@@ -414,7 +551,7 @@ function goLogin() {
         transition: width 0.3s ease;
       }
 
-      &:hover:after {
+      &:hover:after, &:active:after {
         width: 100%;
       }
     }
