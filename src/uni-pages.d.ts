@@ -7,6 +7,9 @@ interface NavigateToOptions {
   url: "/pages/index" |
        "/pages/hi" |
        "/pages/setting" |
+       "/pages/attendance-records/index" |
+       "/pages/attendance-session/create" |
+       "/pages/check-in/index" |
        "/pages/login/index" |
        "/pages/register/index";
 }

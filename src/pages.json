@@ -28,6 +28,18 @@
       }
     },
     {
+      "path": "pages/attendance-records/index",
+      "type": "page"
+    },
+    {
+      "path": "pages/attendance-session/create",
+      "type": "page"
+    },
+    {
+      "path": "pages/check-in/index",
+      "type": "page"
+    },
+    {
       "path": "pages/login/index",
       "type": "page"
     },
