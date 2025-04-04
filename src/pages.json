@@ -26,6 +26,14 @@
       "style": {
         "navigationBarTitleText": "hi"
       }
+    },
+    {
+      "path": "pages/login/index",
+      "type": "page"
+    },
+    {
+      "path": "pages/register/index",
+      "type": "page"
     }
   ],
   "globalStyle": {

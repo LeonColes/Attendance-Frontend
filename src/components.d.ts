@@ -8,13 +8,17 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     PrivacyPopup: typeof import('./components/PrivacyPopup.vue')['default']
+    WdButton: typeof import('wot-design-uni/components/wd-button/wd-button.vue')['default']
     WdCell: typeof import('wot-design-uni/components/wd-cell/wd-cell.vue')['default']
     WdConfigProvider: typeof import('wot-design-uni/components/wd-config-provider/wd-config-provider.vue')['default']
     WdIcon: typeof import('wot-design-uni/components/wd-icon/wd-icon.vue')['default']
+    WdInput: typeof import('wot-design-uni/components/wd-input/wd-input.vue')['default']
     WdMessageBox: typeof import('wot-design-uni/components/wd-message-box/wd-message-box.vue')['default']
     WdNavbar: typeof import('wot-design-uni/components/wd-navbar/wd-navbar.vue')['default']
     WdNotify: typeof import('wot-design-uni/components/wd-notify/wd-notify.vue')['default']
     WdPopup: typeof import('wot-design-uni/components/wd-popup/wd-popup.vue')['default']
+    WdRadio: typeof import('wot-design-uni/components/wd-radio/wd-radio.vue')['default']
+    WdRadioGroup: typeof import('wot-design-uni/components/wd-radio-group/wd-radio-group.vue')['default']
     WdSearch: typeof import('wot-design-uni/components/wd-search/wd-search.vue')['default']
     WdSelectPicker: typeof import('wot-design-uni/components/wd-select-picker/wd-select-picker.vue')['default']
     WdSwitch: typeof import('wot-design-uni/components/wd-switch/wd-switch.vue')['default']
