@@ -8,7 +8,7 @@
  * 记得注释
 -->
 <script lang="ts" setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useUserStore } from '@/store/user'
 import { getAttendanceStatistics } from '@/api/attendance'
 import { TaskStatus, activateTask, completeTask, getActiveTasks, getMyTasks } from '@/api/task'
@@ -37,6 +37,9 @@ const activeSessions = ref<any[]>([])
 const showAnimations = ref(false)
 const fabExpanded = ref(false)
 const fabTimer = ref<any>(null)
+const isScrollingDown = ref(false) // 是否向下滚动
+const lastScrollTop = ref(0) // 上次滚动位置
+const scrollThreshold = 30 // 滚动阈值
 
 // 初始化数据
 onMounted(() => {
@@ -49,21 +52,30 @@ onMounted(() => {
   }, 100)
 })
 
-// 处理悬浮按钮的显示和隐藏
-function toggleFab() {
-  fabExpanded.value = !fabExpanded.value
+// 注册页面滚动事件处理
+uni.$on('page-scroll', onPageScroll)
 
-  // 如果展开了按钮，设置定时器自动收回
-  if (fabExpanded.value && fabTimer.value === null) {
-    fabTimer.value = setTimeout(() => {
-      fabExpanded.value = false
-      fabTimer.value = null
-    }, 5000) // 5秒后自动收回
-  }
-  else if (!fabExpanded.value && fabTimer.value !== null) {
-    // 如果手动收回，清除定时器
+// 组件卸载时清理事件监听
+onUnmounted(() => {
+  uni.$off('page-scroll', onPageScroll)
+  if (fabTimer.value !== null) {
     clearTimeout(fabTimer.value)
-    fabTimer.value = null
+  }
+})
+
+// 处理页面滚动
+function onPageScroll(e: any) {
+  const scrollTop = e.scrollTop
+
+  // 判断是否滚动超过阈值
+  if (Math.abs(scrollTop - lastScrollTop.value) > scrollThreshold) {
+    isScrollingDown.value = scrollTop > lastScrollTop.value
+    lastScrollTop.value = scrollTop
+  }
+
+  // 如果滚动到顶部，始终显示悬浮球
+  if (scrollTop < 50) {
+    isScrollingDown.value = false
   }
 }
 
@@ -122,6 +134,20 @@ async function loadHomeData() {
   }
 }
 
+// 导航到创建任务页面并显示动画效果
+function navigateToCreateTask() {
+  // 显示按钮展开动画
+  fabExpanded.value = true
+
+  // 短暂延迟后跳转，让用户看到动画效果
+  setTimeout(() => {
+    fabExpanded.value = false
+    uni.navigateTo({
+      url: '/pages/create-task/index',
+    })
+  }, 300)
+}
+
 // 处理下拉刷新
 function onRefresh() {
   refreshing.value = true
@@ -139,14 +165,6 @@ function navigateToCheckIn(taskId: string) {
 function navigateToTaskDetail(taskId: string) {
   uni.navigateTo({
     url: `/pages/task-detail/index?taskId=${taskId}`,
-  })
-}
-
-// 导航到创建任务页面
-function navigateToCreateTask() {
-  toggleFab() // 收起按钮
-  uni.navigateTo({
-    url: '/pages/create-task/index',
   })
 }
 
@@ -203,31 +221,15 @@ async function handleCompleteTask(taskId: string, event: Event) {
     loadHomeData()
   }
   catch (error) {
-    console.error('关闭任务失败', error)
+    console.error('结束任务失败', error)
     uni.showToast({
-      title: '关闭失败',
+      title: '操作失败',
       icon: 'error',
     })
   }
   finally {
     uni.hideLoading()
   }
-}
-
-// 退出登录
-function handleLogout() {
-  uni.showModal({
-    title: '提示',
-    content: '确定要退出登录吗？',
-    success: async (res) => {
-      if (res.confirm) {
-        await userStore.logout()
-        uni.reLaunch({
-          url: '/pages/login/index',
-        })
-      }
-    },
-  })
 }
 </script>
 
@@ -413,12 +415,6 @@ function handleLogout() {
             <view class="card-actions">
               <text
                 class="card-action"
-                @click="navigateToCreateTask"
-              >
-                创建任务
-              </text>
-              <text
-                class="card-action"
                 @click="navigateToAttendanceRecords"
               >
                 查看记录
@@ -507,8 +503,9 @@ function handleLogout() {
       :class="{
         'animate-in-pop': showAnimations,
         'expanded': fabExpanded,
+        'hidden': isScrollingDown,
       }"
-      @click="toggleFab"
+      @click="navigateToCreateTask"
     >
       <wd-icon name="plus" size="50rpx" color="#ffffff" />
     </view>
@@ -880,46 +877,52 @@ function handleLogout() {
 // 浮动操作按钮
 .floating-button {
   position: fixed;
-  right: 40rpx;
-  top: 40rpx; // 移到顶部
-  width: 120rpx;
-  height: 120rpx;
-  border-radius: 60rpx;
-  background: linear-gradient(135deg, #6a11cb, #2575fc);
+  bottom: calc(var(--window-bottom) + 200rpx); // 距离底部导航栏2.5倍距离
+  right: -55rpx; // 向右偏移，使其半隐藏在屏幕外
+  width: 110rpx;
+  height: 110rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 10rpx 30rpx rgba(106, 17, 203, 0.4);
+  box-shadow: 0 10rpx 20rpx rgba(0, 0, 0, 0.2);
   z-index: 100;
-  transform: scale(0);
-  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  transform-origin: top right;
-  // 默认部分隐藏在屏幕外
-  transform: translate(40rpx, -60rpx) scale(0.8);
+  transform: scale(1);
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
   &.animate-in-pop {
-    transform: translate(40rpx, -60rpx) scale(0.8);
+    animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.6s forwards;
+    transform: scale(0);
+    opacity: 0;
   }
 
   &.expanded {
-    transform: translate(0, 0) scale(1);
+    right: 50rpx; // 展开时完全显示
+    transform: scale(1.1);
+  }
+
+  &.hidden {
+    transform: translateY(200rpx) scale(0.5);
+    opacity: 0;
   }
 
   &:active {
-    transform: scale(0.9);
+    right: 50rpx; // 点击时完全显示
+    transform: scale(0.95);
   }
 
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: inherit;
-    border-radius: inherit;
-    animation: pulse 2s infinite;
-    z-index: -1;
+  @keyframes popIn {
+    from {
+      transform: scale(0);
+      opacity: 0;
+      right: -55rpx;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+      right: -55rpx;
+    }
   }
 }
 
