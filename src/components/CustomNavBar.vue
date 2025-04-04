@@ -151,15 +151,47 @@ function handleRightAction() {
 
 // 获取设备信息并监听滚动事件
 onMounted(() => {
-  const sysInfo = uni.getSystemInfoSync()
-  // 状态栏高度
-  statusBarHeight.value = sysInfo.statusBarHeight || 20
-  // 安全区域顶部高度
-  if (sysInfo.safeArea) {
-    safeAreaInsetTop.value = sysInfo.safeArea.top
+  try {
+    // 使用新API替代已弃用的getSystemInfoSync
+    let sysInfo
+    // 优先使用新API
+    if (typeof uni.getWindowInfo === 'function') {
+      const windowInfo = uni.getWindowInfo()
+      const deviceInfo = uni.getDeviceInfo()
+      sysInfo = {
+        ...windowInfo,
+        ...deviceInfo,
+        statusBarHeight: windowInfo.statusBarHeight || 20,
+        safeArea: windowInfo.safeAreaInsets
+          ? {
+              top: windowInfo.safeAreaInsets.top,
+              bottom: windowInfo.safeAreaInsets.bottom,
+              left: windowInfo.safeAreaInsets.left,
+              right: windowInfo.safeAreaInsets.right,
+            }
+          : undefined,
+      }
+    }
+    else {
+      // 兼容旧版本
+      sysInfo = uni.getSystemInfoSync()
+    }
+
+    // 状态栏高度
+    statusBarHeight.value = sysInfo.statusBarHeight || 20
+    // 安全区域顶部高度
+    if (sysInfo.safeArea) {
+      safeAreaInsetTop.value = sysInfo.safeArea.top
+    }
+    // 导航栏总高度 = 状态栏高度 + 固定高度(44px)
+    navBarHeight.value = statusBarHeight.value + 44
   }
-  // 导航栏总高度 = 状态栏高度 + 固定高度(44px)
-  navBarHeight.value = statusBarHeight.value + 44
+  catch (error) {
+    console.error('获取设备信息失败', error)
+    // 使用默认值
+    statusBarHeight.value = 20
+    navBarHeight.value = 64
+  }
 
   // 监听滚动事件
   uni.$on('page-scroll', onPageScroll)

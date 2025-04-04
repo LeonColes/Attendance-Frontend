@@ -6,7 +6,7 @@
       "layout": "tabbar",
       "name": "home",
       "style": {
-        "navigationBarTitleText": "home"
+        "navigationBarTitleText": "智能考勤"
       }
     },
     {
@@ -29,7 +29,10 @@
     },
     {
       "path": "pages/attendance-records/index",
-      "type": "page"
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "考勤记录"
+      }
     },
     {
       "path": "pages/attendance-session/create",
@@ -37,11 +40,17 @@
     },
     {
       "path": "pages/check-in/index",
-      "type": "page"
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "签到"
+      }
     },
     {
       "path": "pages/create-task/index",
-      "type": "page"
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "创建签到任务"
+      }
     },
     {
       "path": "pages/login/index",
@@ -53,7 +62,10 @@
     },
     {
       "path": "pages/task-detail/index",
-      "type": "page"
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "任务详情"
+      }
     }
   ],
   "globalStyle": {

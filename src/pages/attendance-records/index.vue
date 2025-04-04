@@ -2,7 +2,6 @@
 import { onMounted, ref } from 'vue'
 import { useUserStore } from '@/store/user'
 import { getTaskRecords } from '@/api/task'
-import CustomNavBar from '@/components/CustomNavBar.vue'
 
 // 用户信息
 const _userStore = useUserStore()
@@ -95,7 +94,7 @@ function getStatusClass(record: any) {
 }
 
 // 返回上一页
-function goBack() {
+function _goBack() {
   uni.navigateBack()
 }
 
@@ -110,20 +109,12 @@ function exportRecords() {
 
 <template>
   <view class="container">
-    <!-- 自定义导航栏 -->
-    <CustomNavBar
-      title="考勤记录"
-      background-color="#6a11cb"
-      scrolled-background-color="rgba(106, 17, 203, 0.95)"
-      :enable-scroll-effect="true"
-      @back="goBack"
-    >
-      <template #right>
-        <view class="nav-action" @click="exportRecords">
-          <wd-icon name="download" size="40rpx" color="#fff" />
-        </view>
-      </template>
-    </CustomNavBar>
+    <view class="header-actions">
+      <view class="action-btn" @click="exportRecords">
+        <wd-icon name="download" size="40rpx" color="#6a11cb" />
+        <text>导出</text>
+      </view>
+    </view>
 
     <view class="content-wrapper">
       <!-- 加载状态 -->
@@ -286,11 +277,28 @@ function exportRecords() {
     z-index: -1;
   }
 
-  .nav-action {
-    padding: 0 20rpx;
-    height: 100%;
+  .header-actions {
     display: flex;
-    align-items: center;
+    justify-content: flex-end;
+    padding: 20rpx 30rpx;
+
+    .action-btn {
+      display: flex;
+      align-items: center;
+      padding: 10rpx 20rpx;
+      border-radius: 30rpx;
+      background-color: rgba(106, 17, 203, 0.1);
+
+      text {
+        font-size: 28rpx;
+        color: #6a11cb;
+        margin-left: 10rpx;
+      }
+
+      &:active {
+        opacity: 0.8;
+      }
+    }
   }
 }
 
@@ -564,3 +572,11 @@ function exportRecords() {
   }
 }
 </style>
+
+<route lang="json">
+{
+  "style": {
+    "navigationBarTitleText": "考勤记录"
+  }
+}
+</route>

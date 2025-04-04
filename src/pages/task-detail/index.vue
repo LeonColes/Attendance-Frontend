@@ -3,7 +3,6 @@ import { onLoad } from '@dcloudio/uni-app'
 import { ref } from 'vue'
 import { useUserStore } from '@/store/user'
 import { getTaskDetail } from '@/api/task'
-import CustomNavBar from '@/components/CustomNavBar.vue'
 
 // 用户信息
 const userStore = useUserStore()
@@ -65,15 +64,6 @@ function goBack() {
 
 <template>
   <view class="container">
-    <!-- 自定义导航栏 -->
-    <CustomNavBar
-      title="任务详情"
-      background-color="#6a11cb"
-      scrolled-background-color="rgba(106, 17, 203, 0.95)"
-      :enable-scroll-effect="true"
-      @back="goBack"
-    />
-
     <view class="content-wrapper">
       <!-- 加载状态 -->
       <view v-if="loading" class="loading-container">
@@ -560,3 +550,11 @@ function goBack() {
   }
 }
 </style>
+
+<route lang="json">
+{
+  "style": {
+    "navigationBarTitleText": "任务详情"
+  }
+}
+</route>

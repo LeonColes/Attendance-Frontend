@@ -12,7 +12,6 @@ import { computed, onMounted, ref } from 'vue'
 import { useUserStore } from '@/store/user'
 import { getAttendanceStatistics } from '@/api/attendance'
 import { TaskStatus, activateTask, completeTask, getActiveTasks, getMyTasks } from '@/api/task'
-import CustomNavBar from '@/components/CustomNavBar.vue'
 
 // 用户信息
 const userStore = useUserStore()
@@ -36,19 +35,13 @@ const attendanceStats = ref({
 })
 const activeSessions = ref<any[]>([])
 const showAnimations = ref(false)
+const fabExpanded = ref(false)
+const fabTimer = ref<any>(null)
 
 // 初始化数据
 onMounted(() => {
   // 直接加载首页数据，token失效会由请求拦截器处理
   loadHomeData()
-
-  // 设置导航栏按钮点击事件
-  // @ts-expect-error - 小程序API类型定义问题
-  uni.onNavigationBarButtonTap((e: { index: number, text: string }) => {
-    if (e.text === '退出') {
-      handleLogout()
-    }
-  })
 
   // 延迟显示动画效果
   setTimeout(() => {
@@ -56,25 +49,28 @@ onMounted(() => {
   }, 100)
 })
 
+// 处理悬浮按钮的显示和隐藏
+function toggleFab() {
+  fabExpanded.value = !fabExpanded.value
+
+  // 如果展开了按钮，设置定时器自动收回
+  if (fabExpanded.value && fabTimer.value === null) {
+    fabTimer.value = setTimeout(() => {
+      fabExpanded.value = false
+      fabTimer.value = null
+    }, 5000) // 5秒后自动收回
+  }
+  else if (!fabExpanded.value && fabTimer.value !== null) {
+    // 如果手动收回，清除定时器
+    clearTimeout(fabTimer.value)
+    fabTimer.value = null
+  }
+}
+
 // 加载首页数据
 async function loadHomeData() {
   try {
     loading.value = true
-
-    // 暂时不区分角色，同时加载所有任务
-    /*
-    if (isStudent.value) {
-      // 学生身份：加载活跃的签到任务
-      const response = await getActiveTasks()
-      activeSessions.value = Array.isArray(response) ? response : (response?.data || [])
-      todayCourses.value = Array.isArray(response) ? response : (response?.data || [])
-    }
-    else if (isTeacher.value) {
-      // 教师身份：加载我创建的任务
-      const response = await getMyTasks()
-      todayCourses.value = Array.isArray(response) ? response : (response?.data || [])
-    }
-    */
 
     // 同时加载所有类型的任务
     const activeTasksResponse = await getActiveTasks()
@@ -148,6 +144,7 @@ function navigateToTaskDetail(taskId: string) {
 
 // 导航到创建任务页面
 function navigateToCreateTask() {
+  toggleFab() // 收起按钮
   uni.navigateTo({
     url: '/pages/create-task/index',
   })
@@ -236,19 +233,6 @@ function handleLogout() {
 
 <template>
   <view class="container">
-    <!-- 自定义导航栏 -->
-    <CustomNavBar
-      title="智能考勤系统"
-      :show-back-button="false"
-      background-color="#6a11cb"
-      scrolled-background-color="rgba(106, 17, 203, 0.95)"
-      :enable-scroll-effect="true"
-    >
-      <template #right>
-        <wd-icon name="setting" size="44rpx" color="#fff" @click="handleLogout" />
-      </template>
-    </CustomNavBar>
-
     <!-- 页面内容 -->
     <scroll-view
       scroll-y
@@ -520,8 +504,11 @@ function handleLogout() {
     <!-- 浮动操作按钮 -->
     <view
       class="floating-button"
-      :class="{ 'animate-in-pop': showAnimations }"
-      @click="navigateToCreateTask"
+      :class="{
+        'animate-in-pop': showAnimations,
+        'expanded': fabExpanded,
+      }"
+      @click="toggleFab"
     >
       <wd-icon name="plus" size="50rpx" color="#ffffff" />
     </view>
@@ -894,7 +881,7 @@ function handleLogout() {
 .floating-button {
   position: fixed;
   right: 40rpx;
-  bottom: 40rpx;
+  top: 40rpx; // 移到顶部
   width: 120rpx;
   height: 120rpx;
   border-radius: 60rpx;
@@ -905,10 +892,17 @@ function handleLogout() {
   box-shadow: 0 10rpx 30rpx rgba(106, 17, 203, 0.4);
   z-index: 100;
   transform: scale(0);
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform-origin: top right;
+  // 默认部分隐藏在屏幕外
+  transform: translate(40rpx, -60rpx) scale(0.8);
 
   &.animate-in-pop {
-    transform: scale(1);
+    transform: translate(40rpx, -60rpx) scale(0.8);
+  }
+
+  &.expanded {
+    transform: translate(0, 0) scale(1);
   }
 
   &:active {
@@ -1044,7 +1038,7 @@ function handleLogout() {
   "layout": "tabbar",
   "name": "home",
   "style": {
-    "navigationBarTitleText": "home"
+    "navigationBarTitleText": "智能考勤"
   }
 }
 </route>

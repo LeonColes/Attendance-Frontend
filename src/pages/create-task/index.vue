@@ -3,7 +3,6 @@ import { computed, onMounted, ref } from 'vue'
 import { useUserStore } from '@/store/user'
 import type { CheckInType } from '@/api/task'
 import { createTask } from '@/api/task'
-import CustomNavBar from '@/components/CustomNavBar.vue'
 
 // 用户信息
 const _userStore = useUserStore()
@@ -121,15 +120,6 @@ function goBack() {
 
 <template>
   <view class="container">
-    <!-- 自定义导航栏 -->
-    <CustomNavBar
-      title="创建签到任务"
-      background-color="#6a11cb"
-      scrolled-background-color="rgba(106, 17, 203, 0.95)"
-      :enable-scroll-effect="true"
-      @back="goBack"
-    />
-
     <view class="content-wrapper">
       <view
         class="form-container"
@@ -410,3 +400,11 @@ function goBack() {
   }
 }
 </style>
+
+<route lang="json">
+{
+  "style": {
+    "navigationBarTitleText": "创建签到任务"
+  }
+}
+</route>
