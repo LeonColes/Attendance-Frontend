@@ -87,7 +87,19 @@ function responseInterceptor<T>(response: UniNamespace.RequestSuccessCallbackRes
   if (statusCode === 401) {
     // 清除token并跳转到登录页
     removeToken()
-    uni.navigateTo({ url: '/pages/login/index' })
+
+    // 显示友好提示
+    uni.showToast({
+      title: '登录已过期，请重新登录',
+      icon: 'none',
+      duration: 2000,
+    })
+
+    // 延迟跳转，让用户看到提示
+    setTimeout(() => {
+      uni.reLaunch({ url: '/pages/login/index' })
+    }, 1500)
+
     throw new Error('登录已过期，请重新登录')
   }
 

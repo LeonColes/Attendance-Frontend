@@ -10,8 +10,10 @@ interface NavigateToOptions {
        "/pages/attendance-records/index" |
        "/pages/attendance-session/create" |
        "/pages/check-in/index" |
+       "/pages/create-task/index" |
        "/pages/login/index" |
-       "/pages/register/index";
+       "/pages/register/index" |
+       "/pages/task-detail/index";
 }
 interface RedirectToOptions extends NavigateToOptions {}
 

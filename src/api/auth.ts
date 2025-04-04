@@ -75,13 +75,6 @@ export function login(params: LoginParams) {
 }
 
 /**
- * 获取当前用户信息
- */
-export function getUserInfo() {
-  return post<UserInfo>('/api/auth/userinfo')
-}
-
-/**
  * 退出登录
  */
 export function logout() {

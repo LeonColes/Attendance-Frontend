@@ -22,9 +22,9 @@
       "path": "pages/setting",
       "type": "page",
       "layout": "tabbar",
-      "name": "hi",
+      "name": "setting",
       "style": {
-        "navigationBarTitleText": "hi"
+        "navigationBarTitleText": "我的"
       }
     },
     {
@@ -40,11 +40,19 @@
       "type": "page"
     },
     {
+      "path": "pages/create-task/index",
+      "type": "page"
+    },
+    {
       "path": "pages/login/index",
       "type": "page"
     },
     {
       "path": "pages/register/index",
+      "type": "page"
+    },
+    {
+      "path": "pages/task-detail/index",
       "type": "page"
     }
   ],

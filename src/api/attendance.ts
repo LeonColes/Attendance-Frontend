@@ -17,10 +17,10 @@ export enum AttendanceStatus {
 export enum CheckInMethod {
   QR_CODE = 'qrcode', // 二维码签到
   LOCATION = 'location', // 位置签到
-  BLUETOOTH = 'bluetooth', // 蓝牙签到
+  GPS = 'gps', // GPS定位签到
   WIFI = 'wifi', // Wi-Fi签到
-  FACE = 'face', // 人脸签到
   MANUAL = 'manual', // 手动签到（教师代签）
+  AUTOMATIC = 'automatic', // 自动签到
 }
 
 /**
@@ -252,14 +252,7 @@ export function applyLeave(params: {
  * 获取当前可签到的会话（学生）
  */
 export function getActiveSessionsForStudent() {
-  return get<AttendanceSession[]>('/api/attendance/sessions/active')
-}
-
-/**
- * 获取今日课程及考勤状态
- */
-export function getTodayCourses() {
-  return get('/api/attendance/today')
+  return get<AttendanceSession[]>('/api/tasks/active')
 }
 
 /**
@@ -267,7 +260,7 @@ export function getTodayCourses() {
  * @param teacherId 教师ID
  */
 export function getTeacherActiveSessions(teacherId?: string) {
-  return get<AttendanceSession[]>('/api/attendance/teacher/sessions/active', { teacherId })
+  return get<AttendanceSession[]>('/api/tasks/my-tasks', { teacherId })
 }
 
 /**

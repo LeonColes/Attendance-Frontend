@@ -229,23 +229,6 @@ export function getCourseSchedule(params?: {
 }
 
 /**
- * 获取今天的课程
- */
-export function getTodayCourses() {
-  return get<Array<{
-    id: string
-    courseId: string
-    courseName: string
-    startTime: string
-    endTime: string
-    location: string
-    hasAttendance: boolean
-    attendanceStatus?: string
-    teacherName: string
-  }>>('/api/courses/today')
-}
-
-/**
  * 导入课程学生名单
  */
 export function importCourseStudents(courseId: string, file: File) {
