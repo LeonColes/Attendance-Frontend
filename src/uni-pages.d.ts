@@ -5,20 +5,14 @@
 
 interface NavigateToOptions {
   url: "/pages/index" |
-       "/pages/hi" |
-       "/pages/setting" |
-       "/pages/attendance-records/index" |
-       "/pages/attendance-session/create" |
-       "/pages/check-in/index" |
-       "/pages/create-task/index" |
        "/pages/login/index" |
-       "/pages/register/index" |
-       "/pages/task-detail/index";
+       "/pages/my/index" |
+       "/pages/register/index";
 }
 interface RedirectToOptions extends NavigateToOptions {}
 
 interface SwitchTabOptions {
-  url: "/pages/index" | "/pages/hi" | "/pages/setting"
+  url: "/pages/index" | "/pages/my/index"
 }
 
 type ReLaunchOptions = NavigateToOptions | SwitchTabOptions;

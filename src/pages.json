@@ -10,62 +10,16 @@
       }
     },
     {
-      "path": "pages/hi",
-      "type": "page",
-      "layout": "tabbar",
-      "name": "hi",
-      "style": {
-        "navigationBarTitleText": "hi"
-      }
-    },
-    {
-      "path": "pages/setting",
-      "type": "page",
-      "layout": "tabbar",
-      "name": "setting",
-      "style": {
-        "navigationBarTitleText": "我的"
-      }
-    },
-    {
-      "path": "pages/attendance-records/index",
-      "type": "page",
-      "style": {
-        "navigationBarTitleText": "考勤记录"
-      }
-    },
-    {
-      "path": "pages/attendance-session/create",
+      "path": "pages/login/index",
       "type": "page"
     },
     {
-      "path": "pages/check-in/index",
-      "type": "page",
-      "style": {
-        "navigationBarTitleText": "签到"
-      }
-    },
-    {
-      "path": "pages/create-task/index",
-      "type": "page",
-      "style": {
-        "navigationBarTitleText": "创建签到任务"
-      }
-    },
-    {
-      "path": "pages/login/index",
+      "path": "pages/my/index",
       "type": "page"
     },
     {
       "path": "pages/register/index",
       "type": "page"
-    },
-    {
-      "path": "pages/task-detail/index",
-      "type": "page",
-      "style": {
-        "navigationBarTitleText": "任务详情"
-      }
     }
   ],
   "globalStyle": {
@@ -83,10 +37,7 @@
         "pagePath": "pages/index"
       },
       {
-        "pagePath": "pages/hi"
-      },
-      {
-        "pagePath": "pages/setting"
+        "pagePath": "pages/my/index"
       }
     ]
   },
