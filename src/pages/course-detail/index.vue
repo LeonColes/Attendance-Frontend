@@ -547,18 +547,6 @@ function closeQRCodeModal() {
             <view class="info-value">{{ formatDateTime(courseDetail.startDate) }} ~ {{ formatDateTime(courseDetail.endDate) }}</view>
           </view>
           
-          <!-- @ts-ignore -->
-          <view class="info-row">
-            <wd-icon name="qr-code" size="32rpx" color="#6a11cb" />
-            <!-- @ts-ignore -->
-            <view class="info-label">课程码</view>
-            <!-- @ts-ignore -->
-            <view class="info-value code" @click="copyCourseCode">
-              {{ courseDetail.code || 'N/A' }}
-              <wd-icon name="copy" size="28rpx" color="#6a11cb" />
-            </view>
-          </view>
-          
           <!-- 移动详细信息到此处 -->
           <!-- @ts-ignore -->
           <view class="info-row">
