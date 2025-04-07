@@ -145,8 +145,39 @@ export function updateCourse(courseId: string, params: Partial<CourseCreateParam
  * 获取课程邀请二维码（教师）
  * @param courseId 课程ID
  */
-export function getCourseQRCode(courseId: string) {
-  return get<Blob>(`/api/courses/qrcode?courseId=${courseId}`, {
-    responseType: 'blob',
-  })
+export function getCourseQRCode(courseId: string): Promise<ArrayBuffer> {
+  console.log('调用 getCourseQRCode, courseId:', courseId)
+  
+  return new Promise((resolve, reject) => {
+    const token = uni.getStorageSync('token');
+    let authHeader = '';
+    
+    try {
+      const parsedToken = JSON.parse(token);
+      authHeader = `${parsedToken.tokenType || 'Bearer'} ${parsedToken.accessToken || ''}`;
+    } catch (e) {
+      console.error('解析token失败', e);
+    }
+    
+    uni.request({
+      url: `http://localhost:8080/api/courses/qrcode?courseId=${courseId}`,
+      method: 'GET',
+      header: {
+        'Authorization': authHeader
+      },
+      responseType: 'arraybuffer',
+      success: (res) => {
+        console.log('二维码请求成功:', res.statusCode);
+        if (res.statusCode === 200 && res.data) {
+          resolve(res.data as ArrayBuffer);
+        } else {
+          reject(new Error(`请求失败: ${res.statusCode}`));
+        }
+      },
+      fail: (err) => {
+        console.error('二维码请求失败:', err);
+        reject(err);
+      }
+    });
+  });
 } 

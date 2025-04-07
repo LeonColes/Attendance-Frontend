@@ -11,7 +11,7 @@
 import { ref, computed, reactive, onMounted } from 'vue'
 import { useUserStore } from '@/store/user'
 import { CheckInType, getCheckinList } from '@/api/attendance'
-import { getCourseMemberList } from '@/api/courses'
+import { getCourseMemberList, getCourseQRCode } from '@/api/courses'
 import type { PageQueryParams } from '@/api/attendance'
 import CustomNavBar from '@/components/CustomNavBar.vue'
 
@@ -34,6 +34,11 @@ const hasMoreData = ref(true)
 const membersList = ref<any[]>([])
 const attendanceStats = ref<any>(null)
 
+// 添加二维码相关状态
+const qrCodeUrl = ref('')
+const showQRCode = ref(false)
+const qrCodeLoading = ref(false)
+
 // 用户角色相关计算属性
 const isTeacher = computed(() => userStore.userInfo?.role === 'TEACHER')
 const isStudent = computed(() => userStore.userInfo?.role === 'STUDENT')
@@ -49,7 +54,7 @@ onMounted(() => {
   const query = getSafeUni().getLaunchOptionsSync().query || {}
   const pages = getCurrentPages()
   const page = pages[pages.length - 1]
-  const options = page?.options || query || {}
+  const options = (page as any)?.options || query || {}
   
   // 尝试解析路由中的课程和签到数据
   if (options.courseData) {
@@ -68,6 +73,11 @@ onMounted(() => {
       loadCheckinList(true)
       loadCourseMembers(true)
       loadCourseAttendanceStats()
+      
+      // 如果是教师，自动获取课程二维码
+      if (isTeacher.value) {
+        loadCourseQRCode()
+      }
       
     } catch (e) {
       console.error('解析课程数据失败:', e)
@@ -91,6 +101,11 @@ function tryParseOldFormat(options) {
       loadCheckinList(true)
       loadCourseMembers(true)
       loadCourseAttendanceStats()
+      
+      // 如果是教师，自动获取课程二维码
+      if (isTeacher.value) {
+        loadCourseQRCode()
+      }
       
     } catch (e) {
       console.error('解析课程信息失败:', e)
@@ -188,9 +203,9 @@ async function loadCourseMembers(showLoading: boolean = false) {
           joinTime: user.joinTime || new Date().toISOString(),
           avatarUrl: user.avatarUrl
         }))
-      } else if (response.data.items && Array.isArray(response.data.items)) {
-        // 原来的结构
-        membersList.value = response.data.items
+      } else if ((response.data as any).items && Array.isArray((response.data as any).items)) {
+        // 原来的结构，使用类型断言
+        membersList.value = (response.data as any).items
       } else {
         membersList.value = []
       }
@@ -425,6 +440,56 @@ function getAttendanceRateClass(attendanceRate: number) {
     return 'normal'
   }
 }
+
+// 添加获取课程二维码的函数
+async function loadCourseQRCode() {
+  if (!courseId.value || !isTeacher.value) return
+  
+  try {
+    qrCodeLoading.value = true
+    console.log('开始获取课程二维码, courseId:', courseId.value)
+    
+    // 调用已封装好的API
+    const response = await getCourseQRCode(courseId.value)
+    console.log('QR Code response type:', typeof response)
+    console.log('QR Code response:', response)
+    
+    if (!response) {
+      console.error('二维码数据为空')
+      getSafeUni().showToast({
+        title: '获取二维码失败',
+        icon: 'none'
+      })
+      return
+    }
+    
+    // 使用 uni.arrayBufferToBase64 直接转换
+    const base64 = uni.arrayBufferToBase64(response)
+    console.log('转换后的base64长度:', base64.length)
+    
+    qrCodeUrl.value = `data:image/png;base64,${base64}`
+    console.log('设置二维码URL成功')
+    
+  } catch (e) {
+    console.error('获取课程二维码出错:', e)
+    getSafeUni().showToast({
+      title: '获取二维码失败',
+      icon: 'none'
+    })
+  } finally {
+    qrCodeLoading.value = false
+  }
+}
+
+// 显示二维码弹窗
+function openQRCodeModal() {
+  showQRCode.value = true
+}
+
+// 关闭二维码弹窗
+function closeQRCodeModal() {
+  showQRCode.value = false
+}
 </script>
 
 <template>
@@ -527,6 +592,17 @@ function getAttendanceRateClass(attendanceRate: number) {
             >
               <wd-icon name="add" size="28rpx" color="#ffffff" />
               <text style="margin-left: 8rpx;">创建签到任务</text>
+            </wd-button>
+            
+            <!-- 添加邀请学生按钮 -->
+            <wd-button 
+              type="info" 
+              size="small"
+              custom-style="height: 70rpx; margin-top: 20rpx; margin-left: 20rpx;"
+              @click="openQRCodeModal"
+            >
+              <wd-icon name="qrcode" size="28rpx" color="#ffffff" />
+              <text style="margin-left: 8rpx;">邀请学生</text>
             </wd-button>
           </view>
         </view>
@@ -759,10 +835,41 @@ function getAttendanceRateClass(attendanceRate: number) {
         </view>
       </view>
     </view>
+    
+    <!-- 添加二维码弹窗 -->
+    <wd-popup v-model="showQRCode" round position="center" custom-style="width: 80%; max-width: 600rpx;">
+      <view class="qrcode-container">
+        <view class="qrcode-header">
+          <text class="qrcode-title">课程邀请二维码</text>
+          <text class="qrcode-subtitle">分享此二维码给学生加入课程</text>
+        </view>
+        
+        <view class="qrcode-content">
+          <image v-if="qrCodeUrl" :src="qrCodeUrl" mode="aspectFit" class="qrcode-image" />
+          <view v-else-if="qrCodeLoading" class="qrcode-loading">
+            <wd-loading size="60rpx" />
+            <text>获取二维码中...</text>
+          </view>
+          <view v-else class="qrcode-error">
+            <wd-icon name="warning" size="60rpx" color="#f56c6c" />
+            <text>获取二维码失败</text>
+          </view>
+          <!-- {{ qrCodeUrl }} -->
+          <view class="course-qrinfo">
+            <text class="course-name">{{ courseDetail.name }}</text>
+            <text class="course-code">课程码: {{ courseDetail.code }}</text>
+          </view>
+        </view>
+        
+        <view class="qrcode-actions">
+          <wd-button type="primary" @click="closeQRCodeModal" block>完成</wd-button>
+        </view>
+      </view>
+    </wd-popup>
   </view>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .container {
   min-height: 100vh;
   background-color: #f5f7fa;
@@ -790,10 +897,8 @@ function getAttendanceRateClass(attendanceRate: number) {
 
 .action-row {
   display: flex;
-  justify-content: center;
-  margin-top: 20rpx;
-  padding-top: 15rpx;
-  border-top: 2rpx dashed #eee;
+  flex-wrap: wrap;
+  gap: 20rpx;
 }
 
 .course-header {
@@ -1209,5 +1314,86 @@ function getAttendanceRateClass(attendanceRate: number) {
 .student-name {
   font-size: 28rpx;
   color: #333;
+}
+
+// 添加二维码弹窗样式
+.qrcode-container {
+  padding: 40rpx;
+  
+  .qrcode-header {
+    text-align: center;
+    margin-bottom: 30rpx;
+    
+    .qrcode-title {
+      display: block;
+      font-size: 36rpx;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 10rpx;
+    }
+    
+    .qrcode-subtitle {
+      font-size: 26rpx;
+      color: #666;
+    }
+  }
+  
+  .qrcode-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 40rpx;
+    
+    .qrcode-image {
+      width: 400rpx;
+      height: 400rpx;
+      margin-bottom: 20rpx;
+      border: 1rpx solid #eee;
+      box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
+      border-radius: 12rpx;
+    }
+    
+    .qrcode-loading, .qrcode-error {
+      width: 400rpx;
+      height: 400rpx;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: #f9f9f9;
+      border-radius: 12rpx;
+      
+      text {
+        margin-top: 20rpx;
+        color: #666;
+        font-size: 28rpx;
+      }
+    }
+    
+    .course-qrinfo {
+      text-align: center;
+      margin-top: 20rpx;
+      background-color: rgba(106, 17, 203, 0.05);
+      padding: 16rpx 30rpx;
+      border-radius: 30rpx;
+      
+      .course-name {
+        display: block;
+        font-size: 32rpx;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 8rpx;
+      }
+      
+      .course-code {
+        font-size: 28rpx;
+        color: #666;
+      }
+    }
+  }
+  
+  .qrcode-actions {
+    margin-top: 20rpx;
+  }
 }
 </style>
