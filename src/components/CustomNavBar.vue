@@ -29,12 +29,12 @@ const props = defineProps({
   // 背景颜色（初始状态）
   backgroundColor: {
     type: String,
-    default: 'rgba(0, 0, 0, 0)', // 默认透明
+    default: '#6a11cb', // 默认导航栏背景颜色
   },
   // 滚动时的背景颜色
   scrolledBackgroundColor: {
     type: String,
-    default: 'rgba(0, 0, 0, 0.5)', // 默认半透明黑色
+    default: '#6a11cb', // 滚动时的导航栏背景颜色
   },
   // 标题颜色
   titleColor: {

@@ -5,12 +5,15 @@
 
 interface NavigateToOptions {
   url: "/pages/index" |
+       "/pages/all-courses/index" |
+       "/pages/course-detail/index" |
+       "/pages/create-checkin/index" |
+       "/pages/create-course/index" |
+       "/pages/join-course/index" |
        "/pages/login/index" |
        "/pages/my/index" |
        "/pages/register/index" |
-       "/pages/scanner/index" |
-       "/pages/student/index" |
-       "/pages/teacher/index";
+       "/pages/scanner/index";
 }
 interface RedirectToOptions extends NavigateToOptions {}
 

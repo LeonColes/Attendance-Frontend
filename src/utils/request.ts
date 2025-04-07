@@ -12,30 +12,50 @@ interface RequestOptions extends UniNamespace.RequestOptions {
 }
 
 // 接口基础URL
-const BASE_URL = 'http://localhost:8080/api'
+const BASE_URL = 'https://api.example.com'
 
 // token的存储键名
 const TOKEN_KEY = 'auth_token'
+
+// 安全获取uni对象
+function getSafeUni() {
+  return typeof window !== 'undefined' && window.uni ? window.uni : uni;
+}
 
 /**
  * 获取存储的token
  */
 export function getToken(): string {
-  return uni.getStorageSync(TOKEN_KEY) || ''
+  try {
+    return getSafeUni().getStorageSync(TOKEN_KEY) || '';
+  } catch (e) {
+    console.error('获取token失败', e);
+    return '';
+  }
 }
 
 /**
  * 设置token到本地存储
  */
 export function setToken(token: string) {
-  uni.setStorageSync(TOKEN_KEY, token)
+  if (!token) return;
+  
+  try {
+    getSafeUni().setStorageSync(TOKEN_KEY, token);
+  } catch (e) {
+    console.error('保存token失败', e);
+  }
 }
 
 /**
  * 清除token
  */
 export function removeToken() {
-  uni.removeStorageSync(TOKEN_KEY)
+  try {
+    getSafeUni().removeStorageSync(TOKEN_KEY);
+  } catch (e) {
+    console.error('移除token失败', e);
+  }
 }
 
 /**
@@ -58,7 +78,7 @@ function requestInterceptor(config: RequestOptions) {
 
   // 显示加载提示
   if (config.showLoading !== false) {
-    uni.showLoading({
+    getSafeUni().showLoading({
       title: '加载中...',
       mask: true,
     })
@@ -73,7 +93,7 @@ function requestInterceptor(config: RequestOptions) {
 function responseInterceptor<T>(response: UniNamespace.RequestSuccessCallbackResult, options: RequestOptions): BaseResponse<T> {
   // 隐藏加载提示
   if (options.showLoading !== false) {
-    uni.hideLoading()
+    getSafeUni().hideLoading()
   }
 
   const { statusCode, data } = response
@@ -89,7 +109,7 @@ function responseInterceptor<T>(response: UniNamespace.RequestSuccessCallbackRes
     removeToken()
 
     // 显示友好提示
-    uni.showToast({
+    getSafeUni().showToast({
       title: '登录已过期，请重新登录',
       icon: 'none',
       duration: 2000,
@@ -97,7 +117,7 @@ function responseInterceptor<T>(response: UniNamespace.RequestSuccessCallbackRes
 
     // 延迟跳转，让用户看到提示
     setTimeout(() => {
-      uni.reLaunch({ url: '/pages/login/index' })
+      getSafeUni().reLaunch({ url: '/pages/login/index' })
     }, 1500)
 
     throw new Error('登录已过期，请重新登录')
@@ -106,7 +126,7 @@ function responseInterceptor<T>(response: UniNamespace.RequestSuccessCallbackRes
   // 显示错误提示
   if (options.showError !== false) {
     const errMsg = (data as BaseResponse<T>)?.message || '请求失败'
-    uni.showToast({
+    getSafeUni().showToast({
       title: errMsg,
       icon: 'error',
     })
@@ -121,13 +141,13 @@ function responseInterceptor<T>(response: UniNamespace.RequestSuccessCallbackRes
 function errorHandler(error: any, options: RequestOptions) {
   // 隐藏加载提示
   if (options.showLoading !== false) {
-    uni.hideLoading()
+    getSafeUni().hideLoading()
   }
 
   // 显示错误提示
   if (options.showError !== false) {
     const errMsg = error.errMsg || error.message || '请求异常'
-    uni.showToast({
+    getSafeUni().showToast({
       title: errMsg,
       icon: 'error',
     })
@@ -143,7 +163,7 @@ function request<T = any>(options: RequestOptions): Promise<BaseResponse<T>> {
   const interceptedOptions = requestInterceptor(options)
 
   return new Promise((resolve, reject) => {
-    uni.request({
+    getSafeUni().request({
       ...interceptedOptions,
       success: (res) => {
         try {

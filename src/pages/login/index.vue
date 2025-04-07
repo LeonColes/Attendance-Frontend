@@ -47,54 +47,63 @@ const formData = reactive({
   password: '',
 })
 
-// 处理登录
+// 安全获取uni对象
+function getSafeUni() {
+  return typeof window !== 'undefined' && window.uni ? window.uni : uni;
+}
+
+// 登录操作
 async function handleLogin() {
-  // 表单验证
-  if (!formData.username) {
-    uni.showToast({
+  // 校验表单
+  if (!formData.username.trim()) {
+    getSafeUni().showToast({
       title: '请输入用户名',
-      icon: 'none',
+      icon: 'none'
     })
     return
   }
-
-  if (!formData.password) {
-    uni.showToast({
+  
+  if (!formData.password.trim()) {
+    getSafeUni().showToast({
       title: '请输入密码',
-      icon: 'none',
+      icon: 'none'
     })
     return
   }
-
+  
   try {
     loading.value = true
+    
+    // 调用登录API
     await userStore.login(formData)
-    uni.showToast({
+    
+    // 处理登录成功
+    getSafeUni().showToast({
       title: '登录成功',
-      icon: 'success',
+      icon: 'success'
     })
-
+    
     // 跳转到首页
-    uni.switchTab({
-      url: '/pages/index',
+    setTimeout(() => {
+      getSafeUni().switchTab({
+        url: '/pages/index'
+      })
+    }, 1500)
+  } catch (error) {
+    console.error('登录失败', error)
+    getSafeUni().showToast({
+      title: '登录失败，请检查用户名和密码',
+      icon: 'none'
     })
-  }
-  catch (error: any) {
-    console.error('登录失败:', error)
-    uni.showToast({
-      title: error.message || '登录失败，请重试',
-      icon: 'error',
-    })
-  }
-  finally {
+  } finally {
     loading.value = false
   }
 }
 
 // 跳转到注册页面
-function goRegister() {
-  uni.navigateTo({
-    url: '/pages/register/index',
+function goToRegister() {
+  getSafeUni().navigateTo({
+    url: '/pages/register/index'
   })
 }
 </script>
@@ -161,7 +170,7 @@ function goRegister() {
         </view>
 
         <view class="form-links">
-          <text class="link" @click="goRegister">
+          <text class="link" @click="goToRegister">
             注册账号
           </text>
           <text class="link">

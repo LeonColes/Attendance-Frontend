@@ -1,133 +1,157 @@
+/**
+ * 用户状态管理
+ */
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { login, type LoginParams, type LoginResponseData, type BaseResponse } from '@/api/auth'
-import { setToken, getToken, removeToken } from '@/utils/request'
+import { login, getUserInfo } from '@/api/user'
+import type { LoginParams, UserInfo } from '@/api/user'
+
+// 安全获取uni对象
+function getSafeUni() {
+  return typeof window !== 'undefined' && window.uni ? window.uni : uni
+}
 
 export const useUserStore = defineStore('user', () => {
-  // 用户信息状态
-  const token = ref<string>('')
-  const userId = ref<string>('')
-  const username = ref<string>('')
-  const fullName = ref<string>('')
-  const role = ref<string>('')
-  const isLoggedIn = ref<boolean>(false)
-
-  /**
-   * 设置用户登录状态
-   */
-  function setLoginState(data: LoginResponseData) {
-    token.value = data.accessToken
-    userId.value = data.userId
-    username.value = data.username
-    fullName.value = data.fullName
-    role.value = data.role
-    isLoggedIn.value = true
-
-    // 存储到本地存储，使用与请求模块相同的键名
-    setToken(data.accessToken) // 使用accessToken而非token
-    uni.setStorageSync('user_info', {
-      userId: data.userId,
-      username: data.username,
-      fullName: data.fullName,
-      role: data.role,
-    })
-  }
-
-  /**
-   * 登录操作
-   */
+  // 用户信息
+  const token = ref('')
+  const userId = ref('')
+  const username = ref('')
+  const fullName = ref('')
+  const role = ref('')
+  const userInfo = ref<UserInfo | null>(null)
+  
+  // 计算属性：是否已登录
+  const isLoggedIn = ref(false)
+  
+  // 登录
   async function loginAction(params: LoginParams) {
     try {
       const response = await login(params)
-      if (response && response.data) {
-        setLoginState(response.data)
-        return response.data
+      
+      if (response && response.code === 200) {
+        const data = response.data
+        
+        // 存储令牌和用户信息
+        token.value = data.token
+        userId.value = data.userId
+        username.value = data.username
+        fullName.value = data.fullName || data.username
+        role.value = data.role
+        userInfo.value = data
+        
+        // 更新登录状态
+        isLoggedIn.value = true
+        
+        // 保存令牌到本地存储
+        getSafeUni().setStorageSync('token', data.token)
+        
+        return true
+      } else {
+        return false
       }
-      throw new Error('登录失败：未获取到用户数据')
-    } 
-    catch (error) {
+    } catch (error) {
       console.error('登录失败:', error)
-      throw error
+      return false
     }
   }
-
-  /**
-   * 恢复登录状态
-   */
-  function restoreLoginState() {
-    const storedToken = getToken() // 使用request模块的getToken函数
-    const storedUserInfo = uni.getStorageSync('user_info')
+  
+  // 获取用户信息
+  async function getUserInfoAction() {
+    try {
+      // 获取存储的令牌
+      const savedToken = getSafeUni().getStorageSync('token')
+      
+      if (!savedToken) {
+        clearUserInfo()
+        return false
+      }
+      
+      token.value = savedToken
+      
+      // 请求用户信息
+      const response = await getUserInfo()
+      
+      if (response && response.code === 200) {
+        const data = response.data
+        
+        // 更新用户信息
+        userId.value = data.userId
+        username.value = data.username
+        fullName.value = data.fullName || data.username
+        role.value = data.role
+        userInfo.value = data
+        
+        // 更新登录状态
+        isLoggedIn.value = true
+        
+        return true
+      } else {
+        clearUserInfo()
+        return false
+      }
+    } catch (error) {
+      console.error('获取用户信息失败:', error)
+      clearUserInfo()
+      return false
+    }
+  }
+  
+  // 检查登录状态
+  function checkLogin() {
+    // 获取存储的令牌
+    const savedToken = getSafeUni().getStorageSync('token')
     
-    if (storedToken && storedUserInfo) {
-      token.value = storedToken
-      userId.value = storedUserInfo.userId
-      username.value = storedUserInfo.username
-      fullName.value = storedUserInfo.fullName
-      role.value = storedUserInfo.role
-      isLoggedIn.value = true
-      return true
+    if (!savedToken) {
+      clearUserInfo()
+      return false
     }
     
-    return false
+    token.value = savedToken
+    isLoggedIn.value = true
+    
+    return true
   }
-
-  /**
-   * 登出操作
-   */
+  
+  // 登出
   function logout() {
-    // 清除内存中的状态
+    clearUserInfo()
+    clearToken()
+    
+    // 跳转到登录页
+    getSafeUni().reLaunch({
+      url: '/pages/login/index'
+    })
+  }
+  
+  // 清除用户信息
+  function clearUserInfo() {
     token.value = ''
     userId.value = ''
     username.value = ''
     fullName.value = ''
     role.value = ''
+    userInfo.value = null
     isLoggedIn.value = false
-
-    // 清除存储
-    removeToken() // 使用request模块的removeToken函数
-    uni.removeStorageSync('user_info')
-
-    // 返回登录页
-    uni.reLaunch({
-      url: '/pages/login/index'
-    })
   }
-
-  /**
-   * 检查用户是否已登录
-   */
-  function checkLogin(): boolean {
-    // 如果内存中没有登录状态，尝试从本地存储恢复
-    if (!isLoggedIn.value) {
-      return restoreLoginState()
-    }
-    return isLoggedIn.value
+  
+  // 清除令牌
+  function clearToken() {
+    getSafeUni().removeStorageSync('token')
   }
-
-  /**
-   * 获取用户角色
-   */
-  function getUserRole(): string {
-    if (!isLoggedIn.value) {
-      restoreLoginState()
-    }
-    return role.value
-  }
-
+  
   return {
-    // 状态
     token,
     userId,
     username,
     fullName,
     role,
+    userInfo,
     isLoggedIn,
-    
-    // 方法
     login: loginAction,
-    logout,
+    getUserInfo: getUserInfoAction,
     checkLogin,
-    getUserRole,
-    restoreLoginState,
+    logout,
+    clearUserInfo,
+    clearToken
   }
 })

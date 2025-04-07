@@ -3,10 +3,48 @@
     {
       "path": "pages/index",
       "type": "home",
-      "layout": "tabbar",
-      "name": "home",
       "style": {
-        "navigationBarTitleText": "智能考勤"
+        "navigationBarTitleText": "我的课程"
+      }
+    },
+    {
+      "path": "pages/all-courses/index",
+      "type": "page",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "其他课程"
+      }
+    },
+    {
+      "path": "pages/course-detail/index",
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "课程详情",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/create-checkin/index",
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "创建签到",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/create-course/index",
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "创建课程",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/join-course/index",
+      "type": "page",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "加入课程"
       }
     },
     {
@@ -17,9 +55,9 @@
       "path": "pages/my/index",
       "type": "page",
       "layout": "tabbar",
-      "name": "setting",
+      "name": "my",
       "style": {
-        "navigationBarTitleText": "我的"
+        "navigationBarTitleText": "个人中心"
       }
     },
     {
@@ -31,16 +69,8 @@
       "type": "page",
       "style": {
         "navigationStyle": "custom",
-        "backgroundColor": "#000000"
+        "navigationBarTitleText": "扫码签到"
       }
-    },
-    {
-      "path": "pages/student/index",
-      "type": "page"
-    },
-    {
-      "path": "pages/teacher/index",
-      "type": "page"
     }
   ],
   "globalStyle": {
