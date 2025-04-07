@@ -10,7 +10,7 @@
 <script lang="ts" setup>
 import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/store/user'
-import { getCourseList } from '@/api/course'
+import { getCourseList } from '@/api/courses'
 import type { PageQueryParams } from '@/api/attendance'
 
 // 安全获取uni对象

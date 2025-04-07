@@ -82,13 +82,10 @@ async function handleLogin() {
       title: '登录成功',
       icon: 'success'
     })
-    
     // 跳转到首页
-    setTimeout(() => {
-      getSafeUni().switchTab({
-        url: '/pages/index'
-      })
-    }, 1500)
+    uni.reLaunch({
+      url: '/pages/index'
+    })
   } catch (error) {
     console.error('登录失败', error)
     getSafeUni().showToast({

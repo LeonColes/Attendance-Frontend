@@ -119,8 +119,15 @@ function logout() {
     success: (res) => {
       if (res.confirm) {
         userStore.logout()
-        getSafeUni().reLaunch({
-          url: '/pages/login/index'
+        getSafeUni().navigateTo({
+          url: '/pages/login/index',
+          fail: (err) => {
+            console.error('导航到登录页失败:', err)
+            // 备选方案
+            getSafeUni().redirectTo({
+              url: '/pages/login/index'
+            })
+          }
         })
       }
     }

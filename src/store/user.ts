@@ -154,9 +154,20 @@ export const useUserStore = defineStore('user', () => {
     getSafeUni().removeStorageSync('userInfo')
     
     // 跳转到登录页
-    getSafeUni().reLaunch({
+    // #ifdef MP-WEIXIN
+    // 微信小程序中避免使用可能导致超时的方法
+    setTimeout(() => {
+      getSafeUni().reLaunch({
+        url: '/pages/login/index'
+      })
+    }, 50)
+    // #endif
+
+    // #ifndef MP-WEIXIN
+    getSafeUni().redirectTo({
       url: '/pages/login/index'
     })
+    // #endif
   }
   
   // 清除用户信息

@@ -132,16 +132,24 @@ async function submitForm() {
 
 // 导航到首页
 function navigateToHome() {
-  uni.switchTab({
-    url: '/pages/index',
-    fail: (err) => {
-      console.error('导航失败:', err)
-      // 如果导航失败，尝试另一种方式
+  // 尝试返回上一页
+  uni.navigateBack({
+    delta: 1,
+    fail: () => {
+      // 如果返回失败，使用特定平台的导航方法
+      // #ifdef MP-WEIXIN
       setTimeout(() => {
         uni.reLaunch({
           url: '/pages/index'
         })
-      }, 100)
+      }, 50)
+      // #endif
+      
+      // #ifndef MP-WEIXIN
+      uni.switchTab({
+        url: '/pages/index'
+      })
+      // #endif
     }
   })
 }
@@ -150,10 +158,20 @@ function navigateToHome() {
 function goBack() {
   uni.navigateBack({
     fail: () => {
-      // 如果返回失败，则转到主页
+      // 如果返回失败，使用特定平台的导航方法
+      // #ifdef MP-WEIXIN
+      setTimeout(() => {
+        uni.reLaunch({
+          url: '/pages/index'
+        })
+      }, 50)
+      // #endif
+      
+      // #ifndef MP-WEIXIN
       uni.switchTab({
         url: '/pages/index'
       })
+      // #endif
     }
   })
 }

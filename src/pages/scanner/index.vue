@@ -413,9 +413,19 @@ async function submitCheckIn(checkInId: string) {
     
     // 返回首页
     setTimeout(() => {
+      // #ifdef MP-WEIXIN
+      // 微信小程序中使用reLaunch避免switchTab超时问题
+      getSafeUni().reLaunch({
+        url: '/pages/index'
+      })
+      // #endif
+      
+      // #ifndef MP-WEIXIN
+      // 简化导航，只使用单一方法，不使用备选方案
       getSafeUni().switchTab({
         url: '/pages/index'
       })
+      // #endif
     }, 1500)
   } catch (error) {
     console.error('提交考勤失败:', error)
