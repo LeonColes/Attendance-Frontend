@@ -10,6 +10,7 @@
 <script lang="ts" setup>
 import { ref, computed, reactive, onMounted, watch } from 'vue'
 import { useUserStore } from '@/store/user'
+import { getCourseList } from '@/api/courses'
 
 // 安全获取uni对象
 function getSafeUni() {
@@ -34,8 +35,8 @@ const completedCourses = ref<any[]>([])
 const otherCourses = ref<any[]>([])
 
 // 计算属性：用户身份
-const isTeacher = computed(() => userStore.userInfo?.role === 'teacher')
-const isStudent = computed(() => userStore.userInfo?.role === 'student')
+const isTeacher = computed(() => userStore.userInfo?.role === 'TEACHER')
+const isStudent = computed(() => userStore.userInfo?.role === 'STUDENT')
 
 // 获取系统信息
 function getSystemInfo() {
@@ -147,18 +148,23 @@ async function loadCourseData() {
   try {
     coursesLoading.value = true
     
-    // 模拟API调用获取课程列表
-    // 实际应用中，应该调用真实的API
-    const response = mockFetchCourses()
+    // 调用真实API获取课程列表
+    const response = await getCourseList({
+      page: 0,
+      size: 50,
+      sort: [{ field: 'createdAt', direction: 'DESC' }],
+      filters: {}
+    })
     
     if (response && response.code === 200) {
-      const courses = response.data || []
+      const courses = response.data.courses || []
+      console.log('获取到课程数据:', courses)
       
       // 根据课程状态分类
-      activeCourses.value = courses.filter((course: any) => course.status === 'active')
-      completedCourses.value = courses.filter((course: any) => course.status === 'completed')
-      otherCourses.value = courses.filter((course: any) => 
-        course.status !== 'active' && course.status !== 'completed'
+      activeCourses.value = courses.filter((course) => course.status === 'ACTIVE')
+      completedCourses.value = courses.filter((course) => course.status === 'COMPLETED')
+      otherCourses.value = courses.filter((course) => 
+        course.status !== 'ACTIVE' && course.status !== 'COMPLETED'
       )
       
       // 更新计数
@@ -241,139 +247,6 @@ function formatDate(dateString: string) {
   const day = String(date.getDate()).padStart(2, '0')
   
   return `${year}-${month}-${day}`
-}
-
-// 模拟API调用获取课程列表
-function mockFetchCourses() {
-  // 老师的课程数据
-  const teacherCourses = [
-    {
-      id: '1',
-      name: '高等数学（上）',
-      description: '本课程介绍微积分的基本概念和应用',
-      cover: '/static/images/course1.jpg',
-      startDate: '2025-04-01',
-      endDate: '2025-06-30',
-      status: 'active',
-      students: 45,
-      checkins: 8
-    },
-    {
-      id: '2',
-      name: '线性代数',
-      description: '学习矩阵运算和向量空间等基础内容',
-      cover: '/static/images/course2.jpg',
-      startDate: '2025-03-01',
-      endDate: '2025-06-15',
-      status: 'active',
-      students: 38,
-      checkins: 12
-    },
-    {
-      id: '3',
-      name: '概率论与数理统计',
-      description: '概率论基础知识与统计学方法',
-      cover: '/static/images/course3.jpg',
-      startDate: '2025-09-01',
-      endDate: '2025-12-30',
-      status: 'not_started',
-      students: 0,
-      checkins: 0
-    },
-    {
-      id: '4',
-      name: '离散数学',
-      description: '离散结构的性质与应用',
-      cover: '/static/images/course4.jpg',
-      startDate: '2024-09-01',
-      endDate: '2024-12-30',
-      status: 'completed',
-      students: 42,
-      checkins: 16
-    },
-    {
-      id: '5',
-      name: '高等数学（下）',
-      description: '多元微积分与常微分方程',
-      cover: '/static/images/default-course.jpg',
-      startDate: '2024-08-15',
-      endDate: '2024-01-15',
-      status: 'completed',
-      students: 40,
-      checkins: 15
-    }
-  ]
-  
-  // 学生的课程数据
-  const studentCourses = [
-    {
-      id: '1',
-      name: '高等数学（上）',
-      description: '本课程介绍微积分的基本概念和应用',
-      cover: '/static/images/default-course.jpg',
-      teacher: '张教授',
-      startDate: '2025-04-01',
-      endDate: '2025-06-30',
-      status: 'active',
-      attendance: 8,
-      totalCheckins: 8
-    },
-    {
-      id: '2',
-      name: '线性代数',
-      description: '学习矩阵运算和向量空间等基础内容',
-      cover: '/static/images/default-course.jpg',
-      teacher: '李教授',
-      startDate: '2025-03-01',
-      endDate: '2025-06-15',
-      status: 'active',
-      attendance: 10,
-      totalCheckins: 12
-    },
-    {
-      id: '3',
-      name: '概率论与数理统计',
-      description: '概率论基础知识与统计学方法',
-      cover: '/static/images/default-course.jpg',
-      teacher: '王教授',
-      startDate: '2025-09-01',
-      endDate: '2025-12-30',
-      status: 'not_started',
-      attendance: 0,
-      totalCheckins: 0
-    },
-    {
-      id: '4',
-      name: '离散数学',
-      description: '离散结构的性质与应用',
-      cover: '/static/images/default-course.jpg',
-      teacher: '刘教授',
-      startDate: '2024-09-01',
-      endDate: '2024-12-30',
-      status: 'completed',
-      attendance: 15,
-      totalCheckins: 16
-    },
-    {
-      id: '5',
-      name: '高等数学（下）',
-      description: '多元微积分与常微分方程',
-      cover: '/static/images/default-course.jpg',
-      teacher: '赵教授',
-      startDate: '2024-08-15',
-      endDate: '2024-01-15',
-      status: 'completed',
-      attendance: 14,
-      totalCheckins: 15
-    }
-  ]
-  
-  // 根据用户角色返回不同数据
-  return {
-    code: 200,
-    message: '获取成功',
-    data: isTeacher.value ? teacherCourses : studentCourses
-  }
 }
 </script>
 
@@ -473,7 +346,7 @@ function mockFetchCourses() {
           >
             <!-- @ts-ignore -->
             <view class="course-card-cover">
-              <image :src="'https://picsum.photos/500/300?random=' + course.id" mode="aspectFill" />
+              <image :src="'https://picsum.photos/500/300?random=' + course.id.slice(0, 8)" mode="aspectFill" />
               <!-- @ts-ignore -->
               <view class="course-status active">进行中</view>
             </view>
@@ -492,13 +365,7 @@ function mockFetchCourses() {
                 <view class="meta-item">
                   <wd-icon name="people" size="28rpx" color="#6a11cb" />
                   <!-- @ts-ignore -->
-                  <text>{{ course.students }}人</text>
-                </view>
-                <!-- @ts-ignore -->
-                <view class="meta-item">
-                  <wd-icon name="check2" size="28rpx" color="#6a11cb" />
-                  <!-- @ts-ignore -->
-                  <text>{{ course.checkins }}次考勤</text>
+                  <text>{{ course.memberCount || 0 }}人</text>
                 </view>
               </view>
               
@@ -509,13 +376,7 @@ function mockFetchCourses() {
                 <view class="meta-item">
                   <wd-icon name="user" size="28rpx" color="#6a11cb" />
                   <!-- @ts-ignore -->
-                  <text>{{ course.teacher }}</text>
-                </view>
-                <!-- @ts-ignore -->
-                <view class="meta-item">
-                  <wd-icon name="check-circle" size="28rpx" color="#6a11cb" />
-                  <!-- @ts-ignore -->
-                  <text>已签到{{ course.attendance }}/{{ course.totalCheckins }}次</text>
+                  <text>{{ course.creatorFullName || course.creatorUsername || '未知教师' }}</text>
                 </view>
               </view>
               
@@ -523,7 +384,7 @@ function mockFetchCourses() {
               <view class="course-time">
                 <wd-icon name="calendar" size="28rpx" color="#999" />
                 <!-- @ts-ignore -->
-                <text>{{ formatDate(course.startDate) }} 至 {{ formatDate(course.endDate) }}</text>
+                <text>{{ formatDate(course.startDate) }} ~ {{ formatDate(course.endDate) }}</text>
               </view>
             </view>
           </view>
@@ -535,22 +396,29 @@ function mockFetchCourses() {
           <wd-icon name="info-outline" size="120rpx" color="#cccccc" />
           <!-- @ts-ignore -->
           <text class="empty-text">暂无进行中的课程</text>
-          <wd-button 
-            v-if="isTeacher" 
-            type="primary" 
-            @click="createCourse" 
-            custom-style="margin-top: 40rpx;"
-          >
-            创建课程
-          </wd-button>
-          <wd-button 
-            v-else-if="isStudent" 
-            type="primary" 
-            @click="joinCourse" 
-            custom-style="margin-top: 40rpx;"
-          >
-            加入课程
-          </wd-button>
+          
+          <!-- 引导按钮 -->
+          <!-- @ts-ignore -->
+          <view class="action-button-container">
+            <wd-button
+              v-if="isTeacher"
+              type="primary"
+              size="medium"
+              custom-style="margin-top: 40rpx;"
+              @click="createCourse"
+            >
+              创建课程
+            </wd-button>
+            <wd-button
+              v-else-if="isStudent"
+              type="primary"
+              size="medium"
+              custom-style="margin-top: 40rpx;"
+              @click="joinCourse"
+            >
+              加入课程
+            </wd-button>
+          </view>
         </view>
       </template>
       
@@ -567,7 +435,7 @@ function mockFetchCourses() {
           >
             <!-- @ts-ignore -->
             <view class="course-card-cover">
-              <image :src="'https://picsum.photos/500/300?random=' + course.id" mode="aspectFill" />
+              <image :src="'https://picsum.photos/500/300?random=' + course.id.slice(0, 8)" mode="aspectFill" />
               <!-- @ts-ignore -->
               <view class="course-status completed">已结课</view>
             </view>
@@ -586,13 +454,7 @@ function mockFetchCourses() {
                 <view class="meta-item">
                   <wd-icon name="people" size="28rpx" color="#6a11cb" />
                   <!-- @ts-ignore -->
-                  <text>{{ course.students }}人</text>
-                </view>
-                <!-- @ts-ignore -->
-                <view class="meta-item">
-                  <wd-icon name="check2" size="28rpx" color="#6a11cb" />
-                  <!-- @ts-ignore -->
-                  <text>{{ course.checkins }}次考勤</text>
+                  <text>{{ course.memberCount || 0 }}人</text>
                 </view>
               </view>
               
@@ -603,13 +465,7 @@ function mockFetchCourses() {
                 <view class="meta-item">
                   <wd-icon name="user" size="28rpx" color="#6a11cb" />
                   <!-- @ts-ignore -->
-                  <text>{{ course.teacher }}</text>
-                </view>
-                <!-- @ts-ignore -->
-                <view class="meta-item">
-                  <wd-icon name="check-circle" size="28rpx" color="#6a11cb" />
-                  <!-- @ts-ignore -->
-                  <text>已签到{{ course.attendance }}/{{ course.totalCheckins }}次</text>
+                  <text>{{ course.creatorFullName || course.creatorUsername || '未知教师' }}</text>
                 </view>
               </view>
               
@@ -617,7 +473,7 @@ function mockFetchCourses() {
               <view class="course-time">
                 <wd-icon name="calendar" size="28rpx" color="#999" />
                 <!-- @ts-ignore -->
-                <text>{{ formatDate(course.startDate) }} 至 {{ formatDate(course.endDate) }}</text>
+                <text>{{ formatDate(course.startDate) }} ~ {{ formatDate(course.endDate) }}</text>
               </view>
             </view>
           </view>

@@ -91,7 +91,7 @@ export default {
 
 <template>
   <view>
-    <wd-popup v-model="showPopup" :close-on-click-modal="false" custom-class="wd-privacy-popup" @close="handleClose">
+    <wd-popup v-model="showPopup" :close-on-click-modal="false" custom-class="privacy-deep" @close="handleClose">
       <view class="wd-privacy-popup__header">
         <!-- 标题 -->
         <view class="wd-picker__title">
@@ -106,9 +106,9 @@ export default {
         <text>{{ subDesc }}</text>
       </view>
       <view class="wd-privacy-popup__footer">
-        <button id="disagree-btn" class="is-block is-round is-medium is-plain wd-privacy-popup__footer-disagree wd-button" @click="handleDisagree">
+        <view id="disagree-btn" class="is-block is-round is-medium is-plain wd-privacy-popup__footer-disagree wd-button" @click="handleDisagree">
           拒绝
-        </button>
+        </view>
         <button
           id="agree-btn"
           class="wd-button is-block is-round is-medium is-primary wd-privacy-popup__footer-agree"
@@ -124,7 +124,7 @@ export default {
 
 <style lang="scss" scoped>
 @import 'wot-design-uni/components/wd-button/index.scss';
-:deep(.wd-privacy-popup) {
+.privacy-deep {
   width: 600rpx;
   padding: 0 24rpx;
   box-sizing: border-box;
@@ -164,7 +164,7 @@ export default {
     justify-content: space-between;
     padding-bottom: 36rpx;
 
-    button {
+    &-agree, &-disagree {
       border: none;
       outline: none;
     }

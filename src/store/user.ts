@@ -4,7 +4,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { login, getUserInfo } from '@/api/user'
-import type { LoginParams, UserInfo } from '@/api/user'
+import type { LoginParams, UserInfo, AuthResponse } from '@/api/user'
+import { setToken, removeToken } from '@/utils/request'
 
 // 安全获取uni对象
 function getSafeUni() {
@@ -32,18 +33,23 @@ export const useUserStore = defineStore('user', () => {
         const data = response.data
         
         // 存储令牌和用户信息
-        token.value = data.token
+        token.value = data.accessToken || ''
         userId.value = data.userId
         username.value = data.username
         fullName.value = data.fullName || data.username
         role.value = data.role
-        userInfo.value = data
+        userInfo.value = {
+          userId: data.userId,
+          username: data.username,
+          fullName: data.fullName || data.username,
+          role: data.role
+        }
         
         // 更新登录状态
         isLoggedIn.value = true
         
         // 保存令牌到本地存储
-        getSafeUni().setStorageSync('token', data.token)
+        setToken(data)
         
         return true
       } else {
@@ -58,17 +64,29 @@ export const useUserStore = defineStore('user', () => {
   // 获取用户信息
   async function getUserInfoAction() {
     try {
-      // 获取存储的令牌
-      const savedToken = getSafeUni().getStorageSync('token')
+      // 尝试从localStorage获取用户信息
+      const savedUserInfo = getSafeUni().getStorageSync('userInfo')
       
-      if (!savedToken) {
-        clearUserInfo()
-        return false
+      if (savedUserInfo) {
+        try {
+          const userInfoData = JSON.parse(savedUserInfo)
+          // 更新用户信息
+          userId.value = userInfoData.userId
+          username.value = userInfoData.username
+          fullName.value = userInfoData.fullName || userInfoData.username
+          role.value = userInfoData.role
+          userInfo.value = userInfoData
+          
+          // 更新登录状态
+          isLoggedIn.value = true
+          
+          return true
+        } catch (e) {
+          console.error('解析用户信息失败:', e)
+        }
       }
       
-      token.value = savedToken
-      
-      // 请求用户信息
+      // 如果没有缓存或解析失败，则请求用户信息
       const response = await getUserInfo()
       
       if (response && response.code === 200) {
@@ -84,6 +102,9 @@ export const useUserStore = defineStore('user', () => {
         // 更新登录状态
         isLoggedIn.value = true
         
+        // 保存用户信息到本地存储
+        getSafeUni().setStorageSync('userInfo', JSON.stringify(data))
+        
         return true
       } else {
         clearUserInfo()
@@ -98,24 +119,39 @@ export const useUserStore = defineStore('user', () => {
   
   // 检查登录状态
   function checkLogin() {
-    // 获取存储的令牌
-    const savedToken = getSafeUni().getStorageSync('token')
+    // 获取存储的用户信息
+    const savedUserInfo = getSafeUni().getStorageSync('userInfo')
     
-    if (!savedToken) {
-      clearUserInfo()
-      return false
+    if (savedUserInfo) {
+      try {
+        const userInfoData = JSON.parse(savedUserInfo)
+        // 更新用户信息
+        userId.value = userInfoData.userId
+        username.value = userInfoData.username
+        fullName.value = userInfoData.fullName || userInfoData.username
+        role.value = userInfoData.role
+        userInfo.value = userInfoData
+        
+        // 更新登录状态
+        isLoggedIn.value = true
+        
+        return true
+      } catch (e) {
+        console.error('解析用户信息失败:', e)
+        clearUserInfo()
+        return false
+      }
     }
     
-    token.value = savedToken
-    isLoggedIn.value = true
-    
-    return true
+    clearUserInfo()
+    return false
   }
   
   // 登出
   function logout() {
     clearUserInfo()
-    clearToken()
+    removeToken()
+    getSafeUni().removeStorageSync('userInfo')
     
     // 跳转到登录页
     getSafeUni().reLaunch({
@@ -134,11 +170,6 @@ export const useUserStore = defineStore('user', () => {
     isLoggedIn.value = false
   }
   
-  // 清除令牌
-  function clearToken() {
-    getSafeUni().removeStorageSync('token')
-  }
-  
   return {
     token,
     userId,
@@ -151,7 +182,6 @@ export const useUserStore = defineStore('user', () => {
     getUserInfo: getUserInfoAction,
     checkLogin,
     logout,
-    clearUserInfo,
-    clearToken
+    clearUserInfo
   }
 })

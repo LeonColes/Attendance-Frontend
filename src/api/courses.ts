@@ -1,5 +1,5 @@
 import { post, get } from '@/utils/request'
-import { PageQueryParams } from './attendance'
+import type { PageQueryParams } from './attendance'
 
 /**
  * 课程信息
@@ -10,11 +10,15 @@ export interface Course {
   description: string
   creatorId: string
   creatorFullName: string
+  creatorUsername: string
   code: string
   status: string
   memberCount: number
   startDate: string
   endDate: string
+  type: string
+  createdAt: string
+  updatedAt: string
 }
 
 /**
@@ -45,7 +49,7 @@ export interface CourseCreateParams {
 export function getCourseList(params: PageQueryParams) {
   return post<{
     totalItems: number
-    items: Course[]
+    courses: Course[]
     totalPages: number
     currentPage: number
   }>('/api/courses/list', params)
@@ -92,13 +96,19 @@ export function getCourseDetail(courseId: string) {
 export function getCourseMemberList(courseId: string, params: PageQueryParams) {
   return post<{
     totalItems: number
-    items: {
+    users: {
       id: string
       userId: string
       username: string
       fullName: string
       role: string
-      joinTime: string
+      email: string
+      phone: string | null
+      avatarUrl: string | null
+      bio: string | null
+      enabled: boolean
+      createdAt: string
+      updatedAt: string
     }[]
     totalPages: number
     currentPage: number
@@ -132,9 +142,11 @@ export function updateCourse(courseId: string, params: Partial<CourseCreateParam
 }
 
 /**
- * 生成新的邀请码（教师）
+ * 获取课程邀请二维码（教师）
  * @param courseId 课程ID
  */
-export function refreshInviteCode(courseId: string) {
-  return post<{ code: string }>(`/api/courses/refresh-code?id=${courseId}`)
+export function getCourseQRCode(courseId: string) {
+  return get<Blob>(`/api/courses/qrcode?courseId=${courseId}`, {
+    responseType: 'blob',
+  })
 } 

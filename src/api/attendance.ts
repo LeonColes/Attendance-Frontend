@@ -16,6 +16,7 @@ export enum CheckInType {
   QR_CODE = 'QR_CODE',
   LOCATION = 'LOCATION',
   WIFI = 'WIFI',
+  MANUAL = 'MANUAL',
 }
 
 /**
@@ -26,6 +27,10 @@ export enum RecordStatus {
   LATE = 'LATE',
   ABSENT = 'ABSENT',
   LEAVE = 'LEAVE',
+  CHECKED_IN = 'CHECKED_IN',
+  NOT_STARTED = 'NOT_STARTED',
+  PENDING = 'PENDING',
+  MISSED = 'MISSED',
 }
 
 /**
@@ -55,8 +60,9 @@ export interface CheckinTask {
   checkinType: string
   parentCourseId: string
   creatorId?: string
-  personalStatus?: string
-  displayStatus?: string
+  attendanceStatus?: string
+  createdAt: string
+  updatedAt: string
 }
 
 /**
@@ -71,7 +77,6 @@ export interface CheckinRecord {
   device: string
   location?: string
   verifyMethod: string
-  displayStatus: string
 }
 
 /**
@@ -84,6 +89,17 @@ export interface CheckinStatistics {
   normalCount: number
   lateCount: number
   attendanceRate: number
+  absentStudents: {
+    userId: string
+    username: string
+    fullName: string
+  }[]
+  presentStudents: string[]
+  title: string
+  startTime: string
+  endTime: string
+  status: string
+  checkinType: string
 }
 
 /**
@@ -103,6 +119,11 @@ export interface CheckinSubmitParams {
 export interface PageQueryParams {
   page: number
   size: number
+  sort?: Array<{
+    field: string
+    direction: string
+  }>
+  filters?: Record<string, any>
 }
 
 /**
@@ -110,7 +131,7 @@ export interface PageQueryParams {
  * @param params 签到任务参数
  */
 export function createCheckin(params: CheckinCreateParams) {
-  return post<CheckinTask>('/courses/attendance/create', params)
+  return post<CheckinTask>('/api/courses/attendance/create', params)
 }
 
 /**
@@ -124,7 +145,20 @@ export function getCheckinList(courseId: string, params: PageQueryParams) {
     items: CheckinTask[]
     totalPages: number
     currentPage: number
-  }>(`/courses/attendance/list?courseId=${courseId}`, params)
+    courseInfo: {
+      id: string
+      name: string
+      description: string
+      creatorId: string
+      creatorUsername: string
+      creatorFullName: string
+      code: string
+      startDate: string
+      endDate: string
+      type: string
+      status: string
+    }
+  }>(`/api/courses/attendance/list?courseId=${courseId}`, params)
 }
 
 /**
@@ -132,7 +166,7 @@ export function getCheckinList(courseId: string, params: PageQueryParams) {
  * @param checkinId 签到任务ID
  */
 export function getCheckinQRCode(checkinId: string) {
-  return get<Blob>(`/courses/attendance/qrcode?checkinId=${checkinId}`, {
+  return get<Blob>(`/api/courses/attendance/qrcode?checkinId=${checkinId}`, {
     responseType: 'blob',
   })
 }
@@ -142,7 +176,7 @@ export function getCheckinQRCode(checkinId: string) {
  * @param params 签到参数
  */
 export function submitCheckin(params: CheckinSubmitParams) {
-  return post<CheckinRecord>('/courses/attendance/check-in', params)
+  return post<CheckinRecord>('/api/courses/attendance/check-in', params)
 }
 
 /**
@@ -153,32 +187,22 @@ export function submitCheckin(params: CheckinSubmitParams) {
 export function getStudentCheckinStatus(courseId: string, params: PageQueryParams) {
   return post<{
     totalItems: number
-    records: {
-      checkinId: string
-      checkinName: string
-      status: string
-      checkInTime: string
-      startTime: string
-      endTime: string
-      checkinType: string
-      displayStatus: string
-    }[]
+    records: string[]
     totalPages: number
     currentPage: number
     courseInfo: {
       id: string
       name: string
       description: string
+      creatorId: string
+      status: string
     }
-    personalStats: {
-      totalCheckins: number
-      attendedCount: number
-      normalCount: number
-      lateCount: number
-      absentCount: number
-      attendanceRate: number
+    userInfo: {
+      id: string
+      username: string
+      fullName: string
     }
-  }>(`/courses/attendance/record/status?courseId=${courseId}`, params)
+  }>(`/api/courses/attendance/record/status?courseId=${courseId}`, params)
 }
 
 /**
@@ -200,16 +224,7 @@ export function getCheckinRecordList(checkinId: string, params: PageQueryParams)
     }[]
     totalPages: number
     currentPage: number
-    checkinInfo: {
-      id: string
-      name: string
-      description: string
-      status: string
-      checkinStartTime: string
-      checkinEndTime: string
-    }
-    statistics: CheckinStatistics
-  }>(`/courses/attendance/record/list?checkinId=${checkinId}`, params)
+  }>(`/api/courses/attendance/record/list?checkinId=${checkinId}`, params)
 }
 
 /**
@@ -219,43 +234,24 @@ export function getCheckinRecordList(checkinId: string, params: PageQueryParams)
  */
 export function getCheckinStatistics(checkinId: string, params: PageQueryParams) {
   return post<{
-    statistics: {
-      checkinId: string
-      title: string
-      description: string
-      startTime: string
-      endTime: string
-      status: string
-      checkinType: string
-      totalStudents: number
-      presentCount: number
-      absentCount: number
-      normalCount: number
-      lateCount: number
-      attendanceRate: number
-      absentStudents: {
-        userId: string
-        username: string
-        fullName: string
-      }[]
-      presentStudents: {
-        userId: string
-        username: string
-        fullName: string
-        status: string
-        checkInTime: string
-      }[]
-      timeDistribution: Record<string, number>
-    }
-    checkinInfo: {
-      id: string
-      name: string
-      description: string
-      creatorId: string
-      type: string
-      status: string
-      checkinStartTime: string
-      checkinEndTime: string
-    }
-  }>(`/courses/attendance/record/statistics?checkinId=${checkinId}`, params)
+    checkinId: string
+    absentStudents: {
+      fullName: string
+      userId: string
+      username: string
+    }[]
+    lateCount: number
+    description: string
+    normalCount: number
+    absentCount: number
+    presentStudents: string[]
+    title: string
+    presentCount: number
+    attendanceRate: number
+    totalStudents: number
+    startTime: string
+    endTime: string
+    status: string
+    checkinType: string
+  }>(`/api/courses/attendance/record/statistics?checkinId=${checkinId}`, params)
 }

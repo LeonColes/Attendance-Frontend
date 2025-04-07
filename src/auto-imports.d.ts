@@ -35,6 +35,7 @@ declare global {
   const effectScope: typeof import('vue')['effectScope']
   const extendRef: typeof import('@vueuse/core')['extendRef']
   const get: typeof import('./utils/request')['get']
+  const getAuthHeader: typeof import('./utils/request')['getAuthHeader']
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
   const getCurrentScope: typeof import('vue')['getCurrentScope']
   const getToken: typeof import('./utils/request')['getToken']
@@ -356,6 +357,7 @@ declare module 'vue' {
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
     readonly get: UnwrapRef<typeof import('./utils/request')['get']>
+    readonly getAuthHeader: UnwrapRef<typeof import('./utils/request')['getAuthHeader']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
     readonly getToken: UnwrapRef<typeof import('./utils/request')['getToken']>

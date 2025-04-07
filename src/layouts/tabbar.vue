@@ -21,7 +21,23 @@ const { activeTabbar, getTabbarItemValue, setTabbarItemActive, tabbarList } = us
 
 function handleTabbarChange({ value }: { value: string }) {
   setTabbarItemActive(value)
-  router.pushTab({ name: value })
+  
+  // 使用uni-app原生方法进行跳转，提高兼容性
+  if (value === 'home') {
+    uni.switchTab({
+      url: '/pages/index',
+      fail: (err) => {
+        console.error('跳转到主页失败:', err)
+      }
+    })
+  } else if (value === 'my') {
+    uni.switchTab({
+      url: '/pages/my/index',
+      fail: (err) => {
+        console.error('跳转到我的页面失败:', err)
+      }
+    })
+  }
 }
 
 onMounted(() => {

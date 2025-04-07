@@ -12,10 +12,11 @@ interface RequestOptions extends UniNamespace.RequestOptions {
 }
 
 // 接口基础URL
-const BASE_URL = 'https://api.example.com'
+const BASE_URL = 'http://localhost:8080'
 
 // token的存储键名
-const TOKEN_KEY = 'auth_token'
+const TOKEN_KEY = 'token'
+const USER_INFO_KEY = 'userInfo'
 
 // 安全获取uni对象
 function getSafeUni() {
@@ -27,23 +28,55 @@ function getSafeUni() {
  */
 export function getToken(): string {
   try {
-    return getSafeUni().getStorageSync(TOKEN_KEY) || '';
+    const tokenInfo = getSafeUni().getStorageSync(TOKEN_KEY)
+    if (tokenInfo) {
+      const parsedToken = JSON.parse(tokenInfo)
+      return parsedToken.accessToken || ''
+    }
+    return ''
   } catch (e) {
-    console.error('获取token失败', e);
-    return '';
+    console.error('获取token失败', e)
+    return ''
+  }
+}
+
+/**
+ * 获取完整的授权头
+ */
+export function getAuthHeader(): string {
+  try {
+    const tokenInfo = getSafeUni().getStorageSync(TOKEN_KEY)
+    if (tokenInfo) {
+      const parsedToken = JSON.parse(tokenInfo)
+      return `${parsedToken.tokenType || 'Bearer'} ${parsedToken.accessToken || ''}`
+    }
+    return ''
+  } catch (e) {
+    console.error('获取授权头失败', e)
+    return ''
   }
 }
 
 /**
  * 设置token到本地存储
  */
-export function setToken(token: string) {
-  if (!token) return;
+export function setToken(tokenInfo: any) {
+  if (!tokenInfo) return
   
   try {
-    getSafeUni().setStorageSync(TOKEN_KEY, token);
+    // 存储完整的token信息
+    getSafeUni().setStorageSync(TOKEN_KEY, JSON.stringify(tokenInfo))
+    
+    // 同时存储用户信息
+    const userInfo = {
+      userId: tokenInfo.userId,
+      username: tokenInfo.username,
+      fullName: tokenInfo.fullName,
+      role: tokenInfo.role
+    }
+    getSafeUni().setStorageSync(USER_INFO_KEY, JSON.stringify(userInfo))
   } catch (e) {
-    console.error('保存token失败', e);
+    console.error('保存token失败', e)
   }
 }
 
@@ -63,12 +96,12 @@ export function removeToken() {
  */
 function requestInterceptor(config: RequestOptions) {
   // 添加token到请求头
-  const token = getToken()
-  if (token) {
+  const authHeader = getAuthHeader()
+  if (authHeader) {
     if (!config.header) {
       config.header = {}
     }
-    config.header.Authorization = `Bearer ${token}`
+    config.header.Authorization = authHeader
   }
 
   // 添加基础URL
@@ -117,7 +150,7 @@ function responseInterceptor<T>(response: UniNamespace.RequestSuccessCallbackRes
 
     // 延迟跳转，让用户看到提示
     setTimeout(() => {
-      getSafeUni().reLaunch({ url: '/pages/login/index' })
+      getSafeUni().redirectTo({ url: '/pages/login/index' })
     }, 1500)
 
     throw new Error('登录已过期，请重新登录')
