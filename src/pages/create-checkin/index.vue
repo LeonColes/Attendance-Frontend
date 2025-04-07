@@ -223,6 +223,9 @@ async function submitForm() {
         icon: 'success'
       })
       
+      // 将新创建的签到传递回上一页(不再需要，因为上一页的onShow会重新加载)
+      const newCheckin = response.data
+      
       // 返回到课程详情页
       setTimeout(() => {
         uni.navigateBack()

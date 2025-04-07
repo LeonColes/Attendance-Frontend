@@ -14,6 +14,7 @@ import { CheckInType, getCheckinList } from '@/api/attendance'
 import { getCourseMemberList, getCourseQRCode } from '@/api/courses'
 import type { PageQueryParams } from '@/api/attendance'
 import CustomNavBar from '@/components/CustomNavBar.vue'
+import { onShow } from '@dcloudio/uni-app'
 
 // 为window.uni声明类型，解决TypeScript错误
 declare global {
@@ -77,22 +78,27 @@ onMounted(() => {
         checkinList.value = parsedData.checkinData.items || []
       }
       
-      // 立即加载所有数据，不等待标签页切换
-      loadCheckinList(true)
-      loadCourseMembers(true)
-      loadCourseAttendanceStats()
-      
-      // 如果是教师，自动获取课程二维码
-      if (isTeacher.value) {
-        loadCourseQRCode()
-      }
-      
     } catch (e) {
       console.error('解析课程数据失败:', e)
       tryParseOldFormat(options)
     }
   } else {
     tryParseOldFormat(options)
+  }
+})
+
+// 在页面每次显示时加载最新数据
+onShow(() => {
+  if (courseId.value) {
+    // 立即加载所有数据，不等待标签页切换
+    loadCheckinList(true)
+    loadCourseMembers(true)
+    loadCourseAttendanceStats()
+    
+    // 如果是教师，自动获取课程二维码
+    if (isTeacher.value) {
+      loadCourseQRCode()
+    }
   }
 })
 

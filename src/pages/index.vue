@@ -12,6 +12,7 @@ import { ref, computed, reactive, onMounted, watch } from 'vue'
 import { useUserStore } from '@/store/user'
 import { getCourseList } from '@/api/courses'
 import { getCheckinList, submitCheckin, CheckInType } from '@/api/attendance'
+import { onShow, onLoad } from '@dcloudio/uni-app'
 
 // 安全获取uni对象
 function getSafeUni() {
@@ -96,9 +97,15 @@ function getSystemInfo() {
 onMounted(async () => {
   // 检查登录状态
   await checkLoginStatus()
-  
-  // 加载课程数据
-  loadCourseData()
+})
+
+// 在uni-app的onShow生命周期中加载数据
+onShow(() => {
+  checkLoginStatus().then(isLoggedIn => {
+    if (isLoggedIn) {
+      loadCourseData()
+    }
+  })
 })
 
 // 检查登录状态
@@ -459,6 +466,25 @@ function formatDate(dateString: string) {
   const day = String(date.getDate()).padStart(2, '0')
   
   return `${year}-${month}-${day}`
+}
+
+// 处理新创建的课程，由创建课程页面调用
+function handleNewCourse(newCourse) {
+  if (newCourse) {
+    console.log('收到新创建的课程:', newCourse)
+    
+    // 根据课程状态添加到对应列表
+    if (newCourse.status === 'ACTIVE') {
+      // 将新课程添加到激活课程列表的开头
+      activeCourses.value.unshift(newCourse)
+      activeCourseCount.value += 1
+    } else if (newCourse.status === 'COMPLETED') {
+      completedCourses.value.unshift(newCourse)
+      completedCourseCount.value += 1
+    } else {
+      otherCourses.value.unshift(newCourse)
+    }
+  }
 }
 </script>
 
