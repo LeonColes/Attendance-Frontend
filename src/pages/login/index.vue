@@ -10,14 +10,36 @@ const statusBarHeight = ref(0)
 const safeAreaInsetTop = ref(0)
 
 // 获取设备信息
-onMounted(() => {
-  const sysInfo = uni.getSystemInfoSync()
-  // 状态栏高度
-  statusBarHeight.value = sysInfo.statusBarHeight || 20
-  // 安全区域顶部高度
-  if (sysInfo.safeArea) {
-    safeAreaInsetTop.value = sysInfo.safeArea.top
+function getDeviceInfo() {
+  try {
+    // 使用推荐的新API
+    const windowInfo = uni.getWindowInfo()
+    const deviceInfo = uni.getDeviceInfo()
+    
+    return {
+      // 状态栏高度
+      statusBarHeight: windowInfo.statusBarHeight || 20,
+      // 安全区域顶部高度
+      safeAreaTop: windowInfo.safeAreaInsets?.top || 0
+    }
+  } catch (e) {
+    console.error('获取设备信息失败:', e)
+    // 如果新API不可用，回退到旧API
+    const sysInfo = uni.getSystemInfoSync()
+    return {
+      statusBarHeight: sysInfo.statusBarHeight || 20,
+      safeAreaTop: sysInfo.safeArea?.top || 0
+    }
   }
+}
+
+// 获取设备信息
+onMounted(() => {
+  const deviceInfo = getDeviceInfo()
+  // 状态栏高度
+  statusBarHeight.value = deviceInfo.statusBarHeight
+  // 安全区域顶部高度
+  safeAreaInsetTop.value = deviceInfo.safeAreaTop
 })
 
 const formData = reactive({

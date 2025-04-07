@@ -1,30 +1,50 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { LoginParams, UserInfo } from '@/api/auth'
-import { login as loginApi, logout as logoutApi } from '@/api/auth'
-import { getToken, removeToken, setToken } from '@/utils/request'
+import { login, type LoginParams, type LoginResponseData, type BaseResponse } from '@/api/auth'
+import { setToken, getToken, removeToken } from '@/utils/request'
 
 export const useUserStore = defineStore('user', () => {
-  const userInfo = ref<UserInfo | null>(null)
-  const token = ref<string>(getToken())
-  const isLoggedIn = ref<boolean>(!!token.value)
+  // 用户信息状态
+  const token = ref<string>('')
+  const userId = ref<string>('')
+  const username = ref<string>('')
+  const fullName = ref<string>('')
+  const role = ref<string>('')
+  const isLoggedIn = ref<boolean>(false)
 
   /**
-   * 登录
-   * @param loginParams 登录参数
+   * 设置用户登录状态
    */
-  async function login(loginParams: LoginParams) {
+  function setLoginState(data: LoginResponseData) {
+    token.value = data.accessToken
+    userId.value = data.userId
+    username.value = data.username
+    fullName.value = data.fullName
+    role.value = data.role
+    isLoggedIn.value = true
+
+    // 存储到本地存储，使用与请求模块相同的键名
+    setToken(data.accessToken) // 使用accessToken而非token
+    uni.setStorageSync('user_info', {
+      userId: data.userId,
+      username: data.username,
+      fullName: data.fullName,
+      role: data.role,
+    })
+  }
+
+  /**
+   * 登录操作
+   */
+  async function loginAction(params: LoginParams) {
     try {
-      const { data } = await loginApi(loginParams)
-      token.value = data.token
-      userInfo.value = data.user
-      isLoggedIn.value = true
-
-      // 保存token
-      setToken(data.token)
-
-      return data
-    }
+      const response = await login(params)
+      if (response && response.data) {
+        setLoginState(response.data)
+        return response.data
+      }
+      throw new Error('登录失败：未获取到用户数据')
+    } 
     catch (error) {
       console.error('登录失败:', error)
       throw error
@@ -32,42 +52,82 @@ export const useUserStore = defineStore('user', () => {
   }
 
   /**
-   * 退出登录
+   * 恢复登录状态
    */
-  async function logout() {
-    try {
-      if (token.value) {
-        await logoutApi()
-      }
+  function restoreLoginState() {
+    const storedToken = getToken() // 使用request模块的getToken函数
+    const storedUserInfo = uni.getStorageSync('user_info')
+    
+    if (storedToken && storedUserInfo) {
+      token.value = storedToken
+      userId.value = storedUserInfo.userId
+      username.value = storedUserInfo.username
+      fullName.value = storedUserInfo.fullName
+      role.value = storedUserInfo.role
+      isLoggedIn.value = true
+      return true
     }
-    catch (error) {
-      console.error('退出登录失败:', error)
-    }
-    finally {
-      resetUserState()
-      uni.showToast({
-        title: '退出登录成功',
-        icon: 'success',
-      })
-    }
+    
+    return false
   }
 
   /**
-   * 重置用户状态
+   * 登出操作
    */
-  function resetUserState() {
-    userInfo.value = null
+  function logout() {
+    // 清除内存中的状态
     token.value = ''
+    userId.value = ''
+    username.value = ''
+    fullName.value = ''
+    role.value = ''
     isLoggedIn.value = false
-    removeToken()
+
+    // 清除存储
+    removeToken() // 使用request模块的removeToken函数
+    uni.removeStorageSync('user_info')
+
+    // 返回登录页
+    uni.reLaunch({
+      url: '/pages/login/index'
+    })
+  }
+
+  /**
+   * 检查用户是否已登录
+   */
+  function checkLogin(): boolean {
+    // 如果内存中没有登录状态，尝试从本地存储恢复
+    if (!isLoggedIn.value) {
+      return restoreLoginState()
+    }
+    return isLoggedIn.value
+  }
+
+  /**
+   * 获取用户角色
+   */
+  function getUserRole(): string {
+    if (!isLoggedIn.value) {
+      restoreLoginState()
+    }
+    return role.value
   }
 
   return {
-    userInfo,
+    // 状态
     token,
+    userId,
+    username,
+    fullName,
+    role,
     isLoggedIn,
-    login,
+    
+    // 方法
+    login: loginAction,
     logout,
-    resetUserState,
+    checkLogin,
+    getUserRole,
+    restoreLoginState,
   }
 })

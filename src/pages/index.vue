@@ -10,36 +10,33 @@
 <script lang="ts" setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useUserStore } from '@/store/user'
-import { getAttendanceStatistics } from '@/api/attendance'
-import { TaskStatus, activateTask, completeTask, getActiveTasks, getMyTasks } from '@/api/task'
+import { CheckInStatus, getCheckinList } from '@/api/attendance'
+import { getCourseList } from '@/api/course'
 
 // 用户信息
 const userStore = useUserStore()
-// 暂时不需要区分角色
-/*
-const isTeacher = computed(() => userStore.userInfo?.role === 'teacher')
-const isStudent = computed(() => userStore.userInfo?.role === 'student')
-*/
+const role = computed(() => userStore.role)
+const isTeacher = computed(() => role.value === 'TEACHER')
+const isStudent = computed(() => role.value === 'STUDENT')
 
 // 页面数据
 const loading = ref(false)
 const refreshing = ref(false)
-const todayCourses = ref<any[]>([])
+const courseList = ref<any[]>([])
 const attendanceStats = ref({
   total: 0,
   present: 0,
   absent: 0,
   late: 0,
-  leave: 0,
   attendanceRate: 0,
 })
 const activeSessions = ref<any[]>([])
-const showAnimations = ref(false)
+const showAnimations = ref(true)
 const fabExpanded = ref(false)
 const fabTimer = ref<any>(null)
 const isScrollingDown = ref(false) // 是否向下滚动
 const lastScrollTop = ref(0) // 上次滚动位置
-const scrollThreshold = 30 // 滚动阈值
+const scrollThreshold = 50 // 滚动阈值
 
 // 初始化数据
 onMounted(() => {
@@ -79,47 +76,76 @@ function onPageScroll(e: any) {
   }
 }
 
+// 获取系统信息 
+function getSystemInfo() {
+  try {
+    // 使用推荐的新API
+    const windowInfo = uni.getWindowInfo()
+    const deviceInfo = uni.getDeviceInfo()
+    const systemInfo = uni.getSystemInfoSync() // 保留部分兼容性
+    
+    return {
+      // 设备信息
+      platform: deviceInfo.platform || systemInfo.platform,
+      model: deviceInfo.model || systemInfo.model,
+      // 窗口信息
+      screenWidth: windowInfo.screenWidth || systemInfo.screenWidth,
+      screenHeight: windowInfo.screenHeight || systemInfo.screenHeight,
+      windowWidth: windowInfo.windowWidth || systemInfo.windowWidth,
+      windowHeight: windowInfo.windowHeight || systemInfo.windowHeight,
+      statusBarHeight: windowInfo.statusBarHeight || systemInfo.statusBarHeight,
+      safeArea: windowInfo.safeArea || systemInfo.safeArea,
+    }
+  } catch (e) {
+    console.error('获取系统信息失败:', e)
+    // 如果新API不可用，回退到旧API
+    return uni.getSystemInfoSync()
+  }
+}
+
 // 加载首页数据
 async function loadHomeData() {
   try {
     loading.value = true
 
-    // 同时加载所有类型的任务
-    const activeTasksResponse = await getActiveTasks()
-    const myTasksResponse = await getMyTasks()
-
-    // 合并任务并去重
-    const activeTasksData = Array.isArray(activeTasksResponse) ? activeTasksResponse : (activeTasksResponse?.data || [])
-    const myTasksData = Array.isArray(myTasksResponse) ? myTasksResponse : (myTasksResponse?.data || [])
-
-    // 使用Set去重（假设每个任务有唯一ID）
-    const allTasksMap = new Map()
-
-    // 添加活跃任务
-    activeTasksData.forEach((task) => {
-      allTasksMap.set(task.id, task)
-    })
-
-    // 添加我的任务
-    myTasksData.forEach((task) => {
-      allTasksMap.set(task.id, task)
-    })
-
-    // 转换回数组
-    const allTasks = Array.from(allTasksMap.values())
-
-    // 设置任务数据
-    activeSessions.value = activeTasksData
-    todayCourses.value = allTasks
-
-    // 设置出勤统计（这里可以是模拟数据或默认值）
-    attendanceStats.value = {
-      total: 0,
-      present: 0,
-      absent: 0,
-      late: 0,
-      leave: 0,
-      attendanceRate: 0,
+    // 获取课程列表
+    const coursesResponse = await getCourseList({ page: 0, size: 10 })
+    if (coursesResponse && coursesResponse.data) {
+      courseList.value = coursesResponse.data.items || []
+      
+      // 如果有课程，获取第一个课程的签到任务
+      if (courseList.value.length > 0) {
+        const firstCourse = courseList.value[0]
+        const checkinsResponse = await getCheckinList(firstCourse.id, { page: 0, size: 10 })
+        
+        if (checkinsResponse && checkinsResponse.data) {
+          // 获取活跃签到任务
+          activeSessions.value = checkinsResponse.data.items.filter(
+            checkin => checkin.status === CheckInStatus.ACTIVE
+          ) || []
+          
+          // 计算出勤统计数据
+          if (isTeacher.value) {
+            // 教师端统计数据
+            attendanceStats.value = {
+              total: activeSessions.value.length,
+              present: 0,
+              absent: 0,
+              late: 0,
+              attendanceRate: 0,
+            }
+          } else {
+            // 学生端统计数据
+            attendanceStats.value = {
+              total: activeSessions.value.length,
+              present: 0,
+              absent: 0,
+              late: 0,
+              attendanceRate: 0,
+            }
+          }
+        }
+      }
     }
   }
   catch (error) {
@@ -131,11 +157,12 @@ async function loadHomeData() {
   }
   finally {
     loading.value = false
+    refreshing.value = false
   }
 }
 
-// 导航到创建任务页面并显示动画效果
-function navigateToCreateTask() {
+// 导航到创建签到任务页面并显示动画效果
+function navigateToCreateCheckin() {
   // 显示按钮展开动画
   fabExpanded.value = true
 
@@ -143,7 +170,7 @@ function navigateToCreateTask() {
   setTimeout(() => {
     fabExpanded.value = false
     uni.navigateTo({
-      url: '/pages/create-task/index',
+      url: '/pages/create-checkin/index',
     })
   }, 300)
 }
@@ -155,16 +182,16 @@ function onRefresh() {
 }
 
 // 导航到签到页面
-function navigateToCheckIn(taskId: string) {
+function navigateToCheckIn(checkinId: string) {
   uni.navigateTo({
-    url: `/pages/check-in/index?taskId=${taskId}`,
+    url: `/pages/check-in/index?checkinId=${checkinId}`,
   })
 }
 
-// 导航到任务详情页面
-function navigateToTaskDetail(taskId: string) {
+// 导航到签到任务详情页面
+function navigateToCheckinDetail(checkinId: string) {
   uni.navigateTo({
-    url: `/pages/task-detail/index?taskId=${taskId}`,
+    url: `/pages/checkin-detail/index?checkinId=${checkinId}`,
   })
 }
 
@@ -182,58 +209,42 @@ function navigateToAttendanceStatistics() {
   })
 }
 
-// 启动签到任务
-async function handleActivateTask(taskId: string, event: Event) {
-  event.stopPropagation()
-
-  try {
-    uni.showLoading({ title: '激活中...' })
-    await activateTask(taskId)
-    uni.showToast({
-      title: '签到任务已激活',
-      icon: 'success',
-    })
-    loadHomeData()
-  }
-  catch (error) {
-    console.error('激活任务失败', error)
-    uni.showToast({
-      title: '激活失败',
-      icon: 'error',
-    })
-  }
-  finally {
-    uni.hideLoading()
-  }
+// 扫描签到二维码
+function scanQRCode() {
+  uni.navigateTo({
+    url: '/pages/scanner/index',
+  })
 }
 
-// 结束签到任务
-async function handleCompleteTask(taskId: string, event: Event) {
-  event.stopPropagation()
+// 悬浮按钮
+function toggleFab() {
+  fabExpanded.value = !fabExpanded.value
+}
 
-  try {
-    uni.showLoading({ title: '处理中...' })
-    await completeTask(taskId)
-    uni.showToast({
-      title: '签到任务已关闭',
-      icon: 'success',
-    })
-    loadHomeData()
-  }
-  catch (error) {
-    console.error('结束任务失败', error)
-    uni.showToast({
-      title: '操作失败',
-      icon: 'error',
-    })
-  }
-  finally {
-    uni.hideLoading()
-  }
+// 导航到创建课程页面
+function navigateToCreateCourse() {
+  uni.navigateTo({
+    url: '/pages/create-course/index',
+  })
+}
+
+// 导航到加入课程页面
+function navigateToJoinCourse() {
+  uni.navigateTo({
+    url: '/pages/join-course/index',
+  })
+}
+
+// 导航到扫描二维码页面
+function navigateToScanCode() {
+  uni.navigateTo({
+    url: '/pages/scanner/index',
+  })
 }
 </script>
 
 <template>
+  <!-- @ts-ignore -->
   <view class="container">
     <!-- 页面内容 -->
     <scroll-view
@@ -243,271 +254,247 @@ async function handleCompleteTask(taskId: string, event: Event) {
       :refresher-triggered="refreshing"
       @refresherrefresh="onRefresh"
     >
+      <!-- @ts-ignore -->
       <view class="content-wrapper">
         <!-- 加载状态 -->
+        <!-- @ts-ignore -->
         <view v-if="loading" class="loading-container">
           <wd-loading color="#6a11cb" size="60px" />
-          <text class="loading-text">
-            加载中...
-          </text>
+          <!-- @ts-ignore -->
+          <text class="loading-text">加载中...</text>
         </view>
 
-        <!-- 统一的用户信息显示 -->
-        <view
-          class="section user-header"
-          :class="{ 'animate-in': showAnimations }"
-        >
-          <view class="user-info">
-            <image class="avatar" :src="userStore.userInfo?.avatar || '/static/default-avatar.png'" mode="aspectFill" />
-            <view class="welcome">
-              <text class="greeting">
-                你好，{{ userStore.userInfo?.fullName }}
-              </text>
-              <text class="subtitle">
-                欢迎使用智能考勤系统
-              </text>
-            </view>
-          </view>
-        </view>
-
-        <!-- 考勤状态卡片 -->
-        <view
-          class="section attendance-status-card"
-          :class="{ 'animate-in-delay': showAnimations }"
-        >
-          <view class="card-header">
-            <text class="card-title">
-              考勤统计
-            </text>
-            <text class="card-action" @click="navigateToAttendanceStatistics">
-              查看详情
-            </text>
-          </view>
-          <view class="attendance-stats">
-            <view
-              class="stat-item"
-              :class="{ 'animate-in-delay-100': showAnimations }"
-            >
-              <text class="stat-value animate-count">
-                {{ attendanceStats.total }}
-              </text>
-              <text class="stat-label">
-                总课程
-              </text>
-            </view>
-            <view
-              class="stat-item"
-              :class="{ 'animate-in-delay-200': showAnimations }"
-            >
-              <text class="stat-value animate-count">
-                {{ attendanceStats.present }}
-              </text>
-              <text class="stat-label">
-                已签到
-              </text>
-            </view>
-            <view
-              class="stat-item"
-              :class="{ 'animate-in-delay-300': showAnimations }"
-            >
-              <text class="stat-value animate-count">
-                {{ attendanceStats.absent }}
-              </text>
-              <text class="stat-label">
-                缺勤
-              </text>
-            </view>
-            <view
-              class="stat-item"
-              :class="{ 'animate-in-delay-400': showAnimations }"
-            >
-              <text class="stat-value animate-count">
-                {{ attendanceStats.late }}
-              </text>
-              <text class="stat-label">
-                迟到
-              </text>
-            </view>
-            <view
-              class="stat-item attendance-rate"
-              :class="{ 'animate-in-delay-500': showAnimations }"
-            >
-              <text class="stat-value animate-count">
-                {{ attendanceStats.attendanceRate }}%
-              </text>
-              <text class="stat-label">
-                出勤率
-              </text>
-            </view>
-          </view>
-        </view>
-
-        <!-- 可签到任务 -->
-        <view
-          v-if="activeSessions.length > 0"
-          class="section quick-checkin"
-          :class="{ 'animate-in-delay-2': showAnimations }"
-        >
-          <view class="card-header">
-            <text class="card-title">
-              可签到任务
-            </text>
-          </view>
-          <view class="session-list">
-            <view
-              v-for="(task, index) in activeSessions"
-              :key="task.id"
-              class="session-item"
-              :class="{
-                'animate-in-delay-100': index === 0 && showAnimations,
-                'animate-in-delay-200': index === 1 && showAnimations,
-                'animate-in-delay-300': index === 2 && showAnimations,
-                'animate-in-delay-400': index >= 3 && showAnimations,
-              }"
-              @click="navigateToTaskDetail(task.id)"
-            >
-              <view class="session-info">
-                <text class="session-name">
-                  {{ task.title }}
-                </text>
-                <text class="session-time">
-                  {{ new Date(task.startTime).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }}
-                  -
-                  {{ new Date(task.endTime).toLocaleString([], { hour: '2-digit', minute: '2-digit' }) }}
-                </text>
-                <text class="session-teacher">
-                  创建人: {{ task.creatorName }}
-                </text>
-                <text class="session-detail">
-                  签到类型: {{
-                    task.checkInType === 'QR_CODE' ? '二维码'
-                    : task.checkInType === 'LOCATION' ? '位置'
-                      : task.checkInType === 'GPS' ? 'GPS'
-                        : task.checkInType === 'WIFI' ? 'Wi-Fi'
-                          : task.checkInType === 'AUTOMATIC' ? '自动'
-                            : '手动'
-                  }}
-                </text>
-              </view>
-              <view class="checkin-btn">
-                <wd-button
-                  type="primary"
-                  size="small"
-                  class="shine-button"
-                  @click.stop="navigateToCheckIn(task.id)"
-                >
-                  签到
-                </wd-button>
-              </view>
-            </view>
-          </view>
-        </view>
-
-        <!-- 所有任务列表 -->
-        <view
-          class="section today-courses"
-          :class="{ 'animate-in-delay-3': showAnimations }"
-        >
-          <view class="card-header">
-            <text class="card-title">
-              所有任务
-            </text>
-            <view class="card-actions">
+        <!-- 页面内容区域 -->
+        <block v-else>
+          <!-- 头部统计卡片 -->
+          <!-- @ts-ignore -->
+          <view
+            class="stats-card"
+            :class="{ 'animate__animated animate__fadeInUp': showAnimations }"
+          >
+            <!-- @ts-ignore -->
+            <view class="stats-header">
+              <!-- @ts-ignore -->
+              <text class="stats-title">考勤统计</text>
+              <!-- @ts-ignore -->
               <text
-                class="card-action"
+                class="stats-action"
+                @click="navigateToAttendanceStatistics"
+              >
+                查看更多 >
+              </text>
+            </view>
+            <!-- @ts-ignore -->
+            <view class="stats-body">
+              <view class="stat-item attendance-rate">
+                <text class="stat-value">{{ attendanceStats.attendanceRate }}%</text>
+                <text class="stat-label">出勤率</text>
+              </view>
+              <view class="stats-divider" />
+              <view class="stats-detail">
+                <view class="detail-item">
+                  <text class="detail-value">{{ attendanceStats.present }}</text>
+                  <text class="detail-label">出席</text>
+                </view>
+                <view class="detail-item">
+                  <text class="detail-value">{{ attendanceStats.late }}</text>
+                  <text class="detail-label">迟到</text>
+                </view>
+                <view class="detail-item">
+                  <text class="detail-value">{{ attendanceStats.absent }}</text>
+                  <text class="detail-label">缺勤</text>
+                </view>
+              </view>
+            </view>
+          </view>
+
+          <!-- 活跃签到任务 -->
+          <view
+            v-if="activeSessions.length > 0"
+            class="active-sessions-section"
+            :class="{ 'animate__animated animate__fadeInUp': showAnimations }"
+          >
+            <view class="section-header">
+              <text class="section-title">进行中的签到</text>
+              <view class="section-badge">
+                <text>{{ activeSessions.length }}</text>
+              </view>
+            </view>
+            <view class="active-sessions-list">
+              <view
+                v-for="session in activeSessions"
+                :key="session.id"
+                class="checkin-card"
+                @click="navigateToCheckinDetail(session.id)"
+              >
+                <view class="card-header">
+                  <view class="card-title">
+                    <text>{{ session.name }}</text>
+                  </view>
+                  <view class="card-status" :class="session.status.toLowerCase()">
+                    <text>{{ session.displayStatus || session.status }}</text>
+                  </view>
+                </view>
+                
+                <view class="card-content">
+                  <view class="checkin-detail">
+                    <wd-icon name="calendar-o" class="detail-icon" />
+                    <text class="detail-text">{{ session.checkinStartTime }}</text>
+                  </view>
+                  
+                  <view class="checkin-detail">
+                    <wd-icon name="clock-o" class="detail-icon" />
+                    <text class="detail-text">剩余：30分钟</text>
+                  </view>
+                  
+                  <view class="checkin-detail">
+                    <wd-icon name="class-o" class="detail-icon" />
+                    <text class="detail-text">{{ session.checkinType }}</text>
+                  </view>
+                </view>
+                
+                <view class="card-footer">
+                  <wd-button 
+                    type="primary" 
+                    size="small" 
+                    custom-class="action-btn scan-btn"
+                    @click.stop="navigateToCheckIn(session.id)"
+                  >
+                    {{ isTeacher ? '查看签到码' : '签到' }}
+                  </wd-button>
+                </view>
+              </view>
+            </view>
+          </view>
+
+          <!-- 今日课程/签到任务列表 -->
+          <view
+            class="today-courses-section"
+            :class="{ 'animate__animated animate__fadeInUp': showAnimations }"
+          >
+            <view class="section-header">
+              <text class="section-title">签到任务</text>
+              <text
+                class="section-action"
                 @click="navigateToAttendanceRecords"
               >
                 查看记录
               </text>
             </view>
-          </view>
-          <view v-if="todayCourses.length === 0" class="empty-tip">
-            <wd-icon
-              name="rest"
-              size="80rpx"
-              color="#ccc"
-              class="animate-float"
-            />
-            <text>暂无签到任务</text>
-          </view>
-          <view v-else class="course-list">
-            <view
-              v-for="(task, index) in todayCourses"
-              :key="task.id"
-              class="course-item"
-              :class="{
-                'animate-in-delay-100': index === 0 && showAnimations,
-                'animate-in-delay-200': index === 1 && showAnimations,
-                'animate-in-delay-300': index === 2 && showAnimations,
-                'animate-in-delay-400': index >= 3 && showAnimations,
-              }"
-              @click="navigateToTaskDetail(task.id)"
-            >
-              <view class="course-time">
-                <text>{{ new Date(task.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</text>
-                <text class="divider">
-                  -
-                </text>
-                <text>{{ new Date(task.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</text>
-              </view>
-              <view class="course-info">
-                <text class="course-name">
-                  {{ task.title }}
-                </text>
-                <text class="course-location">
-                  {{ task.locationRequirement }}
-                </text>
-                <text class="course-detail">
-                  {{ task.description }}
-                </text>
-              </view>
-              <view class="course-status" :class="{ 'status-active': task.status === 'ACTIVE' }">
-                <text>
-                  {{
-                    task.status === 'ACTIVE' ? '可签到'
-                    : task.status === 'COMPLETED' ? '已结束'
-                      : task.status === 'CREATED' ? '未开始'
-                        : '未知状态'
-                  }}
-                </text>
-              </view>
-              <view v-if="task.status === 'CREATED'" class="action-btn">
-                <wd-button
-                  type="primary"
-                  size="small"
-                  class="btn-animate"
-                  @click.stop="handleActivateTask(task.id, $event)"
-                >
-                  激活
-                </wd-button>
-              </view>
-              <view v-if="task.status === 'ACTIVE'" class="action-btn">
-                <wd-button
-                  type="warning"
-                  size="small"
-                  class="btn-animate"
-                  @click.stop="handleCompleteTask(task.id, $event)"
-                >
-                  结束
-                </wd-button>
+
+            <!-- 无数据提示 -->
+            <view v-if="courseList.length === 0" class="empty-state">
+              <wd-icon name="computer" size="120rpx" color="#c0c4cc" />
+              <text class="empty-text">今日暂无签到任务</text>
+              <wd-button
+                type="primary"
+                size="small"
+                @click="navigateToCreateCheckin"
+              >
+                {{ userStore.isTeacher ? '创建课程' : '加入课程' }}
+              </wd-button>
+            </view>
+
+            <!-- 任务列表 -->
+            <view v-else class="courses-list">
+              <view
+                v-for="course in courseList"
+                :key="course.id"
+                class="course-card"
+                @click="navigateToCheckinDetail(course.id)"
+              >
+                <view class="course-header">
+                  <view class="course-title">{{ course.name }}</view>
+                  <view class="course-status" :class="course.status.toLowerCase()">
+                    {{ course.status === 'ACTIVE' ? '活跃' : '未开始' }}
+                  </view>
+                </view>
+                
+                <view class="course-info">
+                  <view class="info-row">
+                    <wd-icon name="user-o" size="32rpx" color="#555"></wd-icon>
+                    <text class="info-text">{{ course.memberCount || 0 }}名学生</text>
+                  </view>
+                  
+                  <view class="info-row">
+                    <wd-icon name="calendar-o" size="32rpx" color="#555"></wd-icon>
+                    <text class="info-text">{{ course.startDate }} - {{ course.endDate }}</text>
+                  </view>
+                  
+                  <view class="info-row">
+                    <wd-icon name="tutorial" size="32rpx" color="#555"></wd-icon>
+                    <text class="info-text">{{ course.creatorFullName }}</text>
+                  </view>
+                </view>
+                
+                <view class="course-actions">
+                  <wd-button 
+                    type="primary" 
+                    size="small"
+                    custom-class="action-btn"
+                    @click.stop="navigateToCheckinDetail(course.id)"
+                  >
+                    {{ isTeacher ? '管理签到' : '查看签到' }}
+                  </wd-button>
+                </view>
               </view>
             </view>
           </view>
-        </view>
+        </block>
       </view>
     </scroll-view>
 
-    <!-- 浮动操作按钮 -->
+    <!-- 悬浮按钮 -->
+    <!-- @ts-ignore -->
     <view
-      class="floating-button"
+      class="floating-action-button"
       :class="{
-        'animate-in-pop': showAnimations,
-        'expanded': fabExpanded,
-        'hidden': isScrollingDown,
+        expanded: fabExpanded,
+        'slide-out': isScrollingDown
       }"
-      @click="navigateToCreateTask"
+      @click="toggleFab"
     >
-      <wd-icon name="plus" size="50rpx" color="#ffffff" />
+      <wd-icon name="add" size="48rpx" color="#fff" class="fab-icon" />
+      
+      <!-- 悬浮菜单 -->
+      <!-- @ts-ignore -->
+      <view v-if="fabExpanded" class="fab-menu">
+        <!-- @ts-ignore -->
+        <view v-if="userStore.isTeacher" class="fab-menu-item" @click.stop="navigateToCreateCourse">
+          <wd-icon name="add-circle" size="40rpx" color="#6a11cb" />
+          <!-- @ts-ignore -->
+          <text class="fab-menu-text">创建课程</text>
+        </view>
+        
+        <!-- @ts-ignore -->
+        <view v-if="userStore.isTeacher" class="fab-menu-item" @click.stop="navigateToCreateCheckin">
+          <wd-icon name="check-circle" size="40rpx" color="#6a11cb" />
+          <!-- @ts-ignore -->
+          <text class="fab-menu-text">创建签到</text>
+        </view>
+        
+        <!-- @ts-ignore -->
+        <view v-if="!userStore.isTeacher" class="fab-menu-item" @click.stop="navigateToJoinCourse">
+          <wd-icon name="share" size="40rpx" color="#6a11cb" />
+          <!-- @ts-ignore -->
+          <text class="fab-menu-text">加入课程</text>
+        </view>
+        
+        <!-- @ts-ignore -->
+        <view v-if="!userStore.isTeacher" class="fab-menu-item" @click.stop="navigateToScanCode">
+          <wd-icon name="scan" size="40rpx" color="#6a11cb" />
+          <!-- @ts-ignore -->
+          <text class="fab-menu-text">扫码签到</text>
+        </view>
+      </view>
+      
+      <!-- 背景蒙层 -->
+      <!-- @ts-ignore -->
+      <view 
+        v-if="fabExpanded" 
+        class="fab-backdrop" 
+        @click.stop="toggleFab"
+      ></view>
     </view>
   </view>
 </template>
@@ -860,70 +847,79 @@ async function handleCompleteTask(taskId: string, event: Event) {
   }
 }
 
-.empty-tip {
+.empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60rpx 0;
-  color: #999;
-  font-size: 28rpx;
-
-  .wd-icon {
-    margin-bottom: 20rpx;
-  }
+  padding: 80rpx 0;
+  text-align: center;
 }
 
-// 浮动操作按钮
-.floating-button {
+.empty-text {
+  font-size: 28rpx;
+  color: #909399;
+  margin: 30rpx 0;
+}
+
+/* 悬浮按钮样式 */
+.floating-action-button {
   position: fixed;
-  bottom: calc(var(--window-bottom) + 200rpx); // 距离底部导航栏2.5倍距离
-  right: -55rpx; // 向右偏移，使其半隐藏在屏幕外
-  width: 110rpx;
-  height: 110rpx;
+  right: 40rpx;
+  bottom: 40rpx;
+  width: 120rpx;
+  height: 120rpx;
   border-radius: 50%;
   background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 6rpx 16rpx rgba(0, 0, 0, 0.2);
+  z-index: 999;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.floating-action-button.expanded {
+  transform: rotate(45deg);
+}
+
+.floating-action-button.slide-out {
+  transform: translateY(200rpx);
+}
+
+.fab-menu {
+  position: absolute;
+  bottom: 140rpx;
+  right: 0;
+  width: 300rpx;
+}
+
+.fab-menu-item {
   display: flex;
   align-items: center;
-  justify-content: center;
-  box-shadow: 0 10rpx 20rpx rgba(0, 0, 0, 0.2);
-  z-index: 100;
-  transform: scale(1);
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  background-color: #fff;
+  padding: 20rpx;
+  margin-bottom: 20rpx;
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+  animation: fadeInUp 0.3s both;
+}
 
-  &.animate-in-pop {
-    animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.6s forwards;
-    transform: scale(0);
-    opacity: 0;
-  }
+.fab-menu-text {
+  margin-left: 20rpx;
+  color: #333;
+  font-size: 28rpx;
+}
 
-  &.expanded {
-    right: 50rpx; // 展开时完全显示
-    transform: scale(1.1);
-  }
-
-  &.hidden {
-    transform: translateY(200rpx) scale(0.5);
-    opacity: 0;
-  }
-
-  &:active {
-    right: 50rpx; // 点击时完全显示
-    transform: scale(0.95);
-  }
-
-  @keyframes popIn {
-    from {
-      transform: scale(0);
-      opacity: 0;
-      right: -55rpx;
-    }
-    to {
-      transform: scale(1);
-      opacity: 1;
-      right: -55rpx;
-    }
-  }
+.fab-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.3);
+  z-index: 998;
 }
 
 // 动画类

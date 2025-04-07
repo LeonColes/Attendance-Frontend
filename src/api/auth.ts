@@ -1,23 +1,24 @@
 import { post } from '@/utils/request'
 
 /**
- * 学生注册接口参数
+ * 基础响应类型
  */
-export interface StudentRegisterParams {
-  username: string
-  password: string
-  fullName: string
-  email: string
+export interface BaseResponse<T = any> {
+  code: number
+  message: string
+  data: T
 }
 
 /**
- * 教师注册接口参数
+ * 用户注册接口参数
  */
-export interface TeacherRegisterParams {
+export interface RegisterParams {
   username: string
   password: string
   fullName: string
-  email: string
+  email?: string
+  phone?: string
+  role?: string
 }
 
 /**
@@ -35,35 +36,41 @@ export interface UserInfo {
   id: string
   username: string
   fullName: string
-  email: string
+  email?: string
+  phone?: string
   role: string
   avatar?: string
-  createdAt: string
-  updatedAt: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+/**
+ * 登录响应数据
+ */
+export interface LoginResponseData {
+  accessToken: string
+  tokenType: string
+  userId: string
+  username: string
+  fullName: string
+  role: string
 }
 
 /**
  * 登录响应
  */
 export interface LoginResponse {
-  token: string
-  user: UserInfo
+  code: number
+  message: string
+  data: LoginResponseData
 }
 
 /**
- * 学生注册
+ * 用户注册
  * @param params 注册参数
  */
-export function registerStudent(params: StudentRegisterParams) {
-  return post<UserInfo>('/api/auth/register/student', params)
-}
-
-/**
- * 教师注册
- * @param params 注册参数
- */
-export function registerTeacher(params: TeacherRegisterParams) {
-  return post<UserInfo>('/api/auth/register/teacher', params)
+export function register(params: RegisterParams) {
+  return post<UserInfo>('/auth/register', params)
 }
 
 /**
@@ -71,12 +78,12 @@ export function registerTeacher(params: TeacherRegisterParams) {
  * @param params 登录参数
  */
 export function login(params: LoginParams) {
-  return post<LoginResponse>('/api/auth/login', params)
+  return post<LoginResponseData>('/auth/login', params)
 }
 
 /**
  * 退出登录
  */
 export function logout() {
-  return post('/api/auth/logout')
+  return post('/auth/logout')
 }

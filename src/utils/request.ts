@@ -12,7 +12,7 @@ interface RequestOptions extends UniNamespace.RequestOptions {
 }
 
 // 接口基础URL
-const BASE_URL = 'http://localhost:8080'
+const BASE_URL = 'http://localhost:8080/api'
 
 // token的存储键名
 const TOKEN_KEY = 'auth_token'
@@ -45,10 +45,10 @@ function requestInterceptor(config: RequestOptions) {
   // 添加token到请求头
   const token = getToken()
   if (token) {
-    config.header = {
-      ...config.header,
-      Authorization: `Bearer ${token}`,
+    if (!config.header) {
+      config.header = {}
     }
+    config.header.Authorization = `Bearer ${token}`
   }
 
   // 添加基础URL

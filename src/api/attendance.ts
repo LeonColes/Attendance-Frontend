@@ -1,304 +1,261 @@
-import { del, get, post, put } from '@/utils/request'
+import { post, get } from '@/utils/request'
+
+/**
+ * 签到任务状态枚举
+ */
+export enum CheckInStatus {
+  ACTIVE = 'ACTIVE',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
+}
+
+/**
+ * 签到类型枚举
+ */
+export enum CheckInType {
+  QR_CODE = 'QR_CODE',
+  LOCATION = 'LOCATION',
+  WIFI = 'WIFI',
+}
 
 /**
  * 签到记录状态枚举
  */
-export enum AttendanceStatus {
-  PRESENT = 'present', // 已签到
-  ABSENT = 'absent', // 缺席
-  LATE = 'late', // 迟到
-  LEAVE = 'leave', // 请假
-  PENDING = 'pending', // 待签到
+export enum RecordStatus {
+  NORMAL = 'NORMAL',
+  LATE = 'LATE',
+  ABSENT = 'ABSENT',
+  LEAVE = 'LEAVE',
 }
 
 /**
- * 签到方式枚举
+ * 签到任务创建参数
  */
-export enum CheckInMethod {
-  QR_CODE = 'qrcode', // 二维码签到
-  LOCATION = 'location', // 位置签到
-  GPS = 'gps', // GPS定位签到
-  WIFI = 'wifi', // Wi-Fi签到
-  MANUAL = 'manual', // 手动签到（教师代签）
-  AUTOMATIC = 'automatic', // 自动签到
-}
-
-/**
- * 签到会话信息
- */
-export interface AttendanceSession {
-  id: string
+export interface CheckinCreateParams {
   courseId: string
-  courseName: string
-  teacherId: string
-  teacherName: string
   title: string
+  description?: string
   startTime: string
   endTime: string
-  duration: number // 签到持续时间（分钟）
-  method: CheckInMethod
-  locationRequired?: boolean
-  location?: {
-    latitude: number
-    longitude: number
-    range: number // 签到有效范围（米）
-  }
-  wifiSSID?: string
-  bluetoothId?: string
-  qrCodeContent?: string
-  createdAt: string
-  updatedAt: string
-  status: 'active' | 'completed' | 'canceled'
+  checkInType: CheckInType
+  verifyParams?: Record<string, any>
 }
 
 /**
- * 考勤记录
+ * 签到任务信息
  */
-export interface AttendanceRecord {
+export interface CheckinTask {
   id: string
-  sessionId: string
+  name: string
+  description?: string
+  type: string
+  status: string
+  checkinStartTime: string
+  checkinEndTime: string
+  checkinType: string
+  parentCourseId: string
+  creatorId?: string
+  personalStatus?: string
+  displayStatus?: string
+}
+
+/**
+ * 签到记录信息
+ */
+export interface CheckinRecord {
+  id: string
+  userId: string
   courseId: string
-  courseName: string
-  studentId: string
-  studentName: string
-  checkInTime?: string
-  checkOutTime?: string
-  status: AttendanceStatus
-  method: CheckInMethod
-  ipAddress?: string
-  location?: {
-    latitude: number
-    longitude: number
-  }
-  device?: string
-  comment?: string
-  createdAt: string
-  updatedAt: string
+  status: string
+  checkInTime: string
+  device: string
+  location?: string
+  verifyMethod: string
+  displayStatus: string
 }
 
 /**
- * 考勤统计
+ * 签到统计信息
  */
-export interface AttendanceStatistics {
-  total: number
-  present: number
-  absent: number
-  late: number
-  leave: number
-  attendanceRate: number // 出勤率
+export interface CheckinStatistics {
+  totalStudents: number
+  presentCount: number
+  absentCount: number
+  normalCount: number
+  lateCount: number
+  attendanceRate: number
 }
 
 /**
- * 创建签到会话参数
+ * 提交签到参数
  */
-export interface CreateSessionParams {
-  courseId: string
-  title?: string
-  startTime?: string
-  endTime?: string
-  duration?: number
-  method: CheckInMethod
-  locationRequired?: boolean
-  location?: {
-    latitude: number
-    longitude: number
-    range: number
-  }
-  wifiSSID?: string
-  bluetoothId?: string
+export interface CheckinSubmitParams {
+  checkinId: string
+  verifyMethod: CheckInType
+  device: string
+  location?: string
+  verifyData: string
 }
 
 /**
- * 学生签到参数
+ * 分页查询参数
  */
-export interface CheckInParams {
-  sessionId: string
-  method: CheckInMethod
-  location?: {
-    latitude: number
-    longitude: number
-  }
-  wifiSSID?: string
-  bluetoothId?: string
-  qrCodeContent?: string
-  faceImage?: string
+export interface PageQueryParams {
+  page: number
+  size: number
 }
 
 /**
- * 查询签到会话列表
- * @param params 查询参数
+ * 创建签到任务
+ * @param params 签到任务参数
  */
-export function getAttendanceSessions(params?: {
-  courseId?: string
-  status?: string
-  startDate?: string
-  endDate?: string
-  page?: number
-  limit?: number
-}) {
-  return get<{
-    total: number
-    list: AttendanceSession[]
-  }>('/api/attendance/sessions', params)
+export function createCheckin(params: CheckinCreateParams) {
+  return post<CheckinTask>('/courses/attendance/create', params)
 }
 
 /**
- * 获取签到会话详情
- * @param sessionId 签到会话ID
+ * 获取签到任务列表
+ * @param courseId 课程ID
+ * @param params 分页参数
  */
-export function getAttendanceSessionDetails(sessionId: string) {
-  return get<AttendanceSession>(`/api/attendance/sessions/${sessionId}`)
+export function getCheckinList(courseId: string, params: PageQueryParams) {
+  return post<{
+    totalItems: number
+    items: CheckinTask[]
+    totalPages: number
+    currentPage: number
+  }>(`/courses/attendance/list?courseId=${courseId}`, params)
 }
 
 /**
- * 创建签到会话（教师）
- * @param params 会话参数
+ * 获取签到二维码（教师）
+ * @param checkinId 签到任务ID
  */
-export function createAttendanceSession(params: CreateSessionParams) {
-  return post<AttendanceSession>('/api/attendance/sessions', params)
+export function getCheckinQRCode(checkinId: string) {
+  return get<Blob>(`/courses/attendance/qrcode?checkinId=${checkinId}`, {
+    responseType: 'blob',
+  })
 }
 
 /**
- * 结束签到会话（教师）
- * @param sessionId 签到会话ID
- */
-export function endAttendanceSession(sessionId: string) {
-  return put<AttendanceSession>(`/api/attendance/sessions/${sessionId}/end`)
-}
-
-/**
- * 取消签到会话（教师）
- * @param sessionId 签到会话ID
- */
-export function cancelAttendanceSession(sessionId: string) {
-  return put<AttendanceSession>(`/api/attendance/sessions/${sessionId}/cancel`)
-}
-
-/**
- * 学生签到
+ * 提交签到（学生）
  * @param params 签到参数
  */
-export function checkIn(params: CheckInParams) {
-  return post<AttendanceRecord>('/api/attendance/check-in', params)
+export function submitCheckin(params: CheckinSubmitParams) {
+  return post<CheckinRecord>('/courses/attendance/check-in', params)
 }
 
 /**
- * 查询考勤记录（教师可查询全部，学生只能查询自己的）
- * @param params 查询参数
+ * 获取学生签到状态列表（学生查看自己的签到状态）
+ * @param courseId 课程ID
+ * @param params 分页参数
  */
-export function getAttendanceRecords(params?: {
-  sessionId?: string
-  courseId?: string
-  studentId?: string
-  status?: AttendanceStatus
-  startDate?: string
-  endDate?: string
-  page?: number
-  limit?: number
-}) {
-  return get<{
-    total: number
-    list: AttendanceRecord[]
-  }>('/api/attendance/records', params)
+export function getStudentCheckinStatus(courseId: string, params: PageQueryParams) {
+  return post<{
+    totalItems: number
+    records: {
+      checkinId: string
+      checkinName: string
+      status: string
+      checkInTime: string
+      startTime: string
+      endTime: string
+      checkinType: string
+      displayStatus: string
+    }[]
+    totalPages: number
+    currentPage: number
+    courseInfo: {
+      id: string
+      name: string
+      description: string
+    }
+    personalStats: {
+      totalCheckins: number
+      attendedCount: number
+      normalCount: number
+      lateCount: number
+      absentCount: number
+      attendanceRate: number
+    }
+  }>(`/courses/attendance/record/status?courseId=${courseId}`, params)
 }
 
 /**
- * 获取考勤记录详情
- * @param recordId 考勤记录ID
+ * 获取签到记录列表（教师查看签到记录）
+ * @param checkinId 签到任务ID
+ * @param params 分页参数
  */
-export function getAttendanceRecord(recordId: string) {
-  return get<AttendanceRecord>(`/api/attendance/records/${recordId}`)
+export function getCheckinRecordList(checkinId: string, params: PageQueryParams) {
+  return post<{
+    totalItems: number
+    records: {
+      userId: string
+      username: string
+      fullName: string
+      status: string
+      checkInTime: string
+      device: string
+      location: string | null
+    }[]
+    totalPages: number
+    currentPage: number
+    checkinInfo: {
+      id: string
+      name: string
+      description: string
+      status: string
+      checkinStartTime: string
+      checkinEndTime: string
+    }
+    statistics: CheckinStatistics
+  }>(`/courses/attendance/record/list?checkinId=${checkinId}`, params)
 }
 
 /**
- * 修改考勤状态（教师）
- * @param recordId 考勤记录ID
- * @param status 新状态
- * @param comment 备注
+ * 获取签到统计数据（教师）
+ * @param checkinId 签到任务ID
+ * @param params 分页参数
  */
-export function updateAttendanceStatus(recordId: string, status: AttendanceStatus, comment?: string) {
-  return put<AttendanceRecord>(`/api/attendance/records/${recordId}/status`, { status, comment })
-}
-
-/**
- * 获取考勤统计
- * @param params 查询参数
- */
-export function getAttendanceStatistics(params?: {
-  courseId?: string
-  studentId?: string
-  startDate?: string
-  endDate?: string
-}) {
-  return get<AttendanceStatistics>('/api/attendance/statistics', params)
-}
-
-/**
- * 学生请假申请
- * @param params 请假参数
- */
-export function applyLeave(params: {
-  courseId: string
-  sessionId?: string
-  reason: string
-  startDate: string
-  endDate: string
-  attachment?: string
-}) {
-  return post('/api/attendance/leave', params)
-}
-
-/**
- * 获取当前可签到的会话（学生）
- */
-export function getActiveSessionsForStudent() {
-  return get<AttendanceSession[]>('/api/tasks/active')
-}
-
-/**
- * 获取教师管理的活跃签到会话
- * @param teacherId 教师ID
- */
-export function getTeacherActiveSessions(teacherId?: string) {
-  return get<AttendanceSession[]>('/api/tasks/my-tasks', { teacherId })
-}
-
-/**
- * 教师代签（为学生手动签到）
- */
-export function manualCheckIn(params: {
-  sessionId: string
-  studentId: string
-  status: AttendanceStatus
-  comment?: string
-}) {
-  return post<AttendanceRecord>('/api/attendance/manual-check-in', params)
-}
-
-/**
- * 批量修改考勤状态（教师）
- */
-export function batchUpdateAttendance(params: {
-  sessionId: string
-  records: Array<{
-    studentId: string
-    status: AttendanceStatus
-  }>
-}) {
-  return put('/api/attendance/batch-update', params)
-}
-
-/**
- * 导出考勤数据
- */
-export function exportAttendanceData(params: {
-  courseId?: string
-  startDate?: string
-  endDate?: string
-  format?: 'excel' | 'csv' | 'pdf'
-}) {
-  return get<ArrayBuffer>('/api/attendance/export', params, {
-    responseType: 'arraybuffer',
-    showLoading: true,
-  })
+export function getCheckinStatistics(checkinId: string, params: PageQueryParams) {
+  return post<{
+    statistics: {
+      checkinId: string
+      title: string
+      description: string
+      startTime: string
+      endTime: string
+      status: string
+      checkinType: string
+      totalStudents: number
+      presentCount: number
+      absentCount: number
+      normalCount: number
+      lateCount: number
+      attendanceRate: number
+      absentStudents: {
+        userId: string
+        username: string
+        fullName: string
+      }[]
+      presentStudents: {
+        userId: string
+        username: string
+        fullName: string
+        status: string
+        checkInTime: string
+      }[]
+      timeDistribution: Record<string, number>
+    }
+    checkinInfo: {
+      id: string
+      name: string
+      description: string
+      creatorId: string
+      type: string
+      status: string
+      checkinStartTime: string
+      checkinEndTime: string
+    }
+  }>(`/courses/attendance/record/statistics?checkinId=${checkinId}`, params)
 }

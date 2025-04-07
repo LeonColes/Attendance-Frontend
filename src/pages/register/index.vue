@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { onMounted, reactive, ref } from 'vue'
-import { registerStudent, registerTeacher } from '@/api/auth'
+import { onLoad } from '@dcloudio/uni-app'
+import { register, type RegisterParams } from '@/api/auth'
 import CustomNavBar from '@/components/CustomNavBar.vue'
 
 const loading = ref(false)
@@ -13,16 +14,45 @@ const navBarHeight = ref(90)
 const safeAreaInsetTop = ref(0)
 
 // 获取设备信息
-onMounted(() => {
-  const sysInfo = uni.getSystemInfoSync()
-  // 状态栏高度
-  statusBarHeight.value = sysInfo.statusBarHeight || 20
-  // 安全区域顶部高度
-  if (sysInfo.safeArea) {
-    safeAreaInsetTop.value = sysInfo.safeArea.top
+function getDeviceInfo() {
+  try {
+    // 使用推荐的新API
+    const windowInfo = uni.getWindowInfo()
+    const deviceInfo = uni.getDeviceInfo()
+    
+    return {
+      // 状态栏高度
+      statusBarHeight: windowInfo.statusBarHeight || 20,
+      // 安全区域顶部高度
+      safeAreaTop: windowInfo.safeAreaInsets?.top || 0
+    }
+  } catch (e) {
+    console.error('获取设备信息失败:', e)
+    // 如果新API不可用，回退到旧API
+    const sysInfo = uni.getSystemInfoSync()
+    return {
+      statusBarHeight: sysInfo.statusBarHeight || 20,
+      safeAreaTop: sysInfo.safeArea?.top || 0
+    }
   }
+}
+
+// 获取设备信息
+onMounted(() => {
+  const deviceInfo = getDeviceInfo()
+  // 状态栏高度
+  statusBarHeight.value = deviceInfo.statusBarHeight
+  // 安全区域顶部高度
+  safeAreaInsetTop.value = deviceInfo.safeAreaTop
   // 导航栏总高度 = 状态栏高度 + 固定高度(44px)
   navBarHeight.value = statusBarHeight.value + 44
+})
+
+// 从路由参数获取角色
+onLoad((options: Record<string, any> = {}) => {
+  if (options.role) {
+    role.value = options.role
+  }
 })
 
 const formData = reactive({
@@ -30,6 +60,7 @@ const formData = reactive({
   password: '',
   fullName: '',
   email: '',
+  phone: '',
 })
 
 // 表单验证
@@ -66,22 +97,17 @@ function validateForm() {
     return false
   }
 
-  if (!formData.email) {
-    uni.showToast({
-      title: '请输入邮箱',
-      icon: 'none',
-    })
-    return false
-  }
-
-  // 简单的邮箱格式验证
-  const emailRegex = /^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/
-  if (!emailRegex.test(formData.email)) {
-    uni.showToast({
-      title: '邮箱格式不正确',
-      icon: 'none',
-    })
-    return false
+  // 电子邮箱可选
+  if (formData.email) {
+    // 简单的邮箱格式验证
+    const emailRegex = /^[^\s@]+@[^\s@][^\s.@]*\.[^\s@]+$/
+    if (!emailRegex.test(formData.email)) {
+      uni.showToast({
+        title: '邮箱格式不正确',
+        icon: 'none',
+      })
+      return false
+    }
   }
 
   return true
@@ -94,13 +120,12 @@ async function handleRegister() {
 
   try {
     loading.value = true
-
-    if (role.value === 'student') {
-      await registerStudent(formData)
-    }
-    else {
-      await registerTeacher(formData)
-    }
+    
+    // 使用统一的注册接口，传入角色参数
+    await register({
+      ...formData,
+      role: role.value,
+    })
 
     uni.showToast({
       title: '注册成功',
