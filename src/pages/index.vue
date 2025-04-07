@@ -11,6 +11,7 @@
 import { ref, computed, reactive, onMounted, watch } from 'vue'
 import { useUserStore } from '@/store/user'
 import { getCourseList } from '@/api/courses'
+import { getCheckinList } from '@/api/attendance'
 
 // 安全获取uni对象
 function getSafeUni() {
@@ -217,9 +218,76 @@ function joinCourse() {
 }
 
 // 查看课程详情
-function viewCourseDetail(courseId: string) {
-  getSafeUni().navigateTo({
-    url: `/pages/course-detail/index?id=${courseId}`
+function viewCourseDetail(course) {
+  // 获取课程的签到任务
+  getCheckinList(course.id, {
+    page: 0,
+    size: 50,
+    sort: [{ field: 'createdAt', direction: 'DESC' }],
+    filters: {}
+  }).then(response => {
+    if (response && response.code === 200) {
+      // 将课程基本信息和签到数据一起通过路由传递给详情页
+      const courseData = encodeURIComponent(JSON.stringify({
+        course: {
+          id: course.id,
+          name: course.name,
+          description: course.description,
+          creatorId: course.creatorId,
+          creatorFullName: course.creatorFullName,
+          creatorUsername: course.creatorUsername,
+          code: course.code,
+          status: course.status,
+          memberCount: course.memberCount || 0,
+          startDate: course.startDate,
+          endDate: course.endDate
+        },
+        checkinData: response.data
+      }))
+      
+      getSafeUni().navigateTo({
+        url: `/pages/course-detail/index?courseData=${courseData}`
+      })
+    } else {
+      // 如果获取签到数据失败，仅传递课程信息
+      const courseInfo = encodeURIComponent(JSON.stringify({
+        id: course.id,
+        name: course.name,
+        description: course.description,
+        creatorId: course.creatorId,
+        creatorFullName: course.creatorFullName,
+        creatorUsername: course.creatorUsername,
+        code: course.code,
+        status: course.status,
+        memberCount: course.memberCount || 0,
+        startDate: course.startDate,
+        endDate: course.endDate
+      }))
+      
+      getSafeUni().navigateTo({
+        url: `/pages/course-detail/index?courseInfo=${courseInfo}`
+      })
+    }
+  }).catch(error => {
+    console.error('获取签到数据失败:', error)
+    // 出错时仅传递课程信息
+    const courseInfo = encodeURIComponent(JSON.stringify({
+      id: course.id,
+      name: course.name,
+      description: course.description,
+      creatorId: course.creatorId,
+      creatorFullName: course.creatorFullName,
+      creatorUsername: course.creatorUsername,
+      code: course.code,
+      status: course.status,
+      memberCount: course.memberCount || 0,
+      startDate: course.startDate,
+      endDate: course.endDate
+    }))
+    
+    getSafeUni().navigateTo({
+      url: `/pages/course-detail/index?courseInfo=${courseInfo}`
+    })
   })
 }
 
@@ -342,7 +410,7 @@ function formatDate(dateString: string) {
             v-for="course in activeCourses"
             :key="course.id"
             class="course-card"
-            @click="viewCourseDetail(course.id)"
+            @click="viewCourseDetail(course)"
           >
             <!-- @ts-ignore -->
             <view class="course-card-cover">
@@ -355,8 +423,6 @@ function formatDate(dateString: string) {
             <view class="course-card-content">
               <!-- @ts-ignore -->
               <view class="course-name">{{ course.name }}</view>
-              <!-- @ts-ignore -->
-              <view class="course-desc">{{ course.description }}</view>
               
               <!-- 教师视图 -->
               <!-- @ts-ignore -->
@@ -385,6 +451,13 @@ function formatDate(dateString: string) {
                 <wd-icon name="calendar" size="28rpx" color="#999" />
                 <!-- @ts-ignore -->
                 <text>{{ formatDate(course.startDate) }} ~ {{ formatDate(course.endDate) }}</text>
+              </view>
+
+              <!-- 点击查看详情提示 -->
+              <!-- @ts-ignore -->
+              <view class="view-details">
+                <wd-icon name="arrow-right" size="28rpx" color="#6a11cb" />
+                <text>查看详情</text>
               </view>
             </view>
           </view>
@@ -431,7 +504,7 @@ function formatDate(dateString: string) {
             v-for="course in completedCourses"
             :key="course.id"
             class="course-card"
-            @click="viewCourseDetail(course.id)"
+            @click="viewCourseDetail(course)"
           >
             <!-- @ts-ignore -->
             <view class="course-card-cover">
@@ -444,8 +517,6 @@ function formatDate(dateString: string) {
             <view class="course-card-content">
               <!-- @ts-ignore -->
               <view class="course-name">{{ course.name }}</view>
-              <!-- @ts-ignore -->
-              <view class="course-desc">{{ course.description }}</view>
               
               <!-- 教师视图 -->
               <!-- @ts-ignore -->
@@ -474,6 +545,13 @@ function formatDate(dateString: string) {
                 <wd-icon name="calendar" size="28rpx" color="#999" />
                 <!-- @ts-ignore -->
                 <text>{{ formatDate(course.startDate) }} ~ {{ formatDate(course.endDate) }}</text>
+              </view>
+
+              <!-- 点击查看详情提示 -->
+              <!-- @ts-ignore -->
+              <view class="view-details">
+                <wd-icon name="arrow-right" size="28rpx" color="#6a11cb" />
+                <text>查看详情</text>
               </view>
             </view>
           </view>
@@ -645,28 +723,19 @@ function formatDate(dateString: string) {
       margin-bottom: 10rpx;
     }
     
-    .course-desc {
-      font-size: 28rpx;
-      color: #666;
-      margin-bottom: 20rpx;
-      display: -webkit-box;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 2;
-      overflow: hidden;
-    }
-    
     .course-meta {
       display: flex;
-      margin-bottom: 16rpx;
+      align-items: center;
+      margin-bottom: 10rpx;
       
       .meta-item {
         display: flex;
         align-items: center;
-        margin-right: 30rpx;
+        margin-right: 20rpx;
         
         text {
           font-size: 26rpx;
-          color: #333;
+          color: #666;
           margin-left: 6rpx;
         }
       }
@@ -679,6 +748,18 @@ function formatDate(dateString: string) {
       text {
         font-size: 26rpx;
         color: #999;
+        margin-left: 6rpx;
+      }
+    }
+
+    .view-details {
+      display: flex;
+      align-items: center;
+      margin-top: 10rpx;
+      
+      text {
+        font-size: 26rpx;
+        color: #6a11cb;
         margin-left: 6rpx;
       }
     }

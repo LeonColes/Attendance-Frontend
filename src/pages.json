@@ -19,11 +19,7 @@
     },
     {
       "path": "pages/course-detail/index",
-      "type": "page",
-      "style": {
-        "navigationBarTitleText": "课程详情",
-        "navigationStyle": "custom"
-      }
+      "type": "page"
     },
     {
       "path": "pages/create-checkin/index",
