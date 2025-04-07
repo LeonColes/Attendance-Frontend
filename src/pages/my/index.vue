@@ -12,11 +12,7 @@ import { ref, computed, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/store/user'
 
-// 安全获取uni对象
-function getSafeUni() {
-  return typeof window !== 'undefined' && window.uni ? window.uni : uni;
-}
-
+// 界面数据
 const userStore = useUserStore()
 const darkMode = ref(false)
 const loading = ref(false)
@@ -31,7 +27,12 @@ const attendanceStats = ref({
 // 计算属性
 const isTeacher = computed(() => userStore.role === 'TEACHER')
 const isStudent = computed(() => userStore.role === 'STUDENT')
-const roleName = computed(() => isTeacher.value ? '教师' : '学生')
+const roleName = computed(() => {
+  const role = userStore.role
+  if (role === 'TEACHER') return '教师'
+  if (role === 'STUDENT') return '学生'
+  return '未知角色'
+})
 
 // 生命周期
 onShow(() => {
@@ -57,6 +58,11 @@ onMounted(() => {
     title: '个人中心'
   })
 })
+
+// 安全获取uni对象
+function getSafeUni() {
+  return typeof window !== 'undefined' && window.uni ? window.uni : uni
+}
 
 // 加载主题设置
 function loadThemeSetting() {
@@ -99,11 +105,10 @@ function toggleTheme() {
 
 // 更新主题
 function updateTheme() {
-  if (darkMode.value) {
-    document.documentElement.classList.add('dark-theme')
-  } else {
-    document.documentElement.classList.remove('dark-theme')
-  }
+  // 小程序环境中不使用document对象
+  // 在小程序中可以通过样式类或状态变量控制主题
+  // darkMode.value已经绑定到了模板中的class条件
+  console.log('主题已更新为:', darkMode.value ? 'dark' : 'light')
 }
 
 // 退出登录
@@ -152,21 +157,13 @@ function goToSettings() {
     <view class="user-card">
       <!-- @ts-ignore -->
       <view class="user-info">
+        <image class="avatar" src="https://picsum.photos/200?random=1" mode="aspectFill" />
         <!-- @ts-ignore -->
-        <view class="avatar-container">
-          <wd-icon name="person" size="80rpx" color="#fff" />
-        </view>
-        <!-- @ts-ignore -->
-        <view class="user-details">
+        <view class="info">
           <!-- @ts-ignore -->
-          <text class="user-name">{{ userStore.fullName }}</text>
+          <text class="name">{{ userStore.fullName || '未登录' }}</text>
           <!-- @ts-ignore -->
-          <view class="user-meta">
-            <!-- @ts-ignore -->
-            <text class="user-role">{{ roleName }}</text>
-            <!-- @ts-ignore -->
-            <text class="user-id">{{ userStore.username }}</text>
-          </view>
+          <text class="role">{{ roleName }}</text>
         </view>
       </view>
       
@@ -348,38 +345,25 @@ function goToSettings() {
     display: flex;
     align-items: center;
     
-    .avatar-container {
+    .avatar {
       width: 120rpx;
       height: 120rpx;
       border-radius: 50%;
-      background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-      display: flex;
-      justify-content: center;
-      align-items: center;
       margin-right: 30rpx;
       flex-shrink: 0;
     }
     
-    .user-details {
-      .user-name {
+    .info {
+      .name {
         font-size: 36rpx;
         font-weight: bold;
         margin-bottom: 10rpx;
         display: block;
       }
       
-      .user-meta {
-        display: flex;
-        
-        text {
-          font-size: 24rpx;
-          color: #666;
-          margin-right: 20rpx;
-          
-          &:last-child {
-            margin-right: 0;
-          }
-        }
+      .role {
+        font-size: 24rpx;
+        color: #666;
       }
     }
   }

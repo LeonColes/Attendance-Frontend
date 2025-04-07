@@ -155,26 +155,33 @@ onMounted(() => {
     // 使用新API替代已弃用的getSystemInfoSync
     let sysInfo
     // 优先使用新API
-    if (typeof uni.getWindowInfo === 'function') {
+    if (typeof uni.getWindowInfo === 'function' && typeof uni.getDeviceInfo === 'function') {
       const windowInfo = uni.getWindowInfo()
       const deviceInfo = uni.getDeviceInfo()
+      const safeAreaInsets = windowInfo.safeAreaInsets || {}
+      
       sysInfo = {
-        ...windowInfo,
-        ...deviceInfo,
         statusBarHeight: windowInfo.statusBarHeight || 20,
-        safeArea: windowInfo.safeAreaInsets
-          ? {
-              top: windowInfo.safeAreaInsets.top,
-              bottom: windowInfo.safeAreaInsets.bottom,
-              left: windowInfo.safeAreaInsets.left,
-              right: windowInfo.safeAreaInsets.right,
-            }
-          : undefined,
+        safeArea: {
+          top: safeAreaInsets.top || 0,
+          bottom: safeAreaInsets.bottom || 0,
+          left: safeAreaInsets.left || 0,
+          right: safeAreaInsets.right || 0
+        }
       }
     }
     else {
-      // 兼容旧版本
-      sysInfo = uni.getSystemInfoSync()
+      // 如果新API不可用，尝试使用老的API，但要捕获可能的错误
+      try {
+        sysInfo = uni.getSystemInfoSync()
+      } catch (e) {
+        console.error('获取系统信息失败', e)
+        // 使用默认值
+        sysInfo = {
+          statusBarHeight: 20,
+          safeArea: { top: 0, bottom: 0, left: 0, right: 0 }
+        }
+      }
     }
 
     // 状态栏高度
