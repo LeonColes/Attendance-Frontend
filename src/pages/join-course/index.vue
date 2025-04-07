@@ -10,8 +10,7 @@
 <script lang="ts" setup>
 import { ref, onMounted } from 'vue'
 import { useUserStore } from '@/store/user'
-import { joinCourse } from '@/api/course'
-import type { FormItemRule } from 'wot-design-uni'
+import { joinCourse } from '@/api/courses'
 
 // 安全获取uni对象
 function getSafeUni() {
@@ -40,7 +39,7 @@ const rules = {
   courseCode: [
     { required: true, message: '请输入课程邀请码' },
     { pattern: /^[A-Za-z0-9]{6,10}$/, message: '课程码格式不正确' }
-  ] as FormItemRule[]
+  ]
 }
 
 // 加入课程
@@ -55,7 +54,7 @@ async function handleJoin() {
     }
     
     loading.value = true
-    const response = await joinCourse({ code: formData.value.courseCode })
+    const response = await joinCourse(formData.value.courseCode)
     
     if (response && response.code === 200) {
       getSafeUni().showToast({
@@ -63,11 +62,9 @@ async function handleJoin() {
         icon: 'success'
       })
       
-      // 延迟返回首页
+      // 延迟返回首页 - 改用navigateBack避免switchTab超时问题
       setTimeout(() => {
-        getSafeUni().switchTab({
-          url: '/pages/index'
-        })
+        getSafeUni().navigateBack()
       }, 1500)
     } else {
       getSafeUni().showToast({
@@ -88,16 +85,40 @@ async function handleJoin() {
 
 // 打开扫码页面
 function handleScan() {
+  // 显示加载提示
+  getSafeUni().showLoading({
+    title: '正在启动扫码...'
+  })
+  
   getSafeUni().scanCode({
     onlyFromCamera: true,
     scanType: ['qrCode'],
     success: (res) => {
+      getSafeUni().hideLoading()
       try {
+        console.log('扫码结果:', res.result)
+        // 提示用户扫码成功
+        getSafeUni().showToast({
+          title: '扫码成功',
+          icon: 'success',
+          duration: 1000
+        })
+        
         // 处理扫码结果
         const code = extractCourseCodeFromQR(res.result)
         if (code) {
           formData.value.courseCode = code
           courseCode.value = code
+          
+          // 显示加入中提示
+          getSafeUni().showLoading({
+            title: '正在加入课程...'
+          })
+          
+          // 自动加入课程
+          setTimeout(() => {
+            handleJoin()
+          }, 800)
         } else {
           getSafeUni().showToast({
             title: '无效的课程二维码',
@@ -113,7 +134,16 @@ function handleScan() {
       }
     },
     fail: (err) => {
+      getSafeUni().hideLoading()
       console.error('扫码失败', err)
+      getSafeUni().showToast({
+        title: '扫码取消或失败',
+        icon: 'none'
+      })
+    },
+    complete: () => {
+      // 确保加载提示被关闭
+      getSafeUni().hideLoading()
     }
   })
 }
@@ -125,6 +155,11 @@ function extractCourseCodeFromQR(qrContent: string): string {
     if (qrContent.includes('course=')) {
       // URL格式 例如：https://example.com/join?course=ABC123
       const regex = /course=([A-Za-z0-9]+)/
+      const match = qrContent.match(regex)
+      return match ? match[1] : ''
+    } else if (qrContent.includes('code=')) {
+      // URL格式 例如：http://localhost:8080/api/courses/members/join?code=MYHU7J
+      const regex = /code=([A-Za-z0-9]+)/
       const match = qrContent.match(regex)
       return match ? match[1] : ''
     } else if (/^[A-Za-z0-9]{6,10}$/.test(qrContent)) {
@@ -198,20 +233,28 @@ function goBack() {
               clearable
               :custom-style="{ padding: '28rpx 24rpx' }"
             />
-            <!-- 扫码按钮 -->
-            <!-- @ts-ignore -->
-            <view class="scan-btn" @click="handleScan">
-              <wd-icon name="scan" size="48rpx" color="#6a11cb" />
-            </view>
           </view>
         </wd-form-item>
+        
+        <!-- 扫码按钮单独一行 -->
+        <wd-button
+          block
+          type="info"
+          custom-style="margin-top: 20rpx; margin-bottom: 20rpx;"
+          @click="handleScan"
+        >
+          <view class="scan-button-content">
+            <wd-icon name="scan" size="36rpx" color="#ffffff" custom-style="margin-right: 10rpx;" />
+            扫码加入课程
+          </view>
+        </wd-button>
         
         <!-- 提交按钮 -->
         <wd-button
           block
           type="primary"
           :loading="loading"
-          custom-style="margin-top: 60rpx;"
+          custom-style="margin-top: 40rpx;"
           @click="handleJoin"
         >
           加入课程
@@ -323,18 +366,12 @@ function goBack() {
 .input-container {
   position: relative;
   margin-bottom: 30rpx;
-  
-  .scan-btn {
-    position: absolute;
-    right: 20rpx;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 80rpx;
-    height: 80rpx;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
+}
+
+.scan-button-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .placeholder {

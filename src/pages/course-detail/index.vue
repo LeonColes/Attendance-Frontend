@@ -8,7 +8,7 @@
  * 记得注释
 -->
 <script lang="ts" setup>
-import { ref, computed, reactive, onMounted } from 'vue'
+import { ref, computed, reactive, onMounted, watch } from 'vue'
 import { useUserStore } from '@/store/user'
 import { CheckInType, getCheckinList } from '@/api/attendance'
 import { getCourseMemberList, getCourseQRCode } from '@/api/courses'
@@ -42,6 +42,14 @@ const qrCodeLoading = ref(false)
 // 用户角色相关计算属性
 const isTeacher = computed(() => userStore.userInfo?.role === 'TEACHER')
 const isStudent = computed(() => userStore.userInfo?.role === 'STUDENT')
+
+// 监听activeTab和isStudent，确保学生不能访问考勤统计
+watch([isStudent, activeTab], ([isStudentValue, activeTabValue]) => {
+  // 如果是学生且当前tab是考勤统计，则自动切换到签到任务
+  if (isStudentValue && activeTabValue === 'stats') {
+    activeTab.value = 'checkins'
+  }
+})
 
 // 安全获取uni对象
 function getSafeUni() {
@@ -631,8 +639,10 @@ function closeQRCodeModal() {
           <!-- @ts-ignore -->
           <text class="tab-text">成员列表</text>
         </view>
+        <!-- 只有教师可以看到考勤统计 -->
         <!-- @ts-ignore -->
         <view 
+          v-if="isTeacher"
           class="tab-item" 
           :class="{ active: activeTab === 'stats' }"
           @click="switchTab('stats')"

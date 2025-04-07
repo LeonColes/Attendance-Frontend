@@ -11,7 +11,7 @@
 import { ref, computed, reactive, onMounted, watch } from 'vue'
 import { useUserStore } from '@/store/user'
 import { getCourseList } from '@/api/courses'
-import { getCheckinList } from '@/api/attendance'
+import { getCheckinList, submitCheckin, CheckInType } from '@/api/attendance'
 
 // 安全获取uni对象
 function getSafeUni() {
@@ -135,7 +135,7 @@ async function checkLoginStatus() {
 
 // 重定向到登录页
 function redirectToLogin() {
-  getSafeUni().redirectTo({
+  getSafeUni().navigateTo({
     url: '/pages/login/index'
   })
 }
@@ -298,11 +298,155 @@ function viewAllCourses() {
   })
 }
 
-// 打开扫码页
+// 打开扫码页面 - 专门用于学生签到
 function openScanner() {
-  getSafeUni().navigateTo({
-    url: '/pages/scanner/index'
+  // 只有学生可以使用签到扫码功能
+  if (!isStudent.value) {
+    getSafeUni().showToast({
+      title: '只有学生可以使用该功能',
+      icon: 'none'
+    })
+    return
+  }
+
+  getSafeUni().scanCode({
+    onlyFromCamera: true,
+    scanType: ['qrCode'],
+    success: (res) => {
+      try {
+        console.log('扫码结果:', res.result)
+        // 提示用户扫码成功
+        getSafeUni().showToast({
+          title: '扫码成功',
+          icon: 'success',
+          duration: 1000
+        })
+        
+        // 尝试从二维码获取签到码和任务ID
+        processCheckInQRCode(res.result)
+      } catch (e) {
+        console.error('处理扫码结果失败', e)
+        getSafeUni().showToast({
+          title: '二维码解析失败',
+          icon: 'none'
+        })
+      }
+    },
+    fail: (err) => {
+      console.error('扫码失败', err)
+      getSafeUni().showToast({
+        title: '扫码取消或失败',
+        icon: 'none'
+      })
+    }
   })
+}
+
+// 处理签到二维码
+async function processCheckInQRCode(qrContent) {
+  try {
+    // 显示签到中提示
+    getSafeUni().showLoading({
+      title: '正在签到...'
+    })
+    
+    // 获取设备信息
+    const deviceInfo = getSafeUni().getSystemInfoSync()
+    const deviceModel = deviceInfo.model || 'iPhone 13'
+    
+    // 构造位置信息
+    const location = {
+      latitude: 39.9042,
+      longitude: 116.4074
+    }
+    
+    // 准备API调用参数
+    const apiParams = {
+      checkinId: qrContent,                 // 使用checkinId而非taskId
+      verifyData: qrContent,                // 使用扫码结果作为verifyData
+      location: JSON.stringify(location),    // 位置信息
+      device: deviceModel,                   // 设备信息
+      verifyMethod: "QR_CODE"               // 使用常量字符串
+    }
+    
+    console.log('签到API参数:', apiParams)
+    
+    // 获取token
+    const token = uni.getStorageSync('token')
+    let authHeader = ''
+    
+    try {
+      // 尝试解析token
+      if (typeof token === 'string') {
+        try {
+          const parsedToken = JSON.parse(token)
+          authHeader = `${parsedToken.tokenType || 'Bearer'} ${parsedToken.accessToken || ''}`
+        } catch {
+          // 如果token不是JSON格式，直接使用
+          authHeader = `Bearer ${token}`
+        }
+      }
+      
+      // 调用原生请求接口
+      uni.request({
+        url: 'http://localhost:8080/api/courses/attendance/check-in',
+        method: 'POST',
+        header: {
+          'Authorization': authHeader,
+          'Content-Type': 'application/json',
+          'Accept': '*/*',
+          'User-Agent': 'Apifox/1.0.0 (https://apifox.com)',
+          'Host': 'localhost:8080',
+          'Connection': 'keep-alive'
+        },
+        data: apiParams,
+        success: (res) => {
+          // 隐藏加载提示
+          getSafeUni().hideLoading()
+          
+          if (res.statusCode === 200 && res.data && res.data.code === 200) {
+            getSafeUni().showToast({
+              title: '签到成功',
+              icon: 'success'
+            })
+            
+            // 延迟后刷新当前页面
+            setTimeout(() => {
+              // 刷新当前页面数据
+              refreshCourses()
+            }, 1500)
+          } else {
+            getSafeUni().showToast({
+              title: res.data?.message || '签到失败',
+              icon: 'none'
+            })
+          }
+        },
+        fail: (err) => {
+          console.error('API请求失败:', err)
+          getSafeUni().hideLoading()
+          getSafeUni().showToast({
+            title: '签到请求失败，请重试',
+            icon: 'none'
+          })
+        }
+      })
+    } catch (error) {
+      console.error('签到过程中发生错误:', error)
+      getSafeUni().hideLoading()
+      getSafeUni().showToast({
+        title: '签到失败，请重试',
+        icon: 'none'
+      })
+    }
+  } catch (error) {
+    console.error('签到失败:', error)
+    getSafeUni().hideLoading()
+    getSafeUni().showToast({
+      title: '签到失败，请重试',
+      icon: 'none'
+    })
+  }
 }
 
 // 格式化日期
@@ -566,12 +710,12 @@ function formatDate(dateString: string) {
         </view>
       </template>
     </view>
-  </view>
-  
-  <!-- 扫码按钮 -->
-  <!-- @ts-ignore -->
-  <view class="scan-btn" @click="openScanner">
-    <wd-icon name="scan" size="48rpx" color="white" />
+
+    <!-- 只对学生显示扫码按钮 -->
+    <!-- @ts-ignore -->
+    <view v-if="isStudent" class="scan-btn" @click="openScanner">
+      <wd-icon name="scan" size="48rpx" color="white" />
+    </view>
   </view>
 </template>
 
@@ -797,6 +941,7 @@ function formatDate(dateString: string) {
   align-items: center;
   justify-content: center;
   box-shadow: 0 6rpx 16rpx rgba(106, 17, 203, 0.3);
+  z-index: 100;
 }
 </style>
 
