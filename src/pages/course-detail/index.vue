@@ -379,9 +379,30 @@ function navigateToCreateCheckin() {
 }
 
 // 导航到签到详情页面
-function navigateToCheckinDetail(checkinId: string) {
+function navigateToCheckinDetail(checkinId) {
+  // 确保参数存在
+  if (!checkinId) {
+    getSafeUni().showToast({
+      title: '缺少签到ID',
+      icon: 'none',
+      duration: 1500
+    })
+    return
+  }
+  
+  console.log('正在跳转到二维码页面，签到ID:', checkinId)
+  
+  // 将参数添加到URL中
   getSafeUni().navigateTo({
-    url: `/pages/checkin-detail/index?id=${checkinId}&courseId=${courseId.value}`
+    url: `/pages/checkin-qrcode/index?checkinId=${encodeURIComponent(checkinId)}`,
+    fail: (err) => {
+      console.error('跳转失败:', err)
+      getSafeUni().showToast({
+        title: '页面跳转失败',
+        icon: 'none',
+        duration: 1500
+      })
+    }
   })
 }
 
@@ -446,14 +467,9 @@ async function loadCourseQRCode() {
   if (!courseId.value || !isTeacher.value) return
   
   try {
-    qrCodeLoading.value = true
-    console.log('开始获取课程二维码, courseId:', courseId.value)
-    
+    qrCodeLoading.value = true    
     // 调用已封装好的API
     const response = await getCourseQRCode(courseId.value)
-    console.log('QR Code response type:', typeof response)
-    console.log('QR Code response:', response)
-    
     if (!response) {
       console.error('二维码数据为空')
       getSafeUni().showToast({
@@ -465,10 +481,7 @@ async function loadCourseQRCode() {
     
     // 使用 uni.arrayBufferToBase64 直接转换
     const base64 = uni.arrayBufferToBase64(response)
-    console.log('转换后的base64长度:', base64.length)
-    
     qrCodeUrl.value = `data:image/png;base64,${base64}`
-    console.log('设置二维码URL成功')
     
   } catch (e) {
     console.error('获取课程二维码出错:', e)

@@ -1,4 +1,18 @@
 import { post, get } from '@/utils/request'
+import { getToken } from '@/utils/request'
+
+/**
+ * 分页查询参数
+ */
+export interface PageQueryParams {
+  page: number
+  size: number
+  sort?: Array<{
+    field: string
+    direction: string
+  }>
+  filters?: Record<string, any>
+}
 
 /**
  * 签到任务状态枚举
@@ -43,7 +57,7 @@ export interface CheckinCreateParams {
   startTime: string
   endTime: string
   checkInType: CheckInType
-  verifyParams?: Record<string, any>
+  verifyParams?: string
 }
 
 /**
@@ -114,19 +128,6 @@ export interface CheckinSubmitParams {
 }
 
 /**
- * 分页查询参数
- */
-export interface PageQueryParams {
-  page: number
-  size: number
-  sort?: Array<{
-    field: string
-    direction: string
-  }>
-  filters?: Record<string, any>
-}
-
-/**
  * 创建签到任务
  * @param params 签到任务参数
  */
@@ -166,9 +167,9 @@ export function getCheckinList(courseId: string, params: PageQueryParams) {
  * @param checkinId 签到任务ID
  */
 export function getCheckinQRCode(checkinId: string) {
-  return get<Blob>(`/api/courses/attendance/qrcode?checkinId=${checkinId}`, {
-    responseType: 'blob',
-  })
+  return get<ArrayBuffer>(`/api/courses/attendance/qrcode?checkinId=${checkinId}`, undefined, {
+    responseType: 'arraybuffer'
+  } as any)
 }
 
 /**

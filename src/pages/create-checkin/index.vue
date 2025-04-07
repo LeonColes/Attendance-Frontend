@@ -8,9 +8,9 @@
  * 记得注释
 -->
 <script lang="ts" setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { useUserStore } from '@/store/user'
-import { CheckInType } from '@/api/attendance'
+import { CheckInType, createCheckin } from '@/api/attendance'
 
 // 为window.uni声明类型，解决TypeScript错误
 declare global {
@@ -40,6 +40,14 @@ const formData = reactive({
   }
 })
 
+// 使用临时变量存储半径值，避免类型问题
+const radiusValue = ref(100)
+
+// 监听radiusValue的变化
+watch(radiusValue, (newValue) => {
+  formData.location.radius = Number(newValue)
+})
+
 // 获取系统信息
 function getSystemInfo() {
   try {
@@ -65,11 +73,21 @@ function getSystemInfo() {
 onMounted(() => {
   // 从路由参数获取课程ID
   const query = uni.getLaunchOptionsSync().query || {}
-  const pages = getCurrentPages()
-  const page = pages[pages.length - 1]
-  if (page && page.$page) {
-    const options = page.$page.options || {}
-    courseId.value = options.courseId || query.courseId || ''
+  
+  // 尝试从query中获取课程ID
+  courseId.value = query.courseId || ''
+  
+  // 如果从query中无法获取，尝试从当前页面获取
+  if (!courseId.value) {
+    try {
+      const pages = getCurrentPages()
+      const page = pages[pages.length - 1]
+      // @ts-ignore 忽略类型检查
+      const options = page?.options || {}
+      courseId.value = options.courseId || ''
+    } catch (e) {
+      console.error('获取页面参数失败:', e)
+    }
   }
   
   if (!courseId.value) {
@@ -170,35 +188,56 @@ async function submitForm() {
     loading.value = true
     errorMessage.value = ''
     
-    // 这里应该调用创建签到API
-    // const response = await createCheckin({
-    //   name: formData.name,
-    //   description: formData.description,
-    //   startTime: formData.startTime,
-    //   endTime: formData.endTime,
-    //   checkinType: formData.checkinType,
-    //   locationRequired: formData.locationRequired,
-    //   location: formData.location,
-    //   courseId: courseId.value,
-    //   creatorId: userStore.userId
-    // })
+    // 准备API参数
+    const checkinParams = {
+      courseId: courseId.value,
+      title: formData.name,
+      description: formData.description || '',
+      startTime: new Date(formData.startTime).toISOString(),
+      endTime: new Date(formData.endTime).toISOString(),
+      checkInType: formData.checkinType,
+      verifyParams: '{}' // 默认空对象字符串
+    }
     
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // 如果是位置签到，添加位置信息到verifyParams
+    if (formData.checkinType === CheckInType.LOCATION && formData.locationRequired) {
+      const locationParams = {
+        latitude: formData.location.latitude,
+        longitude: formData.location.longitude,
+        radius: 100, // 使用固定值，避免类型问题
+        address: formData.location.address
+      }
+      checkinParams.verifyParams = JSON.stringify(locationParams)
+    }
     
-    // 模拟成功响应
-    uni.showToast({
-      title: '创建签到成功',
-      icon: 'success'
-    })
+    console.log('创建签到任务，参数:', checkinParams)
     
-    // 返回到课程详情页
-    setTimeout(() => {
-      uni.navigateBack()
-    }, 1500)
+    // 调用创建签到API
+    const response = await createCheckin(checkinParams)
+    
+    if (response && response.code === 200) {
+      console.log('创建签到成功:', response.data)
+      
+      uni.showToast({
+        title: '创建签到成功',
+        icon: 'success'
+      })
+      
+      // 返回到课程详情页
+      setTimeout(() => {
+        uni.navigateBack()
+      }, 1500)
+    } else {
+      throw new Error(response?.message || '创建签到失败')
+    }
   } catch (e) {
     console.error('创建签到失败:', e)
     errorMessage.value = '创建签到失败，请稍后再试'
+    
+    uni.showToast({
+      title: '创建签到失败',
+      icon: 'none'
+    })
   } finally {
     loading.value = false
   }
@@ -207,6 +246,11 @@ async function submitForm() {
 // 返回上一页
 function goBack() {
   uni.navigateBack()
+}
+
+// 修改半径值handler
+function handleRadiusChange(value: string | number) {
+  formData.location.radius = Number(value);
 }
 </script>
 
@@ -247,23 +291,6 @@ function goBack() {
               v-model="formData.name"
               placeholder="请输入签到名称"
               clearable
-            />
-          </view>
-          
-          <!-- 签到描述 -->
-          <!-- @ts-ignore -->
-          <view class="form-item">
-            <!-- @ts-ignore -->
-            <view class="form-label">
-              <!-- @ts-ignore -->
-              <text>签到描述</text>
-            </view>
-            <wd-textarea
-              v-model="formData.description"
-              placeholder="请输入签到描述（选填）"
-              show-count
-              maxlength="100"
-              autosize
             />
           </view>
           
@@ -317,7 +344,7 @@ function goBack() {
               <view class="radius-setting">
                 <!-- @ts-ignore -->
                 <text>有效半径：{{ formData.location.radius }}米</text>
-                <wd-slider v-model="formData.location.radius" :min="50" :max="500" :step="50" />
+                <wd-slider v-model="radiusValue" :min="50" :max="500" :step="50" />
               </view>
               
               <wd-button block plain @click="chooseLocation">选择位置</wd-button>

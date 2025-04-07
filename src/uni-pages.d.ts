@@ -6,6 +6,8 @@
 interface NavigateToOptions {
   url: "/pages/index" |
        "/pages/all-courses/index" |
+       "/pages/checkin-detail/index" |
+       "/pages/checkin-qrcode/index" |
        "/pages/course-detail/index" |
        "/pages/create-checkin/index" |
        "/pages/create-course/index" |
