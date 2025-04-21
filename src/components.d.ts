@@ -7,18 +7,14 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
-    PrivacyPopup: typeof import('./components/PrivacyPopup.vue')['default']
     RoleSelector: typeof import('./components/RoleSelector.vue')['default']
     WdButton: typeof import('wot-design-uni/components/wd-button/wd-button.vue')['default']
-    WdConfigProvider: typeof import('wot-design-uni/components/wd-config-provider/wd-config-provider.vue')['default']
     WdDatetimePickerView: typeof import('wot-design-uni/components/wd-datetime-picker-view/wd-datetime-picker-view.vue')['default']
     WdForm: typeof import('wot-design-uni/components/wd-form/wd-form.vue')['default']
     WdFormItem: typeof import('wot-design-uni/components/wd-form-item/wd-form-item.vue')['default']
     WdIcon: typeof import('wot-design-uni/components/wd-icon/wd-icon.vue')['default']
     WdInput: typeof import('wot-design-uni/components/wd-input/wd-input.vue')['default']
     WdLoading: typeof import('wot-design-uni/components/wd-loading/wd-loading.vue')['default']
-    WdMessageBox: typeof import('wot-design-uni/components/wd-message-box/wd-message-box.vue')['default']
-    WdNotify: typeof import('wot-design-uni/components/wd-notify/wd-notify.vue')['default']
     WdPopup: typeof import('wot-design-uni/components/wd-popup/wd-popup.vue')['default']
     WdSlider: typeof import('wot-design-uni/components/wd-slider/wd-slider.vue')['default']
     WdTextarea: typeof import('wot-design-uni/components/wd-textarea/wd-textarea.vue')['default']

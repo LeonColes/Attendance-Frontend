@@ -6,9 +6,7 @@
       "layout": "tabbar",
       "name": "home",
       "style": {
-        "navigationBarTitleText": "智能考勤",
-        "navigationBarTextStyle": "black",
-        "navigationBarBackgroundColor": "#ffffff"
+        "navigationBarTitleText": "智能考勤"
       }
     },
     {
@@ -92,21 +90,22 @@
     }
   ],
   "globalStyle": {
-    "navigationBarTitleText": "Wot-Demo",
     "navigationBarTextStyle": "black",
     "navigationBarBackgroundColor": "#ffffff"
   },
   "tabBar": {
-    "custom": true,
+    "custom": false,
     "height": "0",
     "color": "#bfbfbf",
     "selectedColor": "#0165FF",
     "list": [
       {
-        "pagePath": "pages/index"
+        "pagePath": "pages/index",
+        "text": "首页"
       },
       {
-        "pagePath": "pages/my/index"
+        "pagePath": "pages/my/index",
+        "text": "我的"
       }
     ]
   },

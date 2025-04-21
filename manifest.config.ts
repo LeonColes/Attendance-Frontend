@@ -40,12 +40,26 @@ export default defineManifestConfig({
           '<uses-permission android:name="android.permission.FLASHLIGHT"/>',
           '<uses-feature android:name="android.hardware.camera"/>',
           '<uses-permission android:name="android.permission.WRITE_SETTINGS"/>',
+          '<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>',
+          '<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>',
         ],
       },
       /* ios打包配置 */
-      ios: {},
+      ios: {
+        'privacyDescription': {
+          'NSLocationWhenInUseUsageDescription': '根据您的位置信息提供签到服务',
+          'NSLocationAlwaysUsageDescription': '根据您的位置信息提供签到服务',
+          'NSLocationAlwaysAndWhenInUseUsageDescription': '根据您的位置信息提供签到服务'
+        }
+      },
       /* SDK配置 */
-      sdkConfigs: {},
+      sdkConfigs: {
+        geolocation: {
+          system: {
+            enable: true
+          }
+        }
+      },
     },
   },
   /* 快应用特有相关 */
@@ -59,6 +73,14 @@ export default defineManifestConfig({
     usingComponents: true,
     darkmode: true,
     themeLocation: 'theme.json',
+    requiredPrivateInfos: [
+      'getLocation'
+    ],
+    permission: {
+      'scope.userLocation': {
+        desc: '您的位置信息将用于签到功能'
+      }
+    }
   },
   'mp-alipay': {
     usingComponents: true,

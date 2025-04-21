@@ -512,7 +512,7 @@ function handleCheckinClick(checkin: any) {
     type: checkin.checkinType,
     status: checkin.status
   })
-  
+
   if (checkin.checkinType === 'QR_CODE') {
     // 检查用户角色，学生不能查看二维码签到详情
     if (userStore.role === 'STUDENT') {
@@ -523,7 +523,7 @@ function handleCheckinClick(checkin: any) {
       })
       return
     }
-    
+
     console.log('跳转到二维码签到页面，签到ID:', checkin.id)
     uni.navigateTo({
       url: `/pages/checkin-qrcode/index?checkinId=${checkin.id}`,
@@ -544,7 +544,7 @@ function handleCheckinClick(checkin: any) {
       })
       return
     }
-    
+
     // 直接跳转到位置签到页面，不预先获取位置
     uni.navigateTo({
       url: `/pages/location-checkin/index?checkinId=${checkin.id}`,
@@ -691,9 +691,7 @@ function handleCheckinClick(checkin: any) {
               <!-- @ts-ignore -->
               <view class="checkin-time">
                 <wd-icon name="time" size="28rpx" color="#666" />
-                <!-- @ts-ignore -->
-                <text>{{ formatDateTime(checkin.checkinStartTime || checkin.startTime) }} ~ {{
-                  formatDateTime(checkin.checkinEndTime || checkin.endTime) }}</text>
+                <text>{{ formatDateTime(checkin.checkinStartTime || checkin.startTime) }} ~ {{ formatDateTime(checkin.checkinEndTime || checkin.endTime) }}</text>
               </view>
               <!-- @ts-ignore -->
               <view class="checkin-type">
