@@ -96,7 +96,7 @@ export function formatDate(timestamp: number | string | Date): string {
 }
 
 /**
- * 格式化日期和时间为YYYY-MM-DDTHH:MM格式（中国时区），兼容iOS
+ * 格式化日期和时间为MM-DD HH:MM格式（中国时区），更简短易读
  * @param timestamp 时间戳或日期对象
  * @returns 格式化后的日期时间字符串
  */
@@ -106,14 +106,13 @@ export function formatDateTime(timestamp: number | string | Date): string {
   const date = safeParseDate(timestamp);
   const chinaDate = toChineseTimezone(date);
   
-  const year = chinaDate.getFullYear();
   const month = String(chinaDate.getMonth() + 1).padStart(2, '0');
   const day = String(chinaDate.getDate()).padStart(2, '0');
   const hour = String(chinaDate.getHours()).padStart(2, '0');
   const minute = String(chinaDate.getMinutes()).padStart(2, '0');
   
-  // 使用ISO兼容格式 (YYYY-MM-DDTHH:MM)
-  return `${year}-${month}-${day}T${hour}:${minute}`;
+  // 使用简短格式 (MM-DD HH:MM)
+  return `${month}-${day} ${hour}:${minute}`;
 }
 
 /**

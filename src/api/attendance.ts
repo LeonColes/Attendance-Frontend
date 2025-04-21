@@ -248,22 +248,22 @@ export function getCheckinStatistics(checkinId: string, params: PageQueryParams)
   return post<{
     checkinId: string
     absentStudents: {
-      fullName: string
       userId: string
       username: string
+      fullName: string
     }[]
-    lateCount: number
-    description: string
-    normalCount: number
-    absentCount: number
-    presentStudents: string[]
-    title: string
-    presentCount: number
     attendanceRate: number
     totalStudents: number
-    startTime: string
-    endTime: string
-    status: string
-    checkinType: string
-  }>(`/api/courses/attendance/record/statistics?checkinId=${checkinId}`, params)
+    presentCount: number
+    absentCount: number
+    lateCount: number
+  }>(`/api/courses/attendance/statistics?checkinId=${checkinId}`, params)
+}
+
+/**
+ * 获取签到任务详情
+ * @param checkinId 签到任务ID
+ */
+export function getCheckinDetail(checkinId: string) {
+  return get<CheckinTask>(`/api/courses/attendance/detail?checkinId=${checkinId}`)
 }

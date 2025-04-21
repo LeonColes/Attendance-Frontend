@@ -192,7 +192,7 @@ async function loadCheckinList(refresh = false) {
   }
 }
 
-// 加载课程成员列表
+// 加载课程成员列表 - 修复返回数据结构判断逻辑
 async function loadCourseMembers(showLoading: boolean = false) {
   try {
     if (showLoading) {
@@ -201,30 +201,78 @@ async function loadCourseMembers(showLoading: boolean = false) {
 
     const params: PageQueryParams = {
       page: 0,
-      size: 100 // 获取足够多的成员数据
+      size: 100,
+      sort: [
+        {
+          field: "joinedAt",
+          direction: "DESC"
+        }
+      ],
+      filters: {}
     }
 
     const response = await getCourseMemberList(courseId.value, params)
 
     if (response && response.code === 200) {
-      // 检查数据结构，适配 users 字段
-      if (response.data.users && Array.isArray(response.data.users)) {
-        membersList.value = response.data.users.map((user: any) => ({
-          id: user.id,
-          username: user.username,
-          fullName: user.fullName,
-          role: user.role || 'STUDENT',
-          joinTime: user.joinTime || new Date().toISOString(),
-          avatarUrl: user.avatarUrl
-        }))
-      } else if ((response.data as any).items && Array.isArray((response.data as any).items)) {
-        // 原来的结构，使用类型断言
-        membersList.value = (response.data as any).items
+      console.log('成员列表API响应:', response.data)
+      
+      // 修复数据结构判断逻辑，优先检查最常见的数据结构
+      if (response.data && typeof response.data === 'object') {
+        if (Array.isArray(response.data)) {
+          // 直接是数组的情况
+          membersList.value = response.data.map((user: any) => ({
+            id: user.id,
+            username: user.username,
+            fullName: user.fullName || user.username,
+            role: user.role || 'STUDENT',
+            joinTime: user.joinTime || new Date().toISOString(),
+            avatarUrl: user.avatarUrl
+          }))
+        } else if (response.data.users && Array.isArray(response.data.users)) {
+          // users 字段包含用户数组
+          membersList.value = response.data.users.map((user: any) => ({
+            id: user.id,
+            username: user.username,
+            fullName: user.fullName || user.username,
+            role: user.role || 'STUDENT',
+            joinTime: user.joinTime || new Date().toISOString(),
+            avatarUrl: user.avatarUrl
+          }))
+        } else if ((response.data as any).items && Array.isArray((response.data as any).items)) {
+          // items 字段包含用户数组
+          membersList.value = (response.data as any).items.map((user: any) => ({
+            id: user.id,
+            username: user.username,
+            fullName: user.fullName || user.username,
+            role: user.role || 'STUDENT',
+            joinTime: user.joinTime || new Date().toISOString(),
+            avatarUrl: user.avatarUrl
+          }))
+        } else if ((response.data as any).list && Array.isArray((response.data as any).list)) {
+          // list 字段包含用户数组
+          membersList.value = (response.data as any).list.map((user: any) => ({
+            id: user.id,
+            username: user.username,
+            fullName: user.fullName || user.username,
+            role: user.role || 'STUDENT',
+            joinTime: user.joinTime || new Date().toISOString(),
+            avatarUrl: user.avatarUrl
+          }))
+        } else {
+          // 其他未知结构，尝试直接使用
+          membersList.value = []
+          console.warn('未知的成员列表数据结构:', response.data)
+        }
       } else {
         membersList.value = []
       }
 
-      console.log('成员列表加载成功:', membersList.value)
+      console.log('成员列表加载成功，共' + membersList.value.length + '名成员:', membersList.value)
+      
+      // 成员加载后更新统计数据
+      if (activeTab.value === 'stats') {
+        loadCourseAttendanceStats()
+      }
     } else {
       console.error('获取成员列表失败:', response)
       getSafeUni().showToast({
@@ -337,7 +385,19 @@ async function loadCourseAttendanceStats() {
 
 // 切换标签
 function switchTab(tab: string) {
+  // 如果当前标签与目标标签相同，不执行任何操作
+  if (activeTab.value === tab) return
+  
   activeTab.value = tab
+  
+  // 切换到相应标签时刷新对应数据
+  if (tab === 'members') {
+    loadCourseMembers(true)
+  } else if (tab === 'stats' && isTeacher.value) {
+    loadCourseAttendanceStats()
+  } else if (tab === 'checkins') {
+    loadCheckinList(true)
+  }
 }
 
 // 获取签到类型显示文本
@@ -359,8 +419,8 @@ function getCheckinStatus(checkin: any) {
   if (!checkin) return ''
 
   const now = new Date().getTime()
-  const startTime = new Date(checkin.checkinStartTime).getTime()
-  const endTime = new Date(checkin.checkinEndTime).getTime()
+  const startTime = new Date(checkin.startTime).getTime()
+  const endTime = new Date(checkin.endTime).getTime()
 
   if (now < startTime) {
     return 'not-started'
@@ -462,26 +522,52 @@ function getAttendanceRateClass(attendanceRate: number) {
   }
 }
 
-// 添加获取课程二维码的函数
+// 添加获取课程二维码的函数 - 修复二维码渲染问题
 async function loadCourseQRCode() {
   if (!courseId.value || !isTeacher.value) return
 
   try {
     qrCodeLoading.value = true
+    qrCodeUrl.value = '' // 清空之前的URL
+    
     // 调用已封装好的API
     const response = await getCourseQRCode(courseId.value)
+    console.log('二维码响应类型:', typeof response, response instanceof ArrayBuffer ? 'ArrayBuffer' : '非ArrayBuffer')
+    
     if (!response) {
-      console.error('二维码数据为空')
-      getSafeUni().showToast({
-        title: '获取二维码失败',
-        icon: 'none'
-      })
-      return
+      throw new Error('二维码数据为空')
     }
 
-    // 使用 uni.arrayBufferToBase64 直接转换
-    const base64 = uni.arrayBufferToBase64(response)
-    qrCodeUrl.value = `data:image/png;base64,${base64}`
+    if (response instanceof ArrayBuffer) {
+      // 使用 uni.arrayBufferToBase64 直接转换
+      try {
+        const base64 = uni.arrayBufferToBase64(response)
+        qrCodeUrl.value = `data:image/png;base64,${base64}`
+        console.log('二维码生成成功，长度:', base64.length)
+      } catch (err) {
+        console.error('Base64转换失败:', err)
+        throw new Error('二维码数据转换失败')
+      }
+    } else if (response as any && typeof (response as any) === 'object' && (response as any).base64) {
+      // 如果API直接返回了base64字符串
+      qrCodeUrl.value = `data:image/png;base64,${(response as any).base64}`
+    } else if (response as any && typeof (response as any) === 'object' && (response as any).url) {
+      // 如果API返回了图片URL
+      qrCodeUrl.value = (response as any).url
+    } else if (response as any && typeof (response as any) === 'string') {
+      // 处理字符串类型的响应
+      const strResponse = response as string;
+      if (strResponse.startsWith('data:')) {
+        // 如果API直接返回了data URI
+        qrCodeUrl.value = strResponse;
+      } else {
+        // 假设是base64字符串
+        qrCodeUrl.value = `data:image/png;base64,${strResponse}`;
+      }
+    } else {
+      console.error('不支持的二维码数据格式:', response)
+      throw new Error('不支持的二维码数据格式')
+    }
 
   } catch (e) {
     console.error('获取课程二维码出错:', e)
@@ -563,6 +649,14 @@ function handleCheckinClick(checkin: any) {
     })
   }
 }
+
+// 添加Watch监听成员和签到列表变化时自动更新统计
+watch([membersList, checkinList], () => {
+  // 仅当统计标签页激活时自动刷新
+  if (activeTab.value === 'stats' && isTeacher.value) {
+    loadCourseAttendanceStats()
+  }
+})
 </script>
 
 <template>
@@ -572,6 +666,7 @@ function handleCheckinClick(checkin: any) {
     <!-- @ts-ignore -->
     <view v-if="loading" class="loading-container">
       <wd-loading color="#6a11cb" size="80rpx" />
+      <text>加载课程信息中...</text>
     </view>
 
     <!-- 主要内容 -->
@@ -684,20 +779,22 @@ function handleCheckinClick(checkin: any) {
           <!-- @ts-ignore -->
           <view v-if="checkinList.length > 0" class="checkin-list">
             <!-- @ts-ignore -->
-            <view v-for="checkin in checkinList" :key="checkin.id" class="checkin-item"
+            <view v-for="(checkin, index) in checkinList" :key="checkin.id" class="checkin-item"
+              :class="[checkin.checkinType.toLowerCase(), 'checkin-type-' + checkin.checkinType.toLowerCase()]"
+              :style="{ '--i': index }"
               @click="handleCheckinClick(checkin)">
               <!-- @ts-ignore -->
               <view class="checkin-title">{{ checkin.name }}</view>
               <!-- @ts-ignore -->
-              <view class="checkin-time">
-                <wd-icon name="time" size="28rpx" color="#666" />
-                <text>{{ formatDateTime(checkin.checkinStartTime) }} ~ {{ formatDateTime(checkin.checkinEndTime) }}</text>
-              </view>
-              <!-- @ts-ignore -->
-              <view class="checkin-type">
-                <wd-icon name="scan" size="28rpx" color="#666" />
-                <!-- @ts-ignore -->
-                <text>{{ getCheckinTypeText(checkin.checkinType) }}</text>
+              <view class="checkin-info-row">
+                <view class="checkin-time">
+                  <wd-icon name="time" size="28rpx" color="#666" />
+                  <text>{{ formatDateTime(checkin.startTime) }} ~ {{ formatDateTime(checkin.endTime) }}</text>
+                </view>
+                <view class="checkin-type-badge">
+                  <wd-icon :name="checkin.checkinType === 'QR_CODE' ? 'scan' : 'location'" size="24rpx" :color="checkin.checkinType === 'QR_CODE' ? '#2196f3' : '#4caf50'" />
+                  <text>{{ getCheckinTypeText(checkin.checkinType) }}</text>
+                </view>
               </view>
               <!-- @ts-ignore -->
               <view v-if="!isStudent" class="checkin-status" :class="getCheckinStatus(checkin)">
@@ -743,7 +840,9 @@ function handleCheckinClick(checkin: any) {
                 <!-- @ts-ignore -->
                 <view class="member-username">{{ member.username }}</view>
                 <!-- @ts-ignore -->
-                <view class="member-role">{{ member.role === 'TEACHER' ? '教师' : '学生' }}</view>
+                <view class="member-role" :class="{ 'role-teacher': member.role === 'TEACHER', 'role-student': member.role !== 'TEACHER' }">
+                  {{ member.role === 'TEACHER' ? '教师' : '学生' }}
+                </view>
               </view>
             </view>
           </view>
@@ -892,7 +991,7 @@ function handleCheckinClick(checkin: any) {
 <style lang="scss" scoped>
 .container {
   min-height: 100vh;
-  background-color: #f5f7fa;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e9edf2 100%);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -903,9 +1002,17 @@ function handleCheckinClick(checkin: any) {
 
 .loading-container {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   height: 300rpx;
+  gap: 20rpx;
+}
+
+.loading-container text {
+  font-size: 28rpx;
+  color: #666;
+  margin-top: 10rpx;
 }
 
 .content-container {
@@ -923,11 +1030,12 @@ function handleCheckinClick(checkin: any) {
 }
 
 .course-header {
-  background-color: #fff;
-  padding: 25rpx;
-  border-radius: 12rpx;
-  margin-bottom: 20rpx;
-  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+  padding: 30rpx;
+  border-radius: 24rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 8rpx 20rpx rgba(106, 17, 203, 0.08);
+  border: 1rpx solid rgba(106, 17, 203, 0.05);
 }
 
 .basic-info-card {
@@ -939,6 +1047,7 @@ function handleCheckinClick(checkin: any) {
 .info-row {
   display: flex;
   align-items: center;
+  padding: 8rpx 0;
 }
 
 .info-label {
@@ -963,6 +1072,9 @@ function handleCheckinClick(checkin: any) {
   margin-top: 6rpx;
   max-height: 120rpx;
   overflow-y: auto;
+  padding: 10rpx;
+  background-color: rgba(245, 247, 250, 0.6);
+  border-radius: 8rpx;
 }
 
 .info-value.code {
@@ -976,27 +1088,30 @@ function handleCheckinClick(checkin: any) {
   padding: 6rpx 16rpx;
   border-radius: 50rpx;
   display: inline-block;
+  font-weight: 500;
+  box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.05);
 }
 
 .info-value.status.active {
-  background-color: rgba(106, 17, 203, 0.1);
+  background: linear-gradient(135deg, rgba(106, 17, 203, 0.1) 0%, rgba(37, 117, 252, 0.1) 100%);
   color: #6a11cb;
 }
 
 .info-value.status.completed {
-  background-color: rgba(76, 175, 80, 0.1);
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(129, 199, 132, 0.1) 100%);
   color: #4caf50;
 }
 
 .tab-container {
   display: flex;
   align-items: center;
-  background-color: #fff;
-  border-radius: 12rpx;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+  border-radius: 24rpx;
   overflow: hidden;
-  margin-bottom: 20rpx;
-  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
-  padding: 10rpx 20rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 8rpx 20rpx rgba(106, 17, 203, 0.08);
+  border: 1rpx solid rgba(106, 17, 203, 0.05);
+  padding: 5rpx;
 }
 
 .tab-item {
@@ -1004,16 +1119,21 @@ function handleCheckinClick(checkin: any) {
   text-align: center;
   padding: 20rpx 0;
   position: relative;
-  border-bottom: 6rpx solid transparent;
+  margin: 5rpx;
+  border-radius: 20rpx;
+  transition: all 0.3s ease;
 }
 
 .tab-item.active {
-  border-bottom-color: #6a11cb;
+  background: linear-gradient(135deg, rgba(106, 17, 203, 0.1) 0%, rgba(37, 117, 252, 0.1) 100%);
+  box-shadow: 0 4rpx 8rpx rgba(106, 17, 203, 0.1);
+  border-bottom: none;
 }
 
 .tab-item text {
   font-size: 28rpx;
   color: #666;
+  transition: all 0.3s ease;
 }
 
 .tab-item.active text {
@@ -1022,31 +1142,81 @@ function handleCheckinClick(checkin: any) {
 }
 
 .tab-content {
-  background-color: #fff;
-  border-radius: 12rpx;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+  border-radius: 24rpx;
   padding: 30rpx;
-  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
-  min-height: 600rpx;
+  box-shadow: 0 8rpx 20rpx rgba(106, 17, 203, 0.08);
+  border: 1rpx solid rgba(106, 17, 203, 0.05);
+  min-height: auto;
+  height: auto;
+  will-change: transform;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: visible;
 }
 
 .checkins-content {
   display: flex;
   flex-direction: column;
   gap: 20rpx;
+  padding-bottom: 20rpx;
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .checkin-list {
   display: flex;
   flex-direction: column;
-  gap: 20rpx;
+  gap: 24rpx;
+  will-change: transform;
 }
 
 .checkin-item {
-  padding: 20rpx;
+  padding: 24rpx;
   position: relative;
-  border-radius: 24rpx;
+  border-radius: 20rpx;
   margin-bottom: 20rpx;
-  background-color: #fff;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.04);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-left: 8rpx solid #ddd;
+  overflow: hidden;
+  animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  animation-fill-mode: both;
+  animation-delay: calc(var(--i, 0) * 0.05s);
+  will-change: transform, opacity, box-shadow;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.checkin-item:hover, 
+.checkin-item:active {
+  transform: translateY(-2rpx);
+  box-shadow: 0 8rpx 16rpx rgba(0, 0, 0, 0.08);
+}
+
+.checkin-item:active {
+  transform: scale(0.985);
+  opacity: 0.9;
+  box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.04);
 }
 
 .checkin-title {
@@ -1056,17 +1226,35 @@ function handleCheckinClick(checkin: any) {
   margin-bottom: 10rpx;
 }
 
-.checkin-time,
-.checkin-type {
+.checkin-info-row {
   display: flex;
   align-items: center;
-  gap: 10rpx;
+  justify-content: space-between;
   margin-bottom: 10rpx;
 }
 
-.checkin-time text,
-.checkin-type text {
+.checkin-time {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.checkin-time text {
   font-size: 26rpx;
+  color: #666;
+}
+
+.checkin-type-badge {
+  display: flex;
+  align-items: center;
+  gap: 5rpx;
+  background-color: rgba(0, 0, 0, 0.04);
+  padding: 4rpx 12rpx;
+  border-radius: 24rpx;
+}
+
+.checkin-type-badge text {
+  font-size: 24rpx;
   color: #666;
 }
 
@@ -1077,41 +1265,43 @@ function handleCheckinClick(checkin: any) {
   padding: 6rpx 16rpx;
   border-radius: 50rpx;
   font-size: 24rpx;
+  font-weight: 500;
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.05);
 }
 
 .checkin-status.not-started {
-  background-color: rgba(158, 158, 158, 0.1);
+  background: linear-gradient(135deg, rgba(158, 158, 158, 0.1) 0%, rgba(188, 188, 188, 0.1) 100%);
   color: #9e9e9e;
 }
 
 .checkin-status.in-progress {
-  background-color: rgba(33, 150, 243, 0.1);
+  background: linear-gradient(135deg, rgba(33, 150, 243, 0.1) 0%, rgba(3, 169, 244, 0.1) 100%);
   color: #2196f3;
 }
 
 .checkin-status.ended {
-  background-color: rgba(76, 175, 80, 0.1);
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(129, 199, 132, 0.1) 100%);
   color: #4caf50;
 }
 
 .checkin-status.checked_in {
-  background-color: rgba(76, 175, 80, 0.1);
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(129, 199, 132, 0.1) 100%);
   color: #4caf50;
 }
 
 .checkin-status.late {
-  background-color: rgba(255, 152, 0, 0.1);
+  background: linear-gradient(135deg, rgba(255, 152, 0, 0.1) 0%, rgba(255, 193, 7, 0.1) 100%);
   color: #ff9800;
 }
 
 .checkin-status.absent,
 .checkin-status.missed {
-  background-color: rgba(244, 67, 54, 0.1);
+  background: linear-gradient(135deg, rgba(244, 67, 54, 0.1) 0%, rgba(239, 83, 80, 0.1) 100%);
   color: #f44336;
 }
 
 .checkin-status.pending {
-  background-color: rgba(158, 158, 158, 0.1);
+  background: linear-gradient(135deg, rgba(158, 158, 158, 0.1) 0%, rgba(188, 188, 188, 0.1) 100%);
   color: #9e9e9e;
 }
 
@@ -1150,15 +1340,23 @@ function handleCheckinClick(checkin: any) {
 .member-list {
   display: flex;
   flex-direction: column;
-  gap: 20rpx;
+  gap: 24rpx;
 }
 
 .member-item {
   display: flex;
   align-items: center;
-  padding: 20rpx;
-  background-color: #f9f9f9;
-  border-radius: 10rpx;
+  padding: 24rpx;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+  border-radius: 20rpx;
+  box-shadow: 0 6rpx 16rpx rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+}
+
+.member-item:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+  box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.04);
 }
 
 .member-avatar {
@@ -1167,6 +1365,8 @@ function handleCheckinClick(checkin: any) {
   border-radius: 50%;
   overflow: hidden;
   margin-right: 20rpx;
+  box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.1);
+  border: 2rpx solid rgba(255, 255, 255, 0.8);
 }
 
 .member-avatar image {
@@ -1183,18 +1383,31 @@ function handleCheckinClick(checkin: any) {
   font-size: 30rpx;
   color: #333;
   font-weight: bold;
+  margin-bottom: 4rpx;
 }
 
 .member-username {
   font-size: 22rpx;
   color: #999;
-  margin-top: 2rpx;
-  margin-bottom: 2rpx;
+  margin-bottom: 6rpx;
 }
 
 .member-role {
-  font-size: 24rpx;
-  color: #666;
+  font-size: 22rpx;
+  padding: 2rpx 12rpx;
+  border-radius: 30rpx;
+  display: inline-block;
+}
+
+/* 基于角色着色 */
+.member-item .member-role.role-teacher {
+  background: rgba(106, 17, 203, 0.05);
+  color: #6a11cb;
+}
+
+.member-item .member-role.role-student {
+  background: rgba(33, 150, 243, 0.05);
+  color: #2196f3;
 }
 
 .stats-container {
@@ -1204,9 +1417,11 @@ function handleCheckinClick(checkin: any) {
 }
 
 .stats-card {
-  background-color: #f9f9f9;
-  padding: 20rpx;
-  border-radius: 10rpx;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+  padding: 24rpx;
+  border-radius: 20rpx;
+  box-shadow: 0 6rpx 16rpx rgba(0, 0, 0, 0.06);
+  border: 1rpx solid rgba(106, 17, 203, 0.05);
 }
 
 .stats-title {
@@ -1215,7 +1430,7 @@ function handleCheckinClick(checkin: any) {
   color: #333;
   margin-bottom: 20rpx;
   padding-bottom: 10rpx;
-  border-bottom: 2rpx solid #eee;
+  border-bottom: 2rpx solid rgba(106, 17, 203, 0.1);
 }
 
 .stats-row {
@@ -1225,18 +1440,27 @@ function handleCheckinClick(checkin: any) {
 
 .stat-item {
   text-align: center;
+  padding: 16rpx;
+  border-radius: 16rpx;
+  background-color: rgba(106, 17, 203, 0.02);
+  transition: all 0.3s ease;
+}
+
+.stat-item:hover {
+  background-color: rgba(106, 17, 203, 0.05);
+  box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.05);
 }
 
 .stat-value {
   font-size: 40rpx;
   font-weight: bold;
   color: #6a11cb;
+  margin-bottom: 6rpx;
 }
 
 .stat-label {
   font-size: 24rpx;
   color: #666;
-  margin-top: 10rpx;
 }
 
 .attendance-list {
@@ -1328,12 +1552,17 @@ function handleCheckinClick(checkin: any) {
   align-items: center;
   justify-content: center;
   padding: 100rpx 0;
+  min-height: 400rpx;
+  background: linear-gradient(135deg, rgba(245, 245, 245, 0.5) 0%, rgba(250, 250, 250, 0.5) 100%);
+  border-radius: 20rpx;
+  margin: 20rpx 0;
 }
 
 .empty-text {
   font-size: 28rpx;
   color: #999;
   margin-top: 20rpx;
+  margin-bottom: 16rpx;
 }
 
 .refresh-btn {
@@ -1342,21 +1571,29 @@ function handleCheckinClick(checkin: any) {
   justify-content: center;
   padding: 10rpx 20rpx;
   border-radius: 50rpx;
-  background-color: rgba(106, 17, 203, 0.1);
+  background: linear-gradient(135deg, rgba(106, 17, 203, 0.1) 0%, rgba(37, 117, 252, 0.1) 100%);
   color: #6a11cb;
   font-size: 28rpx;
   margin-bottom: 20rpx;
+  align-self: center;
+  width: fit-content;
   cursor: pointer;
+  box-shadow: 0 4rpx 8rpx rgba(106, 17, 203, 0.1);
+  transition: all 0.3s ease;
 }
 
-.refresh-btn:hover {
-  background-color: rgba(106, 17, 203, 0.2);
+.refresh-btn:active {
+  transform: scale(0.95);
+  opacity: 0.9;
+  box-shadow: 0 2rpx 4rpx rgba(106, 17, 203, 0.1);
 }
 
 .empty-list {
   text-align: center;
-  padding: 30rpx 0;
+  padding: 60rpx 0;
   color: #999;
+  background: rgba(250, 250, 250, 0.5);
+  border-radius: 16rpx;
 }
 
 .student-name {
@@ -1444,5 +1681,16 @@ function handleCheckinClick(checkin: any) {
   .qrcode-actions {
     margin-top: 20rpx;
   }
+}
+
+// 基于签到类型添加不同的左侧边框颜色
+.checkin-item.checkin-type-qr_code {
+  border-left-color: #2196f3;
+  background: linear-gradient(135deg, #ffffff 0%, rgba(33, 150, 243, 0.05) 100%);
+}
+
+.checkin-item.checkin-type-location {
+  border-left-color: #4caf50;
+  background: linear-gradient(135deg, #ffffff 0%, rgba(76, 175, 80, 0.05) 100%);
 }
 </style>

@@ -36,7 +36,10 @@
     },
     {
       "path": "pages/course-detail/index",
-      "type": "page"
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "课程详情"
+      }
     },
     {
       "path": "pages/create-checkin/index",
@@ -66,7 +69,10 @@
     },
     {
       "path": "pages/login/index",
-      "type": "page"
+      "type": "page",
+      "style": {
+        "navigationStyle": "custom"
+      }
     },
     {
       "path": "pages/my/index",
@@ -79,7 +85,10 @@
     },
     {
       "path": "pages/register/index",
-      "type": "page"
+      "type": "page",
+      "style": {
+        "navigationStyle": "custom"
+      }
     },
     {
       "path": "pages/scanner/index",

@@ -5,7 +5,6 @@
 
 interface NavigateToOptions {
   url: "/pages/index" |
-       "/pages/all-courses/index" |
        "/pages/checkin-detail/index" |
        "/pages/checkin-location/index" |
        "/pages/checkin-qrcode/index" |

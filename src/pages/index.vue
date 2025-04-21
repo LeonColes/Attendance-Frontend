@@ -28,13 +28,13 @@ declare global {
 }
 
 const userStore = useUserStore()
-const activeTab = ref<'active' | 'completed'>('active')
+const activeTab = ref<'active' | 'all'>('active')
 const activeCourseCount = ref(0)
-const completedCourseCount = ref(0)
+const allCourseCount = ref(0)
 const coursesLoading = ref(true)
 const allCoursesLoading = ref(true)
 const activeCourses = ref<any[]>([])
-const completedCourses = ref<any[]>([])
+const allCourses = ref<any[]>([])
 const otherCourses = ref<any[]>([])
 
 // 计算属性：用户身份
@@ -165,20 +165,20 @@ async function loadCourseData() {
       filters: {}
     })
     
-    if (response && response.code === 200) {
-      const courses = response.data.courses || []
+    if (response && typeof response === 'object' && 'code' in response && response.code === 200) {
+      // 使用类型断言处理响应数据
+      const apiResponse = response as { code: number; data: any }
+      const data = apiResponse.data || {}
+      const courses = data.courses || []
       console.log('获取到课程数据:', courses)
       
       // 根据课程状态分类
       activeCourses.value = courses.filter((course) => course.status === 'ACTIVE')
-      completedCourses.value = courses.filter((course) => course.status === 'COMPLETED')
-      otherCourses.value = courses.filter((course) => 
-        course.status !== 'ACTIVE' && course.status !== 'COMPLETED'
-      )
+      allCourses.value = courses // 所有课程
       
       // 更新计数
       activeCourseCount.value = activeCourses.value.length
-      completedCourseCount.value = completedCourses.value.length
+      allCourseCount.value = allCourses.value.length
     } else {
       showToast('获取课程列表失败')
     }
@@ -202,7 +202,7 @@ function showToast(title: string) {
 }
 
 // 切换标签
-function switchTab(tab: 'active' | 'completed') {
+function switchTab(tab: 'active' | 'all') {
   activeTab.value = tab
 }
 
@@ -296,13 +296,6 @@ function viewCourseDetail(course) {
     getSafeUni().navigateTo({
       url: `/pages/course-detail/index?courseInfo=${courseInfo}`
     })
-  })
-}
-
-// 查看所有课程
-function viewAllCourses() {
-  getSafeUni().navigateTo({
-    url: '/pages/all-courses/index'
   })
 }
 
@@ -408,7 +401,7 @@ async function processCheckInQRCode(qrContent) {
           'Connection': 'keep-alive'
         },
         data: apiParams,
-        success: (res) => {
+        success: (res: any) => {
           // 隐藏加载提示
           getSafeUni().hideLoading()
           
@@ -468,8 +461,8 @@ function handleNewCourse(newCourse) {
       activeCourses.value.unshift(newCourse)
       activeCourseCount.value += 1
     } else if (newCourse.status === 'COMPLETED') {
-      completedCourses.value.unshift(newCourse)
-      completedCourseCount.value += 1
+      allCourses.value.unshift(newCourse)
+      allCourseCount.value += 1
     } else {
       otherCourses.value.unshift(newCourse)
     }
@@ -480,42 +473,39 @@ function handleNewCourse(newCourse) {
 <template>
   <!-- @ts-ignore -->
   <view class="container">
-    <!-- 标题栏 -->
+    <!-- 页面头部 -->
     <!-- @ts-ignore -->
     <view class="header">
-      <!-- @ts-ignore -->
-      <view class="header-title">
-        <!-- @ts-ignore -->
-        <text>我的课程</text>
-      </view>
-      
-      <!-- 课程操作按钮 -->
+      <text class="header-title">我的课程</text>
       <!-- @ts-ignore -->
       <view class="header-action">
-        <template v-if="isTeacher">
-          <wd-button 
-            size="small" 
-            type="primary" 
-            custom-style="height: 64rpx; padding: 0 24rpx; font-size: 28rpx;"
-            @click="createCourse"
-          >
-            创建课程
-          </wd-button>
-        </template>
-        <template v-else-if="isStudent">
-          <wd-button 
-            size="small" 
-            type="primary" 
-            custom-style="height: 64rpx; padding: 0 24rpx; font-size: 28rpx;"
-            @click="joinCourse"
-          >
-            加入课程
-          </wd-button>
-        </template>
+        <!-- 教师端：创建课程 -->
+        <wd-button 
+          v-if="isTeacher" 
+          type="primary"
+          size="small"
+          custom-style="margin-left: 20rpx;"
+          icon="add"
+          @click="createCourse"
+        >
+          创建课程
+        </wd-button>
+        
+        <!-- 学生端：加入课程 -->
+        <wd-button 
+          v-if="isStudent" 
+          type="primary"
+          size="small"
+          custom-style="margin-left: 20rpx;"
+          icon="add"
+          @click="joinCourse"
+        >
+          加入课程
+        </wd-button>
       </view>
     </view>
     
-    <!-- Tab栏 -->
+    <!-- 标签页 -->
     <!-- @ts-ignore -->
     <view class="tab-container">
       <!-- @ts-ignore -->
@@ -533,35 +523,28 @@ function handleNewCourse(newCourse) {
       <!-- @ts-ignore -->
       <view 
         class="tab-item" 
-        :class="{ active: activeTab === 'completed' }"
-        @click="switchTab('completed')"
+        :class="{ active: activeTab === 'all' }"
+        @click="switchTab('all')"
       >
         <!-- @ts-ignore -->
-        <text class="tab-text">已结课</text>
+        <text class="tab-text">全部</text>
         <!-- @ts-ignore -->
-        <text class="tab-count">{{ completedCourseCount }}</text>
-      </view>
-      
-      <!-- 查看全部按钮 -->
-      <!-- @ts-ignore -->
-      <view v-if="otherCourses.length > 0" class="tab-action" @click="viewAllCourses">
-        <!-- @ts-ignore -->
-        <text>查看全部</text>
-        <wd-icon name="arrow-right" size="28rpx" color="#666" />
+        <text class="tab-count">{{ allCourseCount }}</text>
       </view>
     </view>
     
-    <!-- 课程列表 -->
+    <!-- 加载状态 -->
     <!-- @ts-ignore -->
-    <view class="course-list-container">
-      <!-- 加载中 -->
-      <!-- @ts-ignore -->
-      <view v-if="coursesLoading" class="loading-container">
-        <wd-loading color="#6a11cb" size="80rpx" />
-      </view>
-      
+    <view v-if="coursesLoading || allCoursesLoading" class="loading-container">
+      <wd-loading color="#6a11cb" size="80rpx" />
+      <text>加载中...</text>
+    </view>
+    
+    <!-- 课程内容区域 -->
+    <!-- @ts-ignore -->
+    <view v-else class="content-area">
       <!-- 进行中的课程 -->
-      <template v-else-if="activeTab === 'active'">
+      <template v-if="activeTab === 'active'">
         <!-- @ts-ignore -->
         <view v-if="activeCourses.length > 0" class="course-list">
           <!-- @ts-ignore -->
@@ -654,13 +637,13 @@ function handleNewCourse(newCourse) {
         </view>
       </template>
       
-      <!-- 已结课的课程 -->
-      <template v-else-if="activeTab === 'completed'">
+      <!-- 全部课程 -->
+      <template v-else-if="activeTab === 'all'">
         <!-- @ts-ignore -->
-        <view v-if="completedCourses.length > 0" class="course-list">
+        <view v-if="allCourses.length > 0" class="course-list">
           <!-- @ts-ignore -->
           <view
-            v-for="course in completedCourses"
+            v-for="course in allCourses"
             :key="course.id"
             class="course-card"
             @click="viewCourseDetail(course)"
@@ -668,8 +651,24 @@ function handleNewCourse(newCourse) {
             <!-- @ts-ignore -->
             <view class="course-card-cover">
               <image :src="'https://picsum.photos/500/300?random=' + course.id.slice(0, 8)" mode="aspectFill" />
+              <!-- 根据课程状态显示不同标签 -->
               <!-- @ts-ignore -->
-              <view class="course-status completed">已结课</view>
+              <view 
+                class="course-status" 
+                :class="{
+                  'active': course.status === 'ACTIVE',
+                  'completed': course.status === 'COMPLETED',
+                  'created': course.status === 'CREATED',
+                  'ended': course.status === 'ENDED',
+                  'canceled': course.status === 'CANCELED'
+                }"
+              >
+                {{ course.status === 'ACTIVE' ? '进行中' : 
+                   course.status === 'COMPLETED' ? '已结课' : 
+                   course.status === 'CREATED' ? '未开始' :
+                   course.status === 'ENDED' ? '已结束' :
+                   course.status === 'CANCELED' ? '已取消' : '未知状态' }}
+              </view>
             </view>
             
             <!-- @ts-ignore -->
@@ -716,12 +715,12 @@ function handleNewCourse(newCourse) {
           </view>
         </view>
         
-        <!-- 无已结课课程 -->
+        <!-- 无全部课程 -->
         <!-- @ts-ignore -->
         <view v-else class="empty-container">
           <wd-icon name="info-outline" size="120rpx" color="#cccccc" />
           <!-- @ts-ignore -->
-          <text class="empty-text">暂无已结课的课程</text>
+          <text class="empty-text">暂无课程</text>
         </view>
       </template>
     </view>
@@ -797,105 +796,127 @@ function handleNewCourse(newCourse) {
     
     .tab-count {
       font-size: 26rpx;
-      color: #999;
-      background-color: #f0f0f0;
-      border-radius: 20rpx;
-      padding: 4rpx 16rpx;
-      margin-left: 10rpx;
-    }
-  }
-  
-  .tab-action {
-    position: absolute;
-    right: 30rpx;
-    display: flex;
-    align-items: center;
-    
-    text {
-      font-size: 26rpx;
       color: #666;
-      margin-right: 4rpx;
+      margin-left: 10rpx;
+      background: rgba(106, 17, 203, 0.1);
+      padding: 2rpx 10rpx;
+      border-radius: 30rpx;
     }
   }
 }
 
-.course-list-container {
+.content-area {
   width: 100%;
   max-width: 700rpx;
-  flex: 1;
   padding: 0 30rpx;
   box-sizing: border-box;
-}
-
-.loading-container {
-  display: flex;
-  justify-content: center;
-  padding: 100rpx 0;
+  flex: 1;
 }
 
 .course-list {
-  padding: 20rpx 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 30rpx;
+  margin-bottom: 100rpx;
+}
+
+.loading-container {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100rpx 0;
+  gap: 20rpx;
+  
+  text {
+    font-size: 28rpx;
+    color: #999;
+  }
 }
 
 .course-card {
+  width: 100%;
   background-color: #fff;
-  border-radius: 24rpx;
-  margin-bottom: 30rpx;
+  border-radius: 20rpx;
   overflow: hidden;
-  box-shadow: 0 6rpx 16rpx rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  
+  &:active {
+    transform: scale(0.98);
+    box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.1);
+  }
   
   &-cover {
-    height: 240rpx;
+    width: 100%;
+    height: 200rpx;
     position: relative;
     
     image {
       width: 100%;
       height: 100%;
+      object-fit: cover;
     }
     
     .course-status {
       position: absolute;
-      top: 20rpx;
       right: 20rpx;
+      top: 20rpx;
+      padding: 6rpx 16rpx;
+      border-radius: 30rpx;
       font-size: 24rpx;
       color: #fff;
-      padding: 6rpx 16rpx;
-      border-radius: 20rpx;
+      background-color: rgba(0, 0, 0, 0.5);
       
       &.active {
-        background-color: #2575fc;
+        background-color: rgba(52, 152, 219, 0.8);
       }
       
       &.completed {
-        background-color: #52c41a;
+        background-color: rgba(46, 204, 113, 0.8);
+      }
+      
+      &.created {
+        background-color: rgba(155, 89, 182, 0.8);
+      }
+      
+      &.ended {
+        background-color: rgba(52, 73, 94, 0.8);
+      }
+      
+      &.canceled {
+        background-color: rgba(231, 76, 60, 0.8);
       }
     }
   }
   
   &-content {
-    padding: 24rpx;
+    padding: 20rpx 30rpx 30rpx;
     
     .course-name {
-      font-size: 36rpx;
+      font-size: 32rpx;
       font-weight: bold;
       color: #333;
-      margin-bottom: 10rpx;
+      margin-bottom: 16rpx;
     }
     
     .course-meta {
       display: flex;
-      align-items: center;
-      margin-bottom: 10rpx;
+      flex-wrap: wrap;
+      gap: 20rpx;
+      margin-bottom: 16rpx;
       
       .meta-item {
         display: flex;
         align-items: center;
-        margin-right: 20rpx;
+        font-size: 26rpx;
+        color: #666;
         
         text {
-          font-size: 26rpx;
-          color: #666;
-          margin-left: 6rpx;
+          margin-left: 8rpx;
         }
       }
     }
@@ -903,70 +924,79 @@ function handleNewCourse(newCourse) {
     .course-time {
       display: flex;
       align-items: center;
+      font-size: 26rpx;
+      color: #999;
+      margin-bottom: 16rpx;
       
       text {
-        font-size: 26rpx;
-        color: #999;
-        margin-left: 6rpx;
+        margin-left: 8rpx;
       }
     }
-
+    
     .view-details {
       display: flex;
       align-items: center;
-      margin-top: 10rpx;
+      justify-content: flex-end;
+      font-size: 26rpx;
+      color: #6a11cb;
       
       text {
-        font-size: 26rpx;
-        color: #6a11cb;
-        margin-left: 6rpx;
+        margin-left: 8rpx;
       }
     }
   }
 }
 
 .empty-container {
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 100rpx 0;
   
-  .empty-image {
-    width: 300rpx;
-    height: 300rpx;
-    margin-bottom: 30rpx;
-  }
-  
   .empty-text {
     font-size: 30rpx;
     color: #999;
+    margin: 30rpx 0;
+  }
+  
+  .action-button-container {
+    display: flex;
+    gap: 20rpx;
   }
 }
 
 .scan-btn {
   position: fixed;
   right: 40rpx;
-  bottom: 100rpx;
+  bottom: 80rpx;
   width: 100rpx;
   height: 100rpx;
   border-radius: 50%;
   background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+  box-shadow: 0 8rpx 16rpx rgba(106, 17, 203, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6rpx 16rpx rgba(106, 17, 203, 0.3);
-  z-index: 100;
+  z-index: 10;
+  
+  &:active {
+    transform: scale(0.95);
+    box-shadow: 0 4rpx 8rpx rgba(106, 17, 203, 0.3);
+  }
+}
+
+.more-courses {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 30rpx 0 60rpx;
 }
 </style>
 
-
-<route type="home" lang="json">
-  {
-    "layout": "tabbar",
-    "name": "home",
-    "style": {
-      "navigationBarTitleText": "智能考勤"
-    }
-  }
-  </route>
+<route lang="json">
+{
+  "navigationBarTitleText": "课程考勤"
+}
+</route>
