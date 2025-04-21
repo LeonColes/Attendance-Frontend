@@ -7,12 +7,10 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
-    CustomNavBar: typeof import('./components/CustomNavBar.vue')['default']
     PrivacyPopup: typeof import('./components/PrivacyPopup.vue')['default']
     RoleSelector: typeof import('./components/RoleSelector.vue')['default']
     WdButton: typeof import('wot-design-uni/components/wd-button/wd-button.vue')['default']
     WdConfigProvider: typeof import('wot-design-uni/components/wd-config-provider/wd-config-provider.vue')['default']
-    WdDatetimePicker: typeof import('wot-design-uni/components/wd-datetime-picker/wd-datetime-picker.vue')['default']
     WdDatetimePickerView: typeof import('wot-design-uni/components/wd-datetime-picker-view/wd-datetime-picker-view.vue')['default']
     WdForm: typeof import('wot-design-uni/components/wd-form/wd-form.vue')['default']
     WdFormItem: typeof import('wot-design-uni/components/wd-form-item/wd-form-item.vue')['default']
@@ -20,15 +18,9 @@ declare module 'vue' {
     WdInput: typeof import('wot-design-uni/components/wd-input/wd-input.vue')['default']
     WdLoading: typeof import('wot-design-uni/components/wd-loading/wd-loading.vue')['default']
     WdMessageBox: typeof import('wot-design-uni/components/wd-message-box/wd-message-box.vue')['default']
-    WdNavbar: typeof import('wot-design-uni/components/wd-navbar/wd-navbar.vue')['default']
     WdNotify: typeof import('wot-design-uni/components/wd-notify/wd-notify.vue')['default']
     WdPopup: typeof import('wot-design-uni/components/wd-popup/wd-popup.vue')['default']
-    WdRadio: typeof import('wot-design-uni/components/wd-radio/wd-radio.vue')['default']
-    WdRadioGroup: typeof import('wot-design-uni/components/wd-radio-group/wd-radio-group.vue')['default']
     WdSlider: typeof import('wot-design-uni/components/wd-slider/wd-slider.vue')['default']
-    WdSwitch: typeof import('wot-design-uni/components/wd-switch/wd-switch.vue')['default']
-    WdTabbar: typeof import('wot-design-uni/components/wd-tabbar/wd-tabbar.vue')['default']
-    WdTabbarItem: typeof import('wot-design-uni/components/wd-tabbar-item/wd-tabbar-item.vue')['default']
     WdTextarea: typeof import('wot-design-uni/components/wd-textarea/wd-textarea.vue')['default']
     WdToast: typeof import('wot-design-uni/components/wd-toast/wd-toast.vue')['default']
   }

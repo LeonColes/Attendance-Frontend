@@ -12,6 +12,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '@/store/user'
 import { getCourseList } from '@/api/courses'
 import type { PageQueryParams } from '@/api/attendance'
+import { formatDateTime } from '@/utils/dateTime'
 
 // 安全获取uni对象
 function getSafeUni() {
@@ -89,19 +90,6 @@ async function loadCourses() {
   } finally {
     loading.value = false
   }
-}
-
-// 格式化日期时间显示
-function formatDateTime(dateTimeStr: string) {
-  if (!dateTimeStr) return ''
-  
-  const date = new Date(dateTimeStr)
-  const month = (date.getMonth() + 1).toString().padStart(2, '0')
-  const day = date.getDate().toString().padStart(2, '0')
-  const hour = date.getHours().toString().padStart(2, '0')
-  const minute = date.getMinutes().toString().padStart(2, '0')
-  
-  return `${month}-${day} ${hour}:${minute}`
 }
 
 // 导航到课程详情页面

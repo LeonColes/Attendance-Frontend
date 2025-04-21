@@ -12,7 +12,7 @@ interface RequestOptions extends UniNamespace.RequestOptions {
 }
 
 // 接口基础URL
-const BASE_URL = 'http://localhost:8080'
+const BASE_URL = 'http://192.168.31.67:8080'
 
 // token的存储键名
 const TOKEN_KEY = 'token'
@@ -228,13 +228,29 @@ export function get<T = any>(url: string, params?: any, options?: RequestOptions
 }
 
 /**
+ * 确保数据为正确的JSON格式
+ * @param data 要发送的数据
+ */
+export function ensureValidJson(data: any): any {
+  if (typeof data === 'string') {
+    try {
+      return JSON.parse(data);
+    } catch (e) {
+      console.error('转换JSON字符串失败:', e);
+      return data;
+    }
+  }
+  return data;
+}
+
+/**
  * POST请求
  */
 export function post<T = any>(url: string, data?: any, options?: RequestOptions): Promise<BaseResponse<T>> {
   return request<T>({
     url,
     method: 'POST',
-    data,
+    data: ensureValidJson(data),
     ...options,
   })
 }

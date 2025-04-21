@@ -3,6 +3,15 @@
  */
 import { post, get } from '@/utils/request'
 
+// 用户注册接口参数
+export interface RegisterParams {
+  username: string
+  password: string
+  fullName: string
+  email: string
+  role: 'STUDENT' | 'TEACHER'
+}
+
 // 登录参数类型
 export interface LoginParams {
   username: string
@@ -38,6 +47,15 @@ export interface ApiResponse<T = any> {
   code: number
   message: string
   data: T
+}
+
+/**
+ * 用户注册
+ * @param params 注册参数
+ * @returns 包含用户信息的响应
+ */
+export function register(params: RegisterParams) {
+  return post<UserInfo>('/api/auth/register', params)
 }
 
 /**

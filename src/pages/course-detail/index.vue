@@ -13,8 +13,8 @@ import { useUserStore } from '@/store/user'
 import { CheckInType, getCheckinList } from '@/api/attendance'
 import { getCourseMemberList, getCourseQRCode } from '@/api/courses'
 import type { PageQueryParams } from '@/api/attendance'
-import CustomNavBar from '@/components/CustomNavBar.vue'
 import { onShow } from '@dcloudio/uni-app'
+import { formatDateTime } from '@/utils/dateTime'
 
 // 为window.uni声明类型，解决TypeScript错误
 declare global {
@@ -64,7 +64,7 @@ onMounted(() => {
   const pages = getCurrentPages()
   const page = pages[pages.length - 1]
   const options = (page as any)?.options || query || {}
-  
+
   // 尝试解析路由中的课程和签到数据
   if (options.courseData) {
     try {
@@ -72,12 +72,12 @@ onMounted(() => {
       // 设置课程信息
       courseDetail.value = parsedData.course
       courseId.value = parsedData.course.id
-      
+
       // 设置签到数据
       if (parsedData.checkinData) {
         checkinList.value = parsedData.checkinData.items || []
       }
-      
+
     } catch (e) {
       console.error('解析课程数据失败:', e)
       tryParseOldFormat(options)
@@ -94,7 +94,7 @@ onShow(() => {
     loadCheckinList(true)
     loadCourseMembers(true)
     loadCourseAttendanceStats()
-    
+
     // 如果是教师，自动获取课程二维码
     if (isTeacher.value) {
       loadCourseQRCode()
@@ -110,17 +110,17 @@ function tryParseOldFormat(options) {
       const parsedInfo = JSON.parse(decodeURIComponent(options.courseInfo))
       courseDetail.value = parsedInfo
       courseId.value = parsedInfo.id
-      
+
       // 加载所有数据
       loadCheckinList(true)
       loadCourseMembers(true)
       loadCourseAttendanceStats()
-      
+
       // 如果是教师，自动获取课程二维码
       if (isTeacher.value) {
         loadCourseQRCode()
       }
-      
+
     } catch (e) {
       console.error('解析课程信息失败:', e)
       // 显示错误并返回
@@ -152,11 +152,11 @@ async function loadCheckinList(refresh = false) {
       hasMoreData.value = true
       checkinList.value = []
     }
-    
+
     if (!hasMoreData.value) return
-    
+
     loading.value = true
-    
+
     const response = await getCheckinList(courseId.value, {
       page: currentPage.value,
       size: pageSize.value,
@@ -168,16 +168,16 @@ async function loadCheckinList(refresh = false) {
       ],
       filters: {}
     } as PageQueryParams)
-    
+
     if (response && response.code === 200) {
       const newItems = response.data.items || []
-      
+
       if (refresh) {
         checkinList.value = newItems
       } else {
         checkinList.value = [...checkinList.value, ...newItems]
       }
-      
+
       hasMoreData.value = newItems.length === pageSize.value
       currentPage.value++
     }
@@ -198,14 +198,14 @@ async function loadCourseMembers(showLoading: boolean = false) {
     if (showLoading) {
       loading.value = true
     }
-    
+
     const params: PageQueryParams = {
       page: 0,
       size: 100 // 获取足够多的成员数据
     }
-    
+
     const response = await getCourseMemberList(courseId.value, params)
-    
+
     if (response && response.code === 200) {
       // 检查数据结构，适配 users 字段
       if (response.data.users && Array.isArray(response.data.users)) {
@@ -223,7 +223,7 @@ async function loadCourseMembers(showLoading: boolean = false) {
       } else {
         membersList.value = []
       }
-      
+
       console.log('成员列表加载成功:', membersList.value)
     } else {
       console.error('获取成员列表失败:', response)
@@ -254,17 +254,17 @@ async function loadCourseAttendanceStats() {
     }
 
     loading.value = true
-    
+
     // 从签到列表和成员列表中动态计算考勤统计数据
     if (checkinList.value.length > 0 && membersList.value.length > 0) {
       // 计算总签到任务数
       const totalCheckins = checkinList.value.length
-      
+
       // 构造模拟的出勤数据
       // 实际项目中应该从API获取出勤记录来计算
       const studentUsers = membersList.value.filter(member => member.role !== 'TEACHER')
       const totalStudents = studentUsers.length
-      
+
       // 为每个学生生成随机出勤数据（实际项目应该从API获取）
       const attendanceByStudent = studentUsers.map(student => {
         // 生成随机出勤率，范围在40%到100%之间
@@ -272,7 +272,7 @@ async function loadCourseAttendanceStats() {
         // 计算签到和缺勤次数
         const checkedIn = Math.floor(totalCheckins * randomRate / 100)
         const missed = totalCheckins - checkedIn
-        
+
         return {
           userId: student.id,
           userName: student.fullName || student.username,
@@ -283,12 +283,12 @@ async function loadCourseAttendanceStats() {
           role: student.role
         }
       })
-      
+
       // 计算平均出勤率
-      const averageAttendance = attendanceByStudent.length > 0 
-        ? attendanceByStudent.reduce((sum, student) => sum + student.attendanceRate, 0) / attendanceByStudent.length 
+      const averageAttendance = attendanceByStudent.length > 0
+        ? attendanceByStudent.reduce((sum, student) => sum + student.attendanceRate, 0) / attendanceByStudent.length
         : 0
-        
+
       // 生成统计数据
       attendanceStats.value = {
         courseInfo: {
@@ -304,7 +304,7 @@ async function loadCourseAttendanceStats() {
         },
         attendanceByStudent
       }
-      
+
       console.log('考勤统计数据生成完成:', attendanceStats.value)
     } else {
       // 如果签到列表或成员列表为空，显示空状态
@@ -323,10 +323,10 @@ async function loadCourseAttendanceStats() {
         attendanceByStudent: []
       }
     }
-    
+
     // 模拟数据加载延迟
     await new Promise(resolve => setTimeout(resolve, 300))
-    
+
   } catch (e) {
     console.error('获取课程签到统计失败:', e)
     attendanceStats.value = null
@@ -354,28 +354,14 @@ function getCheckinTypeText(type: CheckInType) {
   }
 }
 
-// 格式化日期时间显示
-function formatDateTime(dateTimeStr: string) {
-  if (!dateTimeStr) return ''
-  
-  const date = new Date(dateTimeStr)
-  const year = date.getFullYear()
-  const month = (date.getMonth() + 1).toString().padStart(2, '0')
-  const day = date.getDate().toString().padStart(2, '0')
-  const hour = date.getHours().toString().padStart(2, '0')
-  const minute = date.getMinutes().toString().padStart(2, '0')
-  
-  return `${year}-${month}-${day} ${hour}:${minute}`
-}
-
 // 计算签到状态
 function getCheckinStatus(checkin: any) {
   if (!checkin) return ''
-  
+
   const now = new Date().getTime()
   const startTime = new Date(checkin.checkinStartTime).getTime()
   const endTime = new Date(checkin.checkinEndTime).getTime()
-  
+
   if (now < startTime) {
     return 'not-started'
   } else if (now > endTime) {
@@ -403,9 +389,9 @@ function navigateToCheckinDetail(checkinId) {
     })
     return
   }
-  
+
   console.log('正在跳转到二维码页面，签到ID:', checkinId)
-  
+
   // 将参数添加到URL中
   getSafeUni().navigateTo({
     url: `/pages/checkin-qrcode/index?checkinId=${encodeURIComponent(checkinId)}`,
@@ -436,7 +422,7 @@ function copyCourseCode() {
     })
     return
   }
-  
+
   getSafeUni().setClipboardData({
     data: courseDetail.value.code,
     success: () => {
@@ -458,7 +444,7 @@ function getSortedStudents() {
   if (!attendanceStats.value || !attendanceStats.value.attendanceByStudent) {
     return []
   }
-  
+
   // 过滤出学生（非教师），并按出勤率降序排序
   return [...attendanceStats.value.attendanceByStudent]
     .filter(student => !student.role || student.role !== 'TEACHER')
@@ -479,9 +465,9 @@ function getAttendanceRateClass(attendanceRate: number) {
 // 添加获取课程二维码的函数
 async function loadCourseQRCode() {
   if (!courseId.value || !isTeacher.value) return
-  
+
   try {
-    qrCodeLoading.value = true    
+    qrCodeLoading.value = true
     // 调用已封装好的API
     const response = await getCourseQRCode(courseId.value)
     if (!response) {
@@ -492,11 +478,11 @@ async function loadCourseQRCode() {
       })
       return
     }
-    
+
     // 使用 uni.arrayBufferToBase64 直接转换
     const base64 = uni.arrayBufferToBase64(response)
     qrCodeUrl.value = `data:image/png;base64,${base64}`
-    
+
   } catch (e) {
     console.error('获取课程二维码出错:', e)
     getSafeUni().showToast({
@@ -517,27 +503,77 @@ function openQRCodeModal() {
 function closeQRCodeModal() {
   showQRCode.value = false
 }
+
+// 处理签到列表项点击
+function handleCheckinClick(checkin: any) {
+  console.log('点击签到项:', {
+    id: checkin.id,
+    name: checkin.name,
+    type: checkin.checkinType,
+    status: checkin.status
+  })
+  
+  if (checkin.checkinType === 'QR_CODE') {
+    // 检查用户角色，学生不能查看二维码签到详情
+    if (userStore.role === 'STUDENT') {
+      console.log('学生不能查看二维码签到详情')
+      uni.showToast({
+        title: '学生不能查看二维码签到详情',
+        icon: 'none'
+      })
+      return
+    }
+    
+    console.log('跳转到二维码签到页面，签到ID:', checkin.id)
+    uni.navigateTo({
+      url: `/pages/checkin-qrcode/index?checkinId=${checkin.id}`,
+      success: () => {
+        console.log('成功跳转到二维码签到页面')
+      },
+      fail: (err) => {
+        console.error('跳转到二维码签到页面失败:', err)
+      }
+    })
+  } else if (checkin.checkinType === 'LOCATION') {
+    // 检查用户角色，教师不能进行位置签到
+    if (userStore.role === 'TEACHER') {
+      console.log('教师不能进行位置签到')
+      uni.showToast({
+        title: '教师不能进行位置签到',
+        icon: 'none'
+      })
+      return
+    }
+    
+    // 直接跳转到位置签到页面，不预先获取位置
+    uni.navigateTo({
+      url: `/pages/location-checkin/index?checkinId=${checkin.id}`,
+      success: () => {
+        console.log('成功跳转到位置签到页面')
+      },
+      fail: (err) => {
+        console.error('跳转到位置签到页面失败:', err)
+      }
+    })
+  } else {
+    console.error('不支持的签到类型:', checkin.checkinType)
+    uni.showToast({
+      title: '不支持的签到类型',
+      icon: 'none'
+    })
+  }
+}
 </script>
 
 <template>
   <!-- @ts-ignore -->
   <view class="container">
-    <!-- 自定义导航栏 -->
-    <!-- @ts-ignore -->
-    <CustomNavBar 
-      :title="courseDetail.name || '课程详情'"
-      backgroundColor="#6a11cb" 
-      titleColor="#FFFFFF"
-      iconColor="#FFFFFF"
-      @back="goBack"
-    />
-    
     <!-- 加载中 -->
     <!-- @ts-ignore -->
     <view v-if="loading" class="loading-container">
       <wd-loading color="#6a11cb" size="80rpx" />
     </view>
-    
+
     <!-- 主要内容 -->
     <!-- @ts-ignore -->
     <view v-else class="content-container">
@@ -555,7 +591,7 @@ function closeQRCodeModal() {
             <!-- @ts-ignore -->
             <view class="info-value">{{ courseDetail.creatorFullName || courseDetail.creatorUsername || '未知教师' }}</view>
           </view>
-          
+
           <!-- @ts-ignore -->
           <view class="info-row">
             <wd-icon name="people" size="32rpx" color="#6a11cb" />
@@ -564,16 +600,17 @@ function closeQRCodeModal() {
             <!-- @ts-ignore -->
             <view class="info-value">{{ courseDetail.memberCount || 0 }}人</view>
           </view>
-          
+
           <!-- @ts-ignore -->
           <view class="info-row">
             <wd-icon name="calendar" size="32rpx" color="#6a11cb" />
             <!-- @ts-ignore -->
             <view class="info-label">时间</view>
             <!-- @ts-ignore -->
-            <view class="info-value">{{ formatDateTime(courseDetail.startDate) }} ~ {{ formatDateTime(courseDetail.endDate) }}</view>
+            <view class="info-value">{{ formatDateTime(courseDetail.startDate) }} ~ {{
+              formatDateTime(courseDetail.endDate) }}</view>
           </view>
-          
+
           <!-- 移动详细信息到此处 -->
           <!-- @ts-ignore -->
           <view class="info-row">
@@ -583,7 +620,7 @@ function closeQRCodeModal() {
             <!-- @ts-ignore -->
             <view class="info-value description">{{ courseDetail.description || '暂无课程描述' }}</view>
           </view>
-          
+
           <!-- @ts-ignore -->
           <view class="info-row">
             <wd-icon name="info" size="32rpx" color="#6a11cb" />
@@ -591,73 +628,52 @@ function closeQRCodeModal() {
             <view class="info-label">状态</view>
             <!-- @ts-ignore -->
             <view class="info-value status" :class="courseDetail.status?.toLowerCase()">
-              {{ courseDetail.status === 'ACTIVE' ? '进行中' : 
-                 courseDetail.status === 'COMPLETED' ? '已结课' : '未知状态' }}
+              {{ courseDetail.status === 'ACTIVE' ? '进行中' :
+                courseDetail.status === 'COMPLETED' ? '已结课' : '未知状态' }}
             </view>
           </view>
-          
+
           <!-- 添加创建签到按钮 -->
           <!-- @ts-ignore -->
           <view v-if="isTeacher" class="action-row">
-            <wd-button 
-              type="primary" 
-              size="small"
-              custom-style="height: 70rpx; margin-top: 20rpx;"
-              @click="navigateToCreateCheckin"
-            >
+            <wd-button type="primary" size="small" custom-style="height: 70rpx; margin-top: 20rpx;"
+              @click="navigateToCreateCheckin">
               <wd-icon name="add" size="28rpx" color="#ffffff" />
               <text style="margin-left: 8rpx;">创建签到任务</text>
             </wd-button>
-            
+
             <!-- 添加邀请学生按钮 -->
-            <wd-button 
-              type="info" 
-              size="small"
-              custom-style="height: 70rpx; margin-top: 20rpx; margin-left: 20rpx;"
-              @click="openQRCodeModal"
-            >
+            <wd-button type="info" size="small" custom-style="height: 70rpx; margin-top: 20rpx; margin-left: 20rpx;"
+              @click="openQRCodeModal">
               <wd-icon name="qrcode" size="28rpx" color="#ffffff" />
               <text style="margin-left: 8rpx;">邀请学生</text>
             </wd-button>
           </view>
         </view>
       </view>
-      
+
       <!-- 标签页 -->
       <!-- @ts-ignore -->
       <view class="tab-container">
         <!-- 移除 "详细信息" 标签页 -->
         <!-- @ts-ignore -->
-        <view 
-          class="tab-item" 
-          :class="{ active: activeTab === 'checkins' }"
-          @click="switchTab('checkins')"
-        >
+        <view class="tab-item" :class="{ active: activeTab === 'checkins' }" @click="switchTab('checkins')">
           <!-- @ts-ignore -->
           <text class="tab-text">签到任务</text>
         </view>
         <!-- @ts-ignore -->
-        <view 
-          class="tab-item" 
-          :class="{ active: activeTab === 'members' }"
-          @click="switchTab('members')"
-        >
+        <view class="tab-item" :class="{ active: activeTab === 'members' }" @click="switchTab('members')">
           <!-- @ts-ignore -->
           <text class="tab-text">成员列表</text>
         </view>
         <!-- 只有教师可以看到考勤统计 -->
         <!-- @ts-ignore -->
-        <view 
-          v-if="isTeacher"
-          class="tab-item" 
-          :class="{ active: activeTab === 'stats' }"
-          @click="switchTab('stats')"
-        >
+        <view v-if="isTeacher" class="tab-item" :class="{ active: activeTab === 'stats' }" @click="switchTab('stats')">
           <!-- @ts-ignore -->
           <text class="tab-text">考勤统计</text>
         </view>
       </view>
-      
+
       <!-- 标签页内容 -->
       <!-- @ts-ignore -->
       <view class="tab-content">
@@ -668,19 +684,16 @@ function closeQRCodeModal() {
           <!-- @ts-ignore -->
           <view v-if="checkinList.length > 0" class="checkin-list">
             <!-- @ts-ignore -->
-            <view 
-              v-for="checkin in checkinList" 
-              :key="checkin.id" 
-              class="checkin-item"
-              @click="navigateToCheckinDetail(checkin.id)"
-            >
+            <view v-for="checkin in checkinList" :key="checkin.id" class="checkin-item"
+              @click="handleCheckinClick(checkin)">
               <!-- @ts-ignore -->
               <view class="checkin-title">{{ checkin.name }}</view>
               <!-- @ts-ignore -->
               <view class="checkin-time">
                 <wd-icon name="time" size="28rpx" color="#666" />
                 <!-- @ts-ignore -->
-                <text>{{ formatDateTime(checkin.checkinStartTime || checkin.startTime) }} ~ {{ formatDateTime(checkin.checkinEndTime || checkin.endTime) }}</text>
+                <text>{{ formatDateTime(checkin.checkinStartTime || checkin.startTime) }} ~ {{
+                  formatDateTime(checkin.checkinEndTime || checkin.endTime) }}</text>
               </view>
               <!-- @ts-ignore -->
               <view class="checkin-type">
@@ -690,21 +703,22 @@ function closeQRCodeModal() {
               </view>
               <!-- @ts-ignore -->
               <view class="checkin-status" :class="getCheckinStatus(checkin)">
-                {{ getCheckinStatus(checkin) === 'not-started' ? '未开始' : 
-                   getCheckinStatus(checkin) === 'in-progress' ? '进行中' : '已结束' }}
+                {{ getCheckinStatus(checkin) === 'not-started' ? '未开始' :
+                  getCheckinStatus(checkin) === 'in-progress' ? '进行中' : '已结束' }}
               </view>
-              
+
               <!-- 学生端显示签到状态 -->
               <!-- @ts-ignore -->
-              <view v-if="isStudent && checkin.attendanceStatus" class="attendance-status" :class="checkin.attendanceStatus.toLowerCase()">
+              <view v-if="isStudent && checkin.attendanceStatus" class="attendance-status"
+                :class="checkin.attendanceStatus.toLowerCase()">
                 {{ checkin.attendanceStatus === 'CHECKED_IN' ? '已签到' :
-                   checkin.attendanceStatus === 'LATE' ? '迟到' :
-                   checkin.attendanceStatus === 'ABSENT' ? '缺勤' :
-                   checkin.attendanceStatus === 'NOT_STARTED' ? '未开始' : '未签到' }}
+                  checkin.attendanceStatus === 'LATE' ? '迟到' :
+                    checkin.attendanceStatus === 'ABSENT' ? '缺勤' :
+                      checkin.attendanceStatus === 'NOT_STARTED' ? '未开始' : '未签到' }}
               </view>
             </view>
           </view>
-          
+
           <!-- 无签到任务 -->
           <!-- @ts-ignore -->
           <view v-else class="empty-container">
@@ -713,7 +727,7 @@ function closeQRCodeModal() {
             <text class="empty-text">暂无签到任务</text>
           </view>
         </view>
-        
+
         <!-- 成员列表标签页 -->
         <!-- @ts-ignore -->
         <view v-else-if="activeTab === 'members'" class="members-content">
@@ -724,7 +738,8 @@ function closeQRCodeModal() {
             <view v-for="member in membersList" :key="member.id" class="member-item">
               <!-- @ts-ignore -->
               <view class="member-avatar">
-                <image :src="member.avatarUrl || 'https://picsum.photos/100/100?random=' + member.id.slice(0, 8)" mode="aspectFill" />
+                <image :src="member.avatarUrl || 'https://picsum.photos/100/100?random=' + member.id.slice(0, 8)"
+                  mode="aspectFill" />
               </view>
               <!-- @ts-ignore -->
               <view class="member-info">
@@ -737,7 +752,7 @@ function closeQRCodeModal() {
               </view>
             </view>
           </view>
-          
+
           <!-- 无成员 -->
           <!-- @ts-ignore -->
           <view v-else class="empty-container">
@@ -746,7 +761,7 @@ function closeQRCodeModal() {
             <text class="empty-text">暂无成员信息</text>
           </view>
         </view>
-        
+
         <!-- 考勤统计标签页 -->
         <!-- @ts-ignore -->
         <view v-else-if="activeTab === 'stats'" class="stats-content">
@@ -789,21 +804,18 @@ function closeQRCodeModal() {
                 </view>
               </view>
             </view>
-            
+
             <!-- 所有成员出勤率 -->
             <!-- @ts-ignore -->
             <view class="stats-card">
               <!-- @ts-ignore -->
               <view class="stats-title">出勤率排名</view>
               <!-- @ts-ignore -->
-              <view v-if="attendanceStats.attendanceByStudent && attendanceStats.attendanceByStudent.length > 0" class="attendance-list">
+              <view v-if="attendanceStats.attendanceByStudent && attendanceStats.attendanceByStudent.length > 0"
+                class="attendance-list">
                 <!-- @ts-ignore -->
-                <view 
-                  v-for="(student, index) in getSortedStudents()" 
-                  :key="student.userId" 
-                  class="attendance-item"
-                  :class="getAttendanceRateClass(student.attendanceRate)"
-                >
+                <view v-for="(student, index) in getSortedStudents()" :key="student.userId" class="attendance-item"
+                  :class="getAttendanceRateClass(student.attendanceRate)">
                   <!-- @ts-ignore -->
                   <view class="rank">{{ index + 1 }}</view>
                   <!-- @ts-ignore -->
@@ -816,7 +828,8 @@ function closeQRCodeModal() {
                   <!-- @ts-ignore -->
                   <view class="attendance-details">
                     <!-- @ts-ignore -->
-                    <view class="attendance-rate" :class="getAttendanceRateClass(student.attendanceRate)">{{ student.attendanceRate }}%</view>
+                    <view class="attendance-rate" :class="getAttendanceRateClass(student.attendanceRate)">{{
+                      student.attendanceRate }}%</view>
                     <!-- @ts-ignore -->
                     <view class="attendance-numbers">
                       <text class="normal">{{ student.checkedIn }}</text>/
@@ -832,7 +845,7 @@ function closeQRCodeModal() {
               </view>
             </view>
           </view>
-          
+
           <!-- 无统计数据 -->
           <!-- @ts-ignore -->
           <view v-else class="empty-container">
@@ -840,19 +853,14 @@ function closeQRCodeModal() {
             <!-- @ts-ignore -->
             <text class="empty-text">暂无考勤统计数据</text>
             <!-- @ts-ignore -->
-            <wd-button 
-              type="primary"
-              size="small"
-              custom-style="margin-top: 30rpx;"
-              @click="loadCourseAttendanceStats"
-            >
+            <wd-button type="primary" size="small" custom-style="margin-top: 30rpx;" @click="loadCourseAttendanceStats">
               刷新数据
             </wd-button>
           </view>
         </view>
       </view>
     </view>
-    
+
     <!-- 添加二维码弹窗 -->
     <wd-popup v-model="showQRCode" round position="center" custom-style="width: 80%; max-width: 600rpx;">
       <view class="qrcode-container">
@@ -860,7 +868,7 @@ function closeQRCodeModal() {
           <text class="qrcode-title">课程邀请二维码</text>
           <text class="qrcode-subtitle">分享此二维码给学生加入课程</text>
         </view>
-        
+
         <view class="qrcode-content">
           <image v-if="qrCodeUrl" :src="qrCodeUrl" mode="aspectFit" class="qrcode-image" />
           <view v-else-if="qrCodeLoading" class="qrcode-loading">
@@ -877,7 +885,7 @@ function closeQRCodeModal() {
             <text class="course-code">课程码: {{ courseDetail.code }}</text>
           </view>
         </view>
-        
+
         <view class="qrcode-actions">
           <wd-button type="primary" @click="closeQRCodeModal" block>完成</wd-button>
         </view>
@@ -894,7 +902,8 @@ function closeQRCodeModal() {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 20rpx; /* 减少顶部间距 */
+  padding-top: 20rpx;
+  /* 减少顶部间距 */
 }
 
 .loading-container {
@@ -1051,14 +1060,16 @@ function closeQRCodeModal() {
   margin-bottom: 10rpx;
 }
 
-.checkin-time, .checkin-type {
+.checkin-time,
+.checkin-type {
   display: flex;
   align-items: center;
   gap: 10rpx;
   margin-bottom: 10rpx;
 }
 
-.checkin-time text, .checkin-type text {
+.checkin-time text,
+.checkin-type text {
   font-size: 26rpx;
   color: #666;
 }
@@ -1096,7 +1107,8 @@ function closeQRCodeModal() {
   font-size: 24rpx;
 }
 
-.attendance-status.checked_in, .attendance-status.normal {
+.attendance-status.checked_in,
+.attendance-status.normal {
   background-color: rgba(76, 175, 80, 0.1);
   color: #4caf50;
 }
@@ -1106,12 +1118,14 @@ function closeQRCodeModal() {
   color: #ff9800;
 }
 
-.attendance-status.absent, .attendance-status.missed {
+.attendance-status.absent,
+.attendance-status.missed {
   background-color: rgba(244, 67, 54, 0.1);
   color: #f44336;
 }
 
-.attendance-status.not_started, .attendance-status.pending {
+.attendance-status.not_started,
+.attendance-status.pending {
   background-color: rgba(158, 158, 158, 0.1);
   color: #9e9e9e;
 }
@@ -1336,11 +1350,11 @@ function closeQRCodeModal() {
 // 添加二维码弹窗样式
 .qrcode-container {
   padding: 40rpx;
-  
+
   .qrcode-header {
     text-align: center;
     margin-bottom: 30rpx;
-    
+
     .qrcode-title {
       display: block;
       font-size: 36rpx;
@@ -1348,19 +1362,19 @@ function closeQRCodeModal() {
       color: #333;
       margin-bottom: 10rpx;
     }
-    
+
     .qrcode-subtitle {
       font-size: 26rpx;
       color: #666;
     }
   }
-  
+
   .qrcode-content {
     display: flex;
     flex-direction: column;
     align-items: center;
     margin-bottom: 40rpx;
-    
+
     .qrcode-image {
       width: 400rpx;
       height: 400rpx;
@@ -1369,8 +1383,9 @@ function closeQRCodeModal() {
       box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
       border-radius: 12rpx;
     }
-    
-    .qrcode-loading, .qrcode-error {
+
+    .qrcode-loading,
+    .qrcode-error {
       width: 400rpx;
       height: 400rpx;
       display: flex;
@@ -1379,21 +1394,21 @@ function closeQRCodeModal() {
       justify-content: center;
       background-color: #f9f9f9;
       border-radius: 12rpx;
-      
+
       text {
         margin-top: 20rpx;
         color: #666;
         font-size: 28rpx;
       }
     }
-    
+
     .course-qrinfo {
       text-align: center;
       margin-top: 20rpx;
       background-color: rgba(106, 17, 203, 0.05);
       padding: 16rpx 30rpx;
       border-radius: 30rpx;
-      
+
       .course-name {
         display: block;
         font-size: 32rpx;
@@ -1401,14 +1416,14 @@ function closeQRCodeModal() {
         color: #333;
         margin-bottom: 8rpx;
       }
-      
+
       .course-code {
         font-size: 28rpx;
         color: #666;
       }
     }
   }
-  
+
   .qrcode-actions {
     margin-top: 20rpx;
   }

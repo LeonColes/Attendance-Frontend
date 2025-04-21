@@ -11,13 +11,12 @@ export interface TabbarItem {
   name: string
   value: number | null
   active: boolean
-  title: string
   icon: string
 }
 
 const tabbarItems = ref<TabbarItem[]>([
-  { name: 'home', value: null, active: true, title: '主页', icon: 'home' },
-  { name: 'my', value: null, active: false, title: '我的', icon: 'user' },
+  { name: 'home', value: null, active: true, icon: 'home' },
+  { name: 'my', value: null, active: false, icon: 'user' },
 ])
 
 export function useTabbar() {

@@ -6,14 +6,15 @@
       "layout": "tabbar",
       "name": "home",
       "style": {
-        "navigationBarTitleText": "智能考勤"
+        "navigationBarTitleText": "智能考勤",
+        "navigationBarTextStyle": "black",
+        "navigationBarBackgroundColor": "#ffffff"
       }
     },
     {
       "path": "pages/all-courses/index",
       "type": "page",
       "style": {
-        "navigationStyle": "custom",
         "navigationBarTitleText": "其他课程"
       }
     },
@@ -21,16 +22,18 @@
       "path": "pages/checkin-detail/index",
       "type": "page",
       "style": {
-        "navigationBarTitleText": "签到详情",
-        "navigationStyle": "custom"
+        "navigationBarTitleText": "签到详情"
       }
+    },
+    {
+      "path": "pages/checkin-location/index",
+      "type": "page"
     },
     {
       "path": "pages/checkin-qrcode/index",
       "type": "page",
       "style": {
-        "navigationBarTitleText": "签到二维码",
-        "navigationStyle": "custom"
+        "navigationBarTitleText": "签到二维码"
       }
     },
     {
@@ -41,25 +44,27 @@
       "path": "pages/create-checkin/index",
       "type": "page",
       "style": {
-        "navigationBarTitleText": "创建签到",
-        "navigationStyle": "custom"
+        "navigationBarTitleText": "创建签到"
       }
     },
     {
       "path": "pages/create-course/index",
       "type": "page",
       "style": {
-        "navigationBarTitleText": "创建课程",
-        "navigationStyle": "custom"
+        "navigationBarTitleText": "创建课程"
       }
     },
     {
       "path": "pages/join-course/index",
       "type": "page",
       "style": {
-        "navigationStyle": "custom",
         "navigationBarTitleText": "加入课程"
       }
+    },
+    {
+      "path": "pages/location-checkin/index",
+      "type": "page",
+      "navigationBarTitleText": "位置签到"
     },
     {
       "path": "pages/login/index",
@@ -82,15 +87,14 @@
       "path": "pages/scanner/index",
       "type": "page",
       "style": {
-        "navigationStyle": "custom",
         "navigationBarTitleText": "扫码签到"
       }
     }
   ],
   "globalStyle": {
     "navigationBarTitleText": "Wot-Demo",
-    "navigationBarTextStyle": "white",
-    "navigationStyle": "custom"
+    "navigationBarTextStyle": "black",
+    "navigationBarBackgroundColor": "#ffffff"
   },
   "tabBar": {
     "custom": true,

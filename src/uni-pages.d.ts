@@ -7,11 +7,13 @@ interface NavigateToOptions {
   url: "/pages/index" |
        "/pages/all-courses/index" |
        "/pages/checkin-detail/index" |
+       "/pages/checkin-location/index" |
        "/pages/checkin-qrcode/index" |
        "/pages/course-detail/index" |
        "/pages/create-checkin/index" |
        "/pages/create-course/index" |
        "/pages/join-course/index" |
+       "/pages/location-checkin/index" |
        "/pages/login/index" |
        "/pages/my/index" |
        "/pages/register/index" |

@@ -10,7 +10,9 @@
 <script lang="ts" setup>
 import { ref, onMounted } from 'vue'
 import { getCheckinQRCode as getCheckinQRCodeApi } from '@/api/attendance'
+import { useUserStore } from '@/store/user'
 
+const userStore = useUserStore()
 const loading = ref(false)
 const checkinId = ref('')
 const errorMessage = ref('')
@@ -23,13 +25,26 @@ async function loadQRCode() {
     loading.value = true
     
     // 获取二维码数据
-    const pngData = await getCheckinQRCodeApi(checkinId.value)
-    console.log('获取到二维码数据')
+    const response = await getCheckinQRCodeApi(checkinId.value)
+    console.log('获取到二维码响应:', response)
     
-    // 直接处理响应数据
-    const base64 = uni.arrayBufferToBase64(pngData)
-    qrCodeUrl.value = `data:image/png;base64,${base64}`
-    console.log('二维码URL已设置')
+    // 判断响应是否为ArrayBuffer类型
+    if (response instanceof ArrayBuffer) {
+      console.log('二维码数据是ArrayBuffer，开始转换')
+      // 直接处理ArrayBuffer数据
+      const base64 = uni.arrayBufferToBase64(response)
+      qrCodeUrl.value = `data:image/png;base64,${base64}`
+      console.log('二维码URL已设置')
+    } else if (response && response.code === 200 && response.data) {
+      console.log('二维码数据有效，开始转换')
+      // 处理标准响应对象中的数据
+      const base64 = uni.arrayBufferToBase64(response.data)
+      qrCodeUrl.value = `data:image/png;base64,${base64}`
+      console.log('二维码URL已设置')
+    } else {
+      console.error('二维码响应无效:', response)
+      throw new Error('获取二维码失败')
+    }
   } catch (e) {
     console.error('获取二维码失败:', e)
     errorMessage.value = '获取二维码失败，请稍后再试'
@@ -44,9 +59,14 @@ onMounted(async () => {
     const pages = getCurrentPages()
     const page = pages[pages.length - 1]
     const options = (page as any)?.options || {}
-    checkinId.value = options.checkinId || ''
+    console.log('页面参数:', options)
+    
+    // 兼容两种参数名：id 和 checkinId
+    checkinId.value = options.checkinId || options.id || ''
+    console.log('签到ID:', checkinId.value)
     
     if (!checkinId.value) {
+      console.error('签到ID为空')
       uni.showToast({
         title: '签到ID不能为空',
         icon: 'none'
@@ -72,13 +92,22 @@ function goBack() {
 
 <template>
   <view class="container">
-    <!-- 自定义导航栏 -->
-    <wd-navbar title="签到二维码" left-text="返回" @click-left="goBack" />
+    <!-- 加载中 -->
+    <view v-if="loading" class="loading-container">
+      <wd-loading size="48rpx" />
+      <text>加载中...</text>
+    </view>
+    
+    <!-- 错误信息 -->
+    <view v-else-if="errorMessage" class="error-container">
+      <wd-icon name="warning" size="48rpx" color="#f56c6c" />
+      <text>{{ errorMessage }}</text>
+    </view>
     
     <!-- 内容区域 -->
-    <view class="content-wrapper">
-      <!-- 二维码卡片 -->
-      <view class="qrcode-card">
+    <view v-else class="content-wrapper">
+      <!-- 教师端二维码卡片 -->
+      <view v-if="userStore.userInfo?.role === 'TEACHER'" class="qrcode-card">
         <view class="card-header">
           <text class="card-title">签到二维码</text>
           <text class="card-subtitle">请扫描二维码进行签到</text>
@@ -104,6 +133,14 @@ function goBack() {
         <!-- 错误信息 -->
         <view v-if="errorMessage" class="error-message">
           <text>{{ errorMessage }}</text>
+        </view>
+      </view>
+      
+      <!-- 学生端提示 -->
+      <view v-else class="info-card">
+        <view class="card-header">
+          <text class="card-title">无权限查看</text>
+          <text class="card-subtitle">仅教师可查看签到二维码</text>
         </view>
       </view>
     </view>

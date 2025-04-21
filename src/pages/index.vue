@@ -13,6 +13,7 @@ import { useUserStore } from '@/store/user'
 import { getCourseList } from '@/api/courses'
 import { getCheckinList, submitCheckin, CheckInType } from '@/api/attendance'
 import { onShow, onLoad } from '@dcloudio/uni-app'
+import { formatDate } from '@/utils/dateTime'
 
 // 安全获取uni对象
 function getSafeUni() {
@@ -454,18 +455,6 @@ async function processCheckInQRCode(qrContent) {
       icon: 'none'
     })
   }
-}
-
-// 格式化日期
-function formatDate(dateString: string) {
-  if (!dateString) return ''
-  
-  const date = new Date(dateString)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  
-  return `${year}-${month}-${day}`
 }
 
 // 处理新创建的课程，由创建课程页面调用

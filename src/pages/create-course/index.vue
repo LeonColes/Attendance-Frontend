@@ -11,37 +11,33 @@
 import { ref, reactive } from 'vue'
 import { useUserStore } from '@/store/user'
 import { createCourse, type Course } from '@/api/courses'
-import CustomNavBar from '@/components/CustomNavBar.vue'
+import { formatDate, toChineseISOString } from '@/utils/dateTime'
 
 const userStore = useUserStore()
 const loading = ref(false)
 const errorMessage = ref('')
 
-// 设置日期范围
-const minDate = new Date('2025-01-01').getTime()
-const maxDate = new Date('2035-01-01').getTime()
+// 设置日期范围 - 使用当前年份为基准
+const currentYear = new Date().getFullYear()
+const minDate = new Date(`${currentYear}-01-01`).getTime()
+const maxDate = new Date(`${currentYear + 10}-12-31`).getTime()
 
 // 日期选择器
 const showStartDatePicker = ref(false)
 const showEndDatePicker = ref(false)
 
-// 表单数据
+// 表单数据初始化
+const now = new Date()
+const endDate = new Date(now)
+endDate.setMonth(now.getMonth() + 4) // 默认结束日期为4个月后（一个学期）
+
 const formData = reactive({
   name: '',
   description: '',
-  startDate: minDate,
-  endDate: minDate,
+  startDate: now.getTime(),
+  endDate: endDate.getTime(),
   type: 'COURSE'
 })
-
-// 格式化日期显示
-function formatDate(timestamp) {
-  const date = new Date(timestamp)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
 
 // 表单校验
 function validateForm() {
@@ -75,6 +71,13 @@ function validateForm() {
 // 设置开始日期
 function confirmStartDate(value) {
   formData.startDate = value
+  // 如果结束日期小于开始日期，自动更新结束日期
+  if (formData.endDate < formData.startDate) {
+    // 设置结束日期为开始日期加一个月
+    const endDate = new Date(formData.startDate);
+    endDate.setMonth(endDate.getMonth() + 1);
+    formData.endDate = endDate.getTime();
+  }
   showStartDatePicker.value = false
 }
 
@@ -90,6 +93,20 @@ function cancelDatePicker() {
   showEndDatePicker.value = false
 }
 
+// 日期格式化函数
+const formatter = (type: string, value: number) => {
+  if (type === 'year') {
+    return `${value}年`;
+  }
+  if (type === 'month') {
+    return `${value}月`;
+  }
+  if (type === 'day') {
+    return `${value}日`;
+  }
+  return value;
+};
+
 // 提交表单创建课程
 async function submitForm() {
   if (!validateForm()) {
@@ -100,12 +117,12 @@ async function submitForm() {
     loading.value = true
     errorMessage.value = ''
     
-    // 调用创建课程API，使用类型断言添加type字段
+    // 调用创建课程API，使用统一的时区处理
     const response = await createCourse({
       name: formData.name,
       description: formData.description,
-      startDate: new Date(formData.startDate).toISOString().split('T')[0],
-      endDate: new Date(formData.endDate).toISOString().split('T')[0],
+      startDate: toChineseISOString(new Date(formData.startDate)).split('T')[0],
+      endDate: toChineseISOString(new Date(formData.endDate)).split('T')[0],
       type: formData.type
     } as any)
     
@@ -179,14 +196,6 @@ function goBack() {
 
 <template>
   <view class="container">
-    <!-- 自定义导航栏 -->
-    <CustomNavBar 
-      title="创建课程" 
-      @back="goBack"
-      :title-color="'#FFFFFF'"
-      :background-color="'rgba(106, 17, 203, 0.98)'"
-      :scrolled-background-color="'rgba(106, 17, 203, 1)'"
-    />
     
     <!-- 内容区域 -->
     <view class="content-wrapper">
@@ -293,11 +302,13 @@ function goBack() {
         type="date"
         :min-date="minDate"
         :max-date="maxDate"
+        :current-date="formData.startDate"
         @confirm="confirmStartDate"
         @cancel="cancelDatePicker"
         title="选择开始日期"
         confirm-button-text="确定"
         cancel-button-text="取消"
+        :formatter="formatter"
       />
     </wd-popup>
     
@@ -308,11 +319,13 @@ function goBack() {
         type="date"
         :min-date="formData.startDate"
         :max-date="maxDate"
+        :current-date="formData.endDate"
         @confirm="confirmEndDate"
         @cancel="cancelDatePicker"
         title="选择结束日期"
         confirm-button-text="确定"
         cancel-button-text="取消"
+        :formatter="formatter"
       />
     </wd-popup>
   </view>

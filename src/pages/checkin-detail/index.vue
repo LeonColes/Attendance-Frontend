@@ -134,12 +134,71 @@ async function loadCheckinDetail() {
     
     console.log('开始加载签到详情, ID:', checkinId.value, '课程ID:', courseId.value)
     
-    // 直接加载二维码
-    await loadQRCode()
-    
-    // 设置一些基本信息
-    checkinInfo.title = '签到二维码'
-    checkinInfo.description = '请学生扫描二维码进行签到'
+    // 获取签到任务信息
+    const taskResponse = await getCheckinList(courseId.value, { page: 1, size: 10 })
+    if (taskResponse && taskResponse.code === 200) {
+      const tasks = taskResponse.data.items || []
+      const currentTask = tasks.find(task => task.id === checkinId.value)
+      
+      if (currentTask) {
+        console.log('当前签到任务:', currentTask)
+        checkinInfo.checkinType = currentTask.checkinType || ''
+        
+        // 根据签到类型跳转到不同页面
+        console.log('签到类型:', currentTask.checkinType)
+        console.log('签到ID:', checkinId.value)
+        console.log('课程ID:', courseId.value)
+        
+        if (currentTask.checkinType === 'QR_CODE') {
+          console.log('跳转到二维码签到页面')
+          // 跳转到二维码签到页面
+          uni.navigateTo({
+            url: `/pages/checkin-qrcode/index?checkinId=${checkinId.value}`,
+            success: () => {
+              console.log('成功跳转到二维码签到页面')
+            },
+            fail: (err) => {
+              console.error('跳转到二维码签到页面失败:', err)
+            }
+          })
+          return
+        } else if (currentTask.checkinType === 'LOCATION') {
+          console.log('跳转到位置签到页面')
+          // 跳转到位置签到页面
+          uni.navigateTo({
+            url: `/pages/location-checkin/index?id=${checkinId.value}&courseId=${courseId.value}`,
+            success: () => {
+              console.log('成功跳转到位置签到页面')
+            },
+            fail: (err) => {
+              console.error('跳转到位置签到页面失败:', err)
+            }
+          })
+          return
+        } else {
+          console.log('不支持的签到类型:', currentTask.checkinType)
+          errorMessage.value = '不支持的签到类型'
+          uni.showToast({
+            title: '不支持的签到类型',
+            icon: 'none'
+          })
+          setTimeout(() => {
+            uni.navigateBack()
+          }, 1500)
+          return
+        }
+      } else {
+        errorMessage.value = '未找到签到任务'
+        uni.showToast({
+          title: '未找到签到任务',
+          icon: 'none'
+        })
+        setTimeout(() => {
+          uni.navigateBack()
+        }, 1500)
+        return
+      }
+    }
     
     // 结束加载状态
     loading.value = false
@@ -278,9 +337,6 @@ onUnmounted(() => {
 
 <template>
   <view class="container">
-    <!-- 自定义导航栏 -->
-    <wd-navbar title="签到二维码" left-text="返回" @click-left="goBack" />
-    
     <!-- 加载中 -->
     <view v-if="loading" class="loading-container">
       <wd-loading size="48rpx" />

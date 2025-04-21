@@ -1,11 +1,9 @@
 <script lang="ts" setup>
 import { onMounted, reactive, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { register, type RegisterParams } from '@/api/auth'
-import CustomNavBar from '@/components/CustomNavBar.vue'
+import { register, type RegisterParams } from '@/api/user'
 
 const loading = ref(false)
-const role = ref('student')
 const confirmPassword = ref('')
 
 // 设备信息相关
@@ -48,19 +46,12 @@ onMounted(() => {
   navBarHeight.value = statusBarHeight.value + 44
 })
 
-// 从路由参数获取角色
-onLoad((options: Record<string, any> = {}) => {
-  if (options.role) {
-    role.value = options.role
-  }
-})
-
 const formData = reactive({
   username: '',
   password: '',
   fullName: '',
   email: '',
-  phone: '',
+  role: 'student' as 'student' | 'teacher'
 })
 
 // 表单验证
@@ -122,24 +113,32 @@ async function handleRegister() {
     loading.value = true
     
     // 使用统一的注册接口，传入角色参数
-    await register({
+    const response = await register({
       ...formData,
-      role: role.value,
+      role: formData.role === 'student' ? 'STUDENT' : 'TEACHER',
     })
 
-    uni.showToast({
-      title: '注册成功',
-      icon: 'success',
-    })
+    // 检查响应状态
+    if (response && response.code === 200) {
+      uni.showToast({
+        title: '注册成功',
+        icon: 'success',
+      })
 
-    // 跳转到登录页
-    goLogin()
+      // 跳转到登录页
+      goLogin()
+    } else {
+      uni.showToast({
+        title: response?.message || '注册失败，请重试',
+        icon: 'none',
+      })
+    }
   }
   catch (error: any) {
     console.error('注册失败:', error)
     uni.showToast({
       title: error.message || '注册失败，请重试',
-      icon: 'error',
+      icon: 'none',
     })
   }
   finally {
@@ -174,12 +173,6 @@ export default {
       <view class="wave wave3" />
     </view>
 
-    <!-- 使用自定义导航栏组件 -->
-    <CustomNavBar
-      title="用户注册"
-      @back="goBack"
-    />
-
     <view class="content-wrapper">
       <view class="form-container animate__fadeInUp">
         <wd-toast />
@@ -195,8 +188,8 @@ export default {
           <view class="role-cards">
             <view
               class="role-card"
-              :class="{ active: role === 'student' }"
-              @click="role = 'student'"
+              :class="{ active: formData.role === 'student' }"
+              @click="formData.role = 'student'"
             >
               <view class="role-icon-container">
                 <wd-icon name="person" class="role-icon" />
@@ -208,8 +201,8 @@ export default {
 
             <view
               class="role-card"
-              :class="{ active: role === 'teacher' }"
-              @click="role = 'teacher'"
+              :class="{ active: formData.role === 'teacher' }"
+              @click="formData.role = 'teacher'"
             >
               <view class="role-icon-container">
                 <wd-icon name="tutorial" class="role-icon" />

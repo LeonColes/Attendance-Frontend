@@ -395,38 +395,53 @@ async function submitCheckIn(checkInId: string) {
       title: '正在提交考勤...'
     })
     
-    // 调用API提交考勤
-    // 这里应该调用你的实际API
-    // const response = await submitAttendance(checkInId)
+    // 准备设备信息
+    const deviceInfo = getDeviceInfo()
+    const deviceData = {
+      type: deviceInfo.platform || 'unknown',
+      model: deviceInfo.model || '测试设备'
+    }
     
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // 准备签到参数
+    const checkinParams: any = {
+      checkinId: checkInId,
+      verifyMethod: 'QR_CODE',
+      device: JSON.stringify(deviceData),
+      verifyData: ''
+    }
+    
+    // 调用API提交考勤
+    const response = await submitCheckin(checkinParams)
     
     // 关闭加载提示
     getSafeUni().hideLoading()
     
-    // 显示成功提示
-    getSafeUni().showToast({
-      title: '签到成功',
-      icon: 'success'
-    })
-    
-    // 返回首页
-    setTimeout(() => {
-      // #ifdef MP-WEIXIN
-      // 微信小程序中使用reLaunch避免switchTab超时问题
-      getSafeUni().reLaunch({
-        url: '/pages/index'
+    if (response && response.code === 200) {
+      // 显示成功提示
+      getSafeUni().showToast({
+        title: '签到成功',
+        icon: 'success'
       })
-      // #endif
       
-      // #ifndef MP-WEIXIN
-      // 简化导航，只使用单一方法，不使用备选方案
-      getSafeUni().switchTab({
-        url: '/pages/index'
-      })
-      // #endif
-    }, 1500)
+      // 返回首页
+      setTimeout(() => {
+        // #ifdef MP-WEIXIN
+        // 微信小程序中使用reLaunch避免switchTab超时问题
+        getSafeUni().reLaunch({
+          url: '/pages/index'
+        })
+        // #endif
+        
+        // #ifndef MP-WEIXIN
+        // 简化导航，只使用单一方法，不使用备选方案
+        getSafeUni().switchTab({
+          url: '/pages/index'
+        })
+        // #endif
+      }, 1500)
+    } else {
+      throw new Error(response?.message || '签到失败')
+    }
   } catch (error) {
     console.error('提交考勤失败:', error)
     getSafeUni().hideLoading()

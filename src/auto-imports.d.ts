@@ -8,6 +8,7 @@ declare global {
   const EffectScope: typeof import('vue')['EffectScope']
   const asyncComputed: typeof import('@vueuse/core')['asyncComputed']
   const autoResetRef: typeof import('@vueuse/core')['autoResetRef']
+  const callWxApiSafely: typeof import('./utils/wxUtils')['callWxApiSafely']
   const computed: typeof import('vue')['computed']
   const computedAsync: typeof import('@vueuse/core')['computedAsync']
   const computedEager: typeof import('@vueuse/core')['computedEager']
@@ -22,6 +23,7 @@ declare global {
   const createReactiveFn: typeof import('@vueuse/core')['createReactiveFn']
   const createReusableTemplate: typeof import('@vueuse/core')['createReusableTemplate']
   const createRouter: typeof import('uni-mini-router')['createRouter']
+  const createSafeWorker: typeof import('./utils/wxUtils')['createSafeWorker']
   const createSharedComposable: typeof import('@vueuse/core')['createSharedComposable']
   const createTemplatePromise: typeof import('@vueuse/core')['createTemplatePromise']
   const createUnrefFn: typeof import('@vueuse/core')['createUnrefFn']
@@ -33,14 +35,22 @@ declare global {
   const del: typeof import('./utils/request')['del']
   const eagerComputed: typeof import('@vueuse/core')['eagerComputed']
   const effectScope: typeof import('vue')['effectScope']
+  const ensureValidJson: typeof import('./utils/request')['ensureValidJson']
   const extendRef: typeof import('@vueuse/core')['extendRef']
+  const formatDate: typeof import('./utils/dateTime')['formatDate']
+  const formatDateTime: typeof import('./utils/dateTime')['formatDateTime']
   const get: typeof import('./utils/request')['get']
   const getAuthHeader: typeof import('./utils/request')['getAuthHeader']
+  const getCurrentChineseDate: typeof import('./utils/dateTime')['getCurrentChineseDate']
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
   const getCurrentScope: typeof import('vue')['getCurrentScope']
+  const getDefaultEndTime: typeof import('./utils/dateTime')['getDefaultEndTime']
+  const getDefaultStartTime: typeof import('./utils/dateTime')['getDefaultStartTime']
+  const getSafeUni: typeof import('./utils/wxUtils')['getSafeUni']
   const getToken: typeof import('./utils/request')['getToken']
   const h: typeof import('vue')['h']
   const ignorableWatch: typeof import('@vueuse/core')['ignorableWatch']
+  const initializeWxEnvironment: typeof import('./utils/wxUtils')['initializeWxEnvironment']
   const inject: typeof import('vue')['inject']
   const injectLocal: typeof import('@vueuse/core')['injectLocal']
   const isDefined: typeof import('@vueuse/core')['isDefined']
@@ -48,6 +58,7 @@ declare global {
   const isReactive: typeof import('vue')['isReactive']
   const isReadonly: typeof import('vue')['isReadonly']
   const isRef: typeof import('vue')['isRef']
+  const isWechatMiniProgram: typeof import('./utils/wxUtils')['isWechatMiniProgram']
   const makeDestructurable: typeof import('@vueuse/core')['makeDestructurable']
   const markRaw: typeof import('vue')['markRaw']
   const nextTick: typeof import('vue')['nextTick']
@@ -115,6 +126,7 @@ declare global {
   const resolveComponent: typeof import('vue')['resolveComponent']
   const resolveRef: typeof import('@vueuse/core')['resolveRef']
   const resolveUnref: typeof import('@vueuse/core')['resolveUnref']
+  const safeParseDate: typeof import('./utils/dateTime')['safeParseDate']
   const setToken: typeof import('./utils/request')['setToken']
   const shallowReactive: typeof import('vue')['shallowReactive']
   const shallowReadonly: typeof import('vue')['shallowReadonly']
@@ -124,6 +136,8 @@ declare global {
   const templateRef: typeof import('@vueuse/core')['templateRef']
   const throttledRef: typeof import('@vueuse/core')['throttledRef']
   const throttledWatch: typeof import('@vueuse/core')['throttledWatch']
+  const toChineseISOString: typeof import('./utils/dateTime')['toChineseISOString']
+  const toChineseTimezone: typeof import('./utils/dateTime')['toChineseTimezone']
   const toRaw: typeof import('vue')['toRaw']
   const toReactive: typeof import('@vueuse/core')['toReactive']
   const toRef: typeof import('vue')['toRef']
@@ -330,6 +344,7 @@ declare module 'vue' {
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
     readonly asyncComputed: UnwrapRef<typeof import('@vueuse/core')['asyncComputed']>
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
+    readonly callWxApiSafely: UnwrapRef<typeof import('./utils/wxUtils')['callWxApiSafely']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly computedAsync: UnwrapRef<typeof import('@vueuse/core')['computedAsync']>
     readonly computedEager: UnwrapRef<typeof import('@vueuse/core')['computedEager']>
@@ -344,6 +359,7 @@ declare module 'vue' {
     readonly createReactiveFn: UnwrapRef<typeof import('@vueuse/core')['createReactiveFn']>
     readonly createReusableTemplate: UnwrapRef<typeof import('@vueuse/core')['createReusableTemplate']>
     readonly createRouter: UnwrapRef<typeof import('uni-mini-router')['createRouter']>
+    readonly createSafeWorker: UnwrapRef<typeof import('./utils/wxUtils')['createSafeWorker']>
     readonly createSharedComposable: UnwrapRef<typeof import('@vueuse/core')['createSharedComposable']>
     readonly createTemplatePromise: UnwrapRef<typeof import('@vueuse/core')['createTemplatePromise']>
     readonly createUnrefFn: UnwrapRef<typeof import('@vueuse/core')['createUnrefFn']>
@@ -355,14 +371,22 @@ declare module 'vue' {
     readonly del: UnwrapRef<typeof import('./utils/request')['del']>
     readonly eagerComputed: UnwrapRef<typeof import('@vueuse/core')['eagerComputed']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
+    readonly ensureValidJson: UnwrapRef<typeof import('./utils/request')['ensureValidJson']>
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
+    readonly formatDate: UnwrapRef<typeof import('./utils/dateTime')['formatDate']>
+    readonly formatDateTime: UnwrapRef<typeof import('./utils/dateTime')['formatDateTime']>
     readonly get: UnwrapRef<typeof import('./utils/request')['get']>
     readonly getAuthHeader: UnwrapRef<typeof import('./utils/request')['getAuthHeader']>
+    readonly getCurrentChineseDate: UnwrapRef<typeof import('./utils/dateTime')['getCurrentChineseDate']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
+    readonly getDefaultEndTime: UnwrapRef<typeof import('./utils/dateTime')['getDefaultEndTime']>
+    readonly getDefaultStartTime: UnwrapRef<typeof import('./utils/dateTime')['getDefaultStartTime']>
+    readonly getSafeUni: UnwrapRef<typeof import('./utils/wxUtils')['getSafeUni']>
     readonly getToken: UnwrapRef<typeof import('./utils/request')['getToken']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
     readonly ignorableWatch: UnwrapRef<typeof import('@vueuse/core')['ignorableWatch']>
+    readonly initializeWxEnvironment: UnwrapRef<typeof import('./utils/wxUtils')['initializeWxEnvironment']>
     readonly inject: UnwrapRef<typeof import('vue')['inject']>
     readonly injectLocal: UnwrapRef<typeof import('@vueuse/core')['injectLocal']>
     readonly isDefined: UnwrapRef<typeof import('@vueuse/core')['isDefined']>
@@ -370,6 +394,7 @@ declare module 'vue' {
     readonly isReactive: UnwrapRef<typeof import('vue')['isReactive']>
     readonly isReadonly: UnwrapRef<typeof import('vue')['isReadonly']>
     readonly isRef: UnwrapRef<typeof import('vue')['isRef']>
+    readonly isWechatMiniProgram: UnwrapRef<typeof import('./utils/wxUtils')['isWechatMiniProgram']>
     readonly makeDestructurable: UnwrapRef<typeof import('@vueuse/core')['makeDestructurable']>
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
@@ -437,6 +462,7 @@ declare module 'vue' {
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
     readonly resolveRef: UnwrapRef<typeof import('@vueuse/core')['resolveRef']>
     readonly resolveUnref: UnwrapRef<typeof import('@vueuse/core')['resolveUnref']>
+    readonly safeParseDate: UnwrapRef<typeof import('./utils/dateTime')['safeParseDate']>
     readonly setToken: UnwrapRef<typeof import('./utils/request')['setToken']>
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
@@ -446,6 +472,8 @@ declare module 'vue' {
     readonly templateRef: UnwrapRef<typeof import('@vueuse/core')['templateRef']>
     readonly throttledRef: UnwrapRef<typeof import('@vueuse/core')['throttledRef']>
     readonly throttledWatch: UnwrapRef<typeof import('@vueuse/core')['throttledWatch']>
+    readonly toChineseISOString: UnwrapRef<typeof import('./utils/dateTime')['toChineseISOString']>
+    readonly toChineseTimezone: UnwrapRef<typeof import('./utils/dateTime')['toChineseTimezone']>
     readonly toRaw: UnwrapRef<typeof import('vue')['toRaw']>
     readonly toReactive: UnwrapRef<typeof import('@vueuse/core')['toReactive']>
     readonly toRef: UnwrapRef<typeof import('vue')['toRef']>

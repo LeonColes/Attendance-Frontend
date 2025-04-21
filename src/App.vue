@@ -9,7 +9,6 @@
 -->
 <script lang="ts" setup>
 import { onLaunch, onShow, onHide } from '@dcloudio/uni-app'
-import CustomNavBar from './components/CustomNavBar.vue'
 
 onLaunch(() => {
   console.log('App Launch')
