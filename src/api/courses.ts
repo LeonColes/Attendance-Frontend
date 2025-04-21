@@ -241,7 +241,7 @@ export function updateCourse(courseId: string, params: Partial<CourseCreateParam
  * 获取课程邀请二维码（教师）
  * @param courseId 课程ID
  */
-export function getCourseQRCode(courseId: string): Promise<ArrayBuffer> {
+export function getCourseQRCode(courseId: string): Promise<any> {
   console.log('调用 getCourseQRCode, courseId:', courseId)
   
   return new Promise((resolve, reject) => {
@@ -255,17 +255,40 @@ export function getCourseQRCode(courseId: string): Promise<ArrayBuffer> {
       console.error('解析token失败', e);
     }
     
-    uni.request({
+    // 请求选项
+    const requestOptions: UniApp.RequestOptions = {
       url: `http://localhost:8080/api/courses/qrcode?courseId=${courseId}`,
       method: 'GET',
       header: {
         'Authorization': authHeader
       },
-      responseType: 'arraybuffer',
-      success: (res) => {
+      responseType: 'arraybuffer' as any,
+      success: (res: any) => {
         console.log('二维码请求成功:', res.statusCode);
         if (res.statusCode === 200 && res.data) {
-          resolve(res.data as ArrayBuffer);
+          console.log('二维码数据类型:', typeof res.data);
+          
+          // 微信小程序特殊处理（数据可能已经是ArrayBuffer）
+          // #ifdef MP-WEIXIN
+          if (res.data instanceof ArrayBuffer) {
+            resolve(res.data);
+          } else {
+            console.warn('微信小程序: 响应不是ArrayBuffer类型, 尝试转换');
+            // 可能是不同的数据类型，尝试处理
+            if (typeof res.data === 'object') {
+              // 如果是对象，包装后返回
+              resolve(res.data);
+            } else {
+              // 其他情况转为字符串
+              resolve(res.data);
+            }
+          }
+          // #endif
+          
+          // 非微信小程序环境
+          // #ifndef MP-WEIXIN
+          resolve(res.data);
+          // #endif
         } else {
           reject(new Error(`请求失败: ${res.statusCode}`));
         }
@@ -274,6 +297,9 @@ export function getCourseQRCode(courseId: string): Promise<ArrayBuffer> {
         console.error('二维码请求失败:', err);
         reject(err);
       }
-    });
+    };
+    
+    // 发送请求
+    uni.request(requestOptions);
   });
 } 

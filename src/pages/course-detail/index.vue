@@ -95,8 +95,8 @@ onShow(() => {
     loadCourseMembers(true)
     loadCourseAttendanceStats()
 
-    // 如果是教师，自动获取课程二维码
-    if (isTeacher.value) {
+    // 如果是教师，且二维码窗口正在显示，才加载二维码
+    if (isTeacher.value && showQRCode.value) {
       loadCourseQRCode()
     }
   }
@@ -527,48 +527,118 @@ async function loadCourseQRCode() {
   if (!courseId.value || !isTeacher.value) return
 
   try {
+    // 显示加载状态并清除之前的URL
     qrCodeLoading.value = true
     qrCodeUrl.value = '' // 清空之前的URL
     
+    console.log('开始获取课程二维码, 课程ID:', courseId.value)
+    
     // 调用已封装好的API
     const response = await getCourseQRCode(courseId.value)
-    console.log('二维码响应类型:', typeof response, response instanceof ArrayBuffer ? 'ArrayBuffer' : '非ArrayBuffer')
+    console.log('二维码API响应接收成功')
     
     if (!response) {
+      console.error('二维码响应为空')
       throw new Error('二维码数据为空')
     }
 
+    // 检查响应类型并进行相应处理
     if (response instanceof ArrayBuffer) {
-      // 使用 uni.arrayBufferToBase64 直接转换
+      console.log('响应类型为ArrayBuffer, 长度:', response.byteLength)
+      
+      // 直接使用小程序原生API进行Base64转换
       try {
-        const base64 = uni.arrayBufferToBase64(response)
-        qrCodeUrl.value = `data:image/png;base64,${base64}`
-        console.log('二维码生成成功，长度:', base64.length)
+        // 微信小程序环境
+        // #ifdef MP-WEIXIN
+        console.log('微信小程序环境: 开始处理ArrayBuffer')
+        // 使用同步方式处理ArrayBuffer (部分新版微信小程序支持)
+        try {
+          // 尝试直接使用wx.arrayBufferToBase64
+          // @ts-ignore
+          const base64 = wx.arrayBufferToBase64(response)
+          qrCodeUrl.value = `data:image/png;base64,${base64}`
+          console.log('微信小程序: 使用同步方法转换成功')
+        } catch (err) {
+          console.error('微信小程序: 同步方法失败，尝试异步方法', err)
+          // 回退到异步方法
+          wx.arrayBufferToBase64({
+            buffer: response,
+            success: (res) => {
+              qrCodeUrl.value = `data:image/png;base64,${res.base64}`
+              console.log('微信小程序: 异步二维码Base64转换成功')
+            },
+            fail: (err) => {
+              console.error('微信小程序: Base64转换失败', err)
+              // 失败时尝试直接使用二进制数据
+              try {
+                // 使用替代策略
+                const uint8Array = new Uint8Array(response)
+                let binary = ''
+                for (let i = 0; i < uint8Array.length; i++) {
+                  binary += String.fromCharCode(uint8Array[i])
+                }
+                const base64 = btoa(binary)
+                qrCodeUrl.value = `data:image/png;base64,${base64}`
+                console.log('微信小程序: 使用手动实现方法转换成功')
+              } catch (e) {
+                console.error('微信小程序: 所有方法都失败', e)
+              }
+            }
+          })
+        }
+        // #endif
+        
+        // 非微信小程序环境
+        // #ifndef MP-WEIXIN
+        try {
+          const base64 = uni.arrayBufferToBase64(response)
+          qrCodeUrl.value = `data:image/png;base64,${base64}`
+          console.log('二维码Base64转换成功, 长度:', base64.length)
+        } catch (err) {
+          console.error('uni.arrayBufferToBase64 转换失败:', err)
+          throw new Error('二维码数据转换失败')
+        }
+        // #endif
       } catch (err) {
         console.error('Base64转换失败:', err)
         throw new Error('二维码数据转换失败')
       }
-    } else if (response as any && typeof (response as any) === 'object' && (response as any).base64) {
-      // 如果API直接返回了base64字符串
-      qrCodeUrl.value = `data:image/png;base64,${(response as any).base64}`
-    } else if (response as any && typeof (response as any) === 'object' && (response as any).url) {
-      // 如果API返回了图片URL
-      qrCodeUrl.value = (response as any).url
-    } else if (response as any && typeof (response as any) === 'string') {
-      // 处理字符串类型的响应
-      const strResponse = response as string;
-      if (strResponse.startsWith('data:')) {
-        // 如果API直接返回了data URI
-        qrCodeUrl.value = strResponse;
-      } else {
-        // 假设是base64字符串
-        qrCodeUrl.value = `data:image/png;base64,${strResponse}`;
-      }
     } else {
-      console.error('不支持的二维码数据格式:', response)
-      throw new Error('不支持的二维码数据格式')
+      console.log('响应不是ArrayBuffer类型:', typeof response)
+      // 非ArrayBuffer类型响应处理 (后备方案)
+      
+      if (typeof response === 'string') {
+        // 字符串类型的响应
+        const strResponse = response as string
+        if (strResponse.indexOf('data:') === 0) {
+          // 如果已经是data URI
+          qrCodeUrl.value = strResponse
+          console.log('收到data URI格式的二维码')
+        } else {
+          // 假设是base64字符串
+          qrCodeUrl.value = `data:image/png;base64,${strResponse}`
+          console.log('将字符串作为base64处理')
+        }
+      } else if (typeof response === 'object') {
+        // 对象类型响应
+        console.log('响应是对象类型:', response)
+        
+        if ((response as any).base64) {
+          qrCodeUrl.value = `data:image/png;base64,${(response as any).base64}`
+          console.log('从对象中提取base64字段')
+        } else if ((response as any).url) {
+          qrCodeUrl.value = (response as any).url
+          console.log('从对象中提取url字段')
+        } else {
+          // 尝试将整个对象转为JSON字符串并作为文本显示
+          console.error('无法识别的对象格式:', response)
+          throw new Error('无法识别的二维码数据格式')
+        }
+      } else {
+        console.error('不支持的二维码数据格式:', response)
+        throw new Error('不支持的二维码数据格式')
+      }
     }
-
   } catch (e) {
     console.error('获取课程二维码出错:', e)
     getSafeUni().showToast({
@@ -583,11 +653,28 @@ async function loadCourseQRCode() {
 // 显示二维码弹窗
 function openQRCodeModal() {
   showQRCode.value = true
+  
+  // 打开弹窗时自动加载二维码
+  // 先重置状态
+  qrCodeUrl.value = ''
+  qrCodeLoading.value = false
+  
+  // 延迟一小段时间再加载，以确保弹窗已完全打开
+  setTimeout(() => {
+    console.log('弹窗已打开，开始加载二维码')
+    loadCourseQRCode()
+  }, 100)
 }
 
 // 关闭二维码弹窗
 function closeQRCodeModal() {
   showQRCode.value = false
+  
+  // 清除二维码状态，延迟执行以等待弹窗关闭动画完成
+  setTimeout(() => {
+    qrCodeUrl.value = ''
+    qrCodeLoading.value = false
+  }, 300)
 }
 
 // 处理签到列表项点击
@@ -964,16 +1051,51 @@ watch([membersList, checkinList], () => {
         </view>
 
         <view class="qrcode-content">
-          <image v-if="qrCodeUrl" :src="qrCodeUrl" mode="aspectFit" class="qrcode-image" />
-          <view v-else-if="qrCodeLoading" class="qrcode-loading">
+          <!-- 为微信小程序添加特殊处理 -->
+          <!-- #ifdef MP-WEIXIN -->
+          <view v-if="qrCodeUrl" class="qrcode-wx-container">
+            <image 
+              :src="qrCodeUrl" 
+              mode="aspectFit" 
+              class="qrcode-image"
+              :show-menu-by-longpress="true"
+              @error="(e) => { console.error('微信小程序图片加载错误:', e); }"
+              @load="() => { console.log('微信小程序图片加载成功'); }"
+            />
+            <text class="qrcode-tip">长按图片可保存</text>
+          </view>
+          <!-- #endif -->
+          
+          <!-- 其他平台通用处理 -->
+          <!-- #ifndef MP-WEIXIN -->
+          <image v-if="qrCodeUrl" 
+                 :src="qrCodeUrl" 
+                 mode="aspectFit" 
+                 class="qrcode-image" 
+                 @error="(e) => { console.error('图片加载错误:', e); }"
+                 @load="() => { console.log('图片加载成功'); }"
+          />
+          <!-- #endif -->
+          
+          <view v-if="!qrCodeUrl && qrCodeLoading" class="qrcode-loading">
             <wd-loading size="60rpx" />
             <text>获取二维码中...</text>
           </view>
-          <view v-else class="qrcode-error">
+          
+          <view v-if="!qrCodeUrl && !qrCodeLoading" class="qrcode-error">
             <wd-icon name="warning" size="60rpx" color="#f56c6c" />
             <text>获取二维码失败</text>
+            <view class="retry-button" @click="loadCourseQRCode">
+              <wd-icon name="refresh" size="28rpx" color="#0165FF" />
+              <text style="margin-left: 6rpx;">重试</text>
+            </view>
           </view>
-          <!-- {{ qrCodeUrl }} -->
+          
+          <!-- 调试信息 -->
+          <view v-if="qrCodeUrl" class="debug-info">
+            <text>二维码是否加载: {{qrCodeUrl ? '是' : '否'}}</text>
+          </view>
+          
           <view class="course-qrinfo">
             <text class="course-name">{{ courseDetail.name }}</text>
             <text class="course-code">课程码: {{ courseDetail.code }}</text>
@@ -1692,5 +1814,50 @@ watch([membersList, checkinList], () => {
 .checkin-item.checkin-type-location {
   border-left-color: #4caf50;
   background: linear-gradient(135deg, #ffffff 0%, rgba(76, 175, 80, 0.05) 100%);
+}
+
+.retry-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 16rpx;
+  padding: 10rpx 20rpx;
+  border-radius: 50rpx;
+  background-color: rgba(1, 101, 255, 0.1);
+  color: #0165FF;
+  font-size: 24rpx;
+}
+
+.debug-info {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #999;
+  text-align: center;
+}
+
+// 添加微信小程序专用样式
+.qrcode-wx-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.qrcode-tip {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: #666;
+  text-align: center;
+}
+
+.debug-info {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 22rpx;
+  color: #999;
+  text-align: center;
+  padding: 6rpx 12rpx;
+  background-color: rgba(0, 0, 0, 0.03);
+  border-radius: 10rpx;
 }
 </style>
