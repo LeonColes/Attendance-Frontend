@@ -10,13 +10,6 @@
       }
     },
     {
-      "path": "pages/all-courses/index",
-      "type": "page",
-      "style": {
-        "navigationBarTitleText": "其他课程"
-      }
-    },
-    {
       "path": "pages/checkin-detail/index",
       "type": "page",
       "style": {
