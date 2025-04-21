@@ -160,21 +160,19 @@ onMounted(() => {
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1]
   const query = currentPage ? (currentPage as any)?.options : {}
-  
+  console.log('query', query)
   // 处理签到ID
-  if (query.id) {
-    checkinId.value = query.id
+  if (query.checkinId) {
+    checkinId.value = query.checkinId
   } else if (query.checkinData) {
     try {
       const checkinData = JSON.parse(decodeURIComponent(query.checkinData))
-      checkinId.value = checkinData.id
+      checkinId.value = checkinData.checkinId
     } catch (e) {
       console.error('解析签到数据失败:', e)
-      checkinId.value = 'cf29f64b-778f-4f26-ba9f-9829d9ae4a4d'
     }
   } else {
-    // 使用默认ID
-    checkinId.value = 'cf29f64b-778f-4f26-ba9f-9829d9ae4a4d'
+    console.error('签到ID不存在')
   }
   
   courseId.value = query.courseId || ''

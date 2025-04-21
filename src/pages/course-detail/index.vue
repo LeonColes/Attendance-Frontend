@@ -691,7 +691,7 @@ function handleCheckinClick(checkin: any) {
               <!-- @ts-ignore -->
               <view class="checkin-time">
                 <wd-icon name="time" size="28rpx" color="#666" />
-                <text>{{ formatDateTime(checkin.checkinStartTime || checkin.startTime) }} ~ {{ formatDateTime(checkin.checkinEndTime || checkin.endTime) }}</text>
+                <text>{{ formatDateTime(checkin.checkinStartTime) }} ~ {{ formatDateTime(checkin.checkinEndTime) }}</text>
               </view>
               <!-- @ts-ignore -->
               <view class="checkin-type">
@@ -700,19 +700,16 @@ function handleCheckinClick(checkin: any) {
                 <text>{{ getCheckinTypeText(checkin.checkinType) }}</text>
               </view>
               <!-- @ts-ignore -->
-              <view class="checkin-status" :class="getCheckinStatus(checkin)">
+              <view v-if="!isStudent" class="checkin-status" :class="getCheckinStatus(checkin)">
                 {{ getCheckinStatus(checkin) === 'not-started' ? '未开始' :
                   getCheckinStatus(checkin) === 'in-progress' ? '进行中' : '已结束' }}
               </view>
 
               <!-- 学生端显示签到状态 -->
               <!-- @ts-ignore -->
-              <view v-if="isStudent && checkin.attendanceStatus" class="attendance-status"
-                :class="checkin.attendanceStatus.toLowerCase()">
-                {{ checkin.attendanceStatus === 'CHECKED_IN' ? '已签到' :
-                  checkin.attendanceStatus === 'LATE' ? '迟到' :
-                    checkin.attendanceStatus === 'ABSENT' ? '缺勤' :
-                      checkin.attendanceStatus === 'NOT_STARTED' ? '未开始' : '未签到' }}
+              <view v-else class="checkin-status"
+                :class="checkin.personalStatus.toLowerCase()">
+                {{ checkin.displayStatus }}
               </view>
             </view>
           </view>
@@ -1045,10 +1042,11 @@ function handleCheckinClick(checkin: any) {
 }
 
 .checkin-item {
-  background-color: #f9f9f9;
   padding: 20rpx;
-  border-radius: 10rpx;
   position: relative;
+  border-radius: 24rpx;
+  margin-bottom: 20rpx;
+  background-color: #fff;
 }
 
 .checkin-title {
@@ -1094,6 +1092,27 @@ function handleCheckinClick(checkin: any) {
 .checkin-status.ended {
   background-color: rgba(76, 175, 80, 0.1);
   color: #4caf50;
+}
+
+.checkin-status.checked_in {
+  background-color: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
+}
+
+.checkin-status.late {
+  background-color: rgba(255, 152, 0, 0.1);
+  color: #ff9800;
+}
+
+.checkin-status.absent,
+.checkin-status.missed {
+  background-color: rgba(244, 67, 54, 0.1);
+  color: #f44336;
+}
+
+.checkin-status.pending {
+  background-color: rgba(158, 158, 158, 0.1);
+  color: #9e9e9e;
 }
 
 .attendance-status {
