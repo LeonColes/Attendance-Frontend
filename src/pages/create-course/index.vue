@@ -11,7 +11,7 @@
 import { ref, reactive } from 'vue'
 import { useUserStore } from '@/store/user'
 import { createCourse, type Course } from '@/api/courses'
-import { formatDate, toChineseISOString } from '@/utils/dateTime'
+import { formatDate, toChineseISOString, toChineseTimezone } from '@/utils/dateTime'
 
 const userStore = useUserStore()
 const loading = ref(false)
@@ -27,9 +27,21 @@ const showStartDatePicker = ref(false)
 const showEndDatePicker = ref(false)
 
 // 表单数据初始化
-const now = new Date()
-const endDate = new Date(now)
+const now = toChineseTimezone(new Date())
+console.log('当前时间:', now)
+console.log('当前时间戳:', now.getTime())
+console.log('当前时间字符串:', now.toISOString())
+console.log('当前时间本地字符串:', now.toLocaleString())
+console.log('当前时间时区:', now.getTimezoneOffset())
+
+const endDate = toChineseTimezone(new Date(now.getTime()))
 endDate.setMonth(now.getMonth() + 4) // 默认结束日期为4个月后（一个学期）
+
+console.log('结束时间:', endDate)
+console.log('结束时间戳:', endDate.getTime())
+console.log('结束时间字符串:', endDate.toISOString())
+console.log('结束时间本地字符串:', endDate.toLocaleString())
+console.log('结束时间时区:', endDate.getTimezoneOffset())
 
 const formData = reactive({
   name: '',

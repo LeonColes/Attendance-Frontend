@@ -39,6 +39,7 @@ declare global {
   const extendRef: typeof import('@vueuse/core')['extendRef']
   const formatDate: typeof import('./utils/dateTime')['formatDate']
   const formatDateTime: typeof import('./utils/dateTime')['formatDateTime']
+  const formatDateTimeFull: typeof import('./utils/dateTime')['formatDateTimeFull']
   const get: typeof import('./utils/request')['get']
   const getAuthHeader: typeof import('./utils/request')['getAuthHeader']
   const getCurrentChineseDate: typeof import('./utils/dateTime')['getCurrentChineseDate']
@@ -47,6 +48,7 @@ declare global {
   const getDefaultEndTime: typeof import('./utils/dateTime')['getDefaultEndTime']
   const getDefaultStartTime: typeof import('./utils/dateTime')['getDefaultStartTime']
   const getSafeUni: typeof import('./utils/wxUtils')['getSafeUni']
+  const getTimeDiff: typeof import('./utils/dateTime')['getTimeDiff']
   const getToken: typeof import('./utils/request')['getToken']
   const h: typeof import('vue')['h']
   const ignorableWatch: typeof import('@vueuse/core')['ignorableWatch']
@@ -375,6 +377,7 @@ declare module 'vue' {
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
     readonly formatDate: UnwrapRef<typeof import('./utils/dateTime')['formatDate']>
     readonly formatDateTime: UnwrapRef<typeof import('./utils/dateTime')['formatDateTime']>
+    readonly formatDateTimeFull: UnwrapRef<typeof import('./utils/dateTime')['formatDateTimeFull']>
     readonly get: UnwrapRef<typeof import('./utils/request')['get']>
     readonly getAuthHeader: UnwrapRef<typeof import('./utils/request')['getAuthHeader']>
     readonly getCurrentChineseDate: UnwrapRef<typeof import('./utils/dateTime')['getCurrentChineseDate']>
@@ -383,6 +386,7 @@ declare module 'vue' {
     readonly getDefaultEndTime: UnwrapRef<typeof import('./utils/dateTime')['getDefaultEndTime']>
     readonly getDefaultStartTime: UnwrapRef<typeof import('./utils/dateTime')['getDefaultStartTime']>
     readonly getSafeUni: UnwrapRef<typeof import('./utils/wxUtils')['getSafeUni']>
+    readonly getTimeDiff: UnwrapRef<typeof import('./utils/dateTime')['getTimeDiff']>
     readonly getToken: UnwrapRef<typeof import('./utils/request')['getToken']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
     readonly ignorableWatch: UnwrapRef<typeof import('@vueuse/core')['ignorableWatch']>

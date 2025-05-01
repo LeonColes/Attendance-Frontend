@@ -1,5 +1,6 @@
 import { post, get } from '@/utils/request'
 import { getToken } from '@/utils/request'
+import { formatDateTimeFull } from '@/utils/dateTime'
 
 /**
  * 分页查询参数
@@ -135,9 +136,9 @@ export function createCheckin(params: CheckinCreateParams) {
   // 确保日期格式正确，使用Asia/Shanghai时区
   const formattedParams = {
     ...params,
-    // 保持参数中的时间字符串格式，确保已经正确转换为亚洲/上海时区
-    startTime: params.startTime,
-    endTime: params.endTime
+    // 将时间格式转换为 YYYY-MM-DD HH:mm:ss 格式
+    startTime: formatDateTimeFull(params.startTime),
+    endTime: formatDateTimeFull(params.endTime)
   };
   
   // 打印日志以便调试

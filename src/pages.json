@@ -63,10 +63,7 @@
     },
     {
       "path": "pages/login/index",
-      "type": "page",
-      "style": {
-        "navigationStyle": "custom"
-      }
+      "type": "page"
     },
     {
       "path": "pages/my/index",
