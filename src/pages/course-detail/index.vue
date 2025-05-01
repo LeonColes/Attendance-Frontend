@@ -48,6 +48,9 @@ const showOperations = ref(false)
 const isTeacher = computed(() => userStore.userInfo?.role === 'TEACHER')
 const isStudent = computed(() => userStore.userInfo?.role === 'STUDENT')
 
+// 添加删除状态
+const isDeletingCourse = ref(false)
+
 // 监听activeTab和isStudent，确保学生不能访问考勤统计
 watch([isStudent, activeTab], ([isStudentValue, activeTabValue]) => {
   // 如果是学生且当前tab是考勤统计，则自动切换到签到任务
@@ -783,6 +786,9 @@ watch([membersList, checkinList], () => {
 
 // 删除课程
 function handleDeleteCourse() {
+  // 设置删除状态
+  isDeletingCourse.value = true
+  
   getSafeUni().showModal({
     title: '提示',
     content: '确定要删除该课程吗？此操作不可恢复！',
@@ -806,6 +812,8 @@ function handleDeleteCourse() {
           })
         }
       }
+      // 无论成功失败，操作完成后重置状态
+      isDeletingCourse.value = false
     }
   })
 }
@@ -993,18 +1001,17 @@ function confirmDeleteCourse() {
             </view>
 
             <!-- @ts-ignore -->
-            <view class="info-item">
+            <view class="info-item full-width">
               <wd-icon name="calendar" size="32rpx" color="#6a11cb" />
               <!-- @ts-ignore -->
               <view class="info-label">起止日期</view>
               <!-- @ts-ignore -->
-              <view class="info-value date-value" style="width: auto;">{{ formatDateTime(courseDetail.startDate) }} ~ {{
-                formatDateTime(courseDetail.endDate) }}</view>
+              <view class="info-value date-value">{{ formatDateTime(courseDetail.startDate) }} ~ {{formatDateTime(courseDetail.endDate) }}</view>
             </view>
 
             <!-- @ts-ignore -->
             <view class="info-item full-width">
-              <wd-icon name="info-outline" size="32rpx" color="#6a11cb" />
+              <wd-icon name="description" size="32rpx" color="#6a11cb" />
               <!-- @ts-ignore -->
               <view class="info-label">描述</view>
               <!-- @ts-ignore -->
@@ -1029,10 +1036,13 @@ function confirmDeleteCourse() {
             </wd-button>
             
             <!-- 添加删除课程按钮 -->
-            <wd-button type="danger" size="small" custom-style="height: 70rpx; margin-top: 20rpx; margin-left: 20rpx;"
+            <wd-button type="danger" size="small" 
+              custom-style="height: 70rpx; margin-top: 20rpx; margin-left: 20rpx;"
+              :loading="isDeletingCourse"
+              :disabled="isDeletingCourse"
               @click="handleDeleteCourse">
-              <wd-icon name="delete" size="28rpx" color="#ffffff" />
-              <text style="margin-left: 8rpx;">删除课程</text>
+              <wd-icon v-if="!isDeletingCourse" name="delete" size="28rpx" color="#ffffff" style="color: #ffffff !important; fill: #ffffff !important;" />
+              <text style="margin-left: 8rpx;">{{ isDeletingCourse ? '删除中...' : '删除课程' }}</text>
             </wd-button>
           </view>
         </view>
@@ -1070,7 +1080,11 @@ function confirmDeleteCourse() {
           <view v-if="checkinList.length > 0" class="checkin-list">
             <!-- @ts-ignore -->
             <view v-for="(checkin, index) in checkinList" :key="checkin.id" class="checkin-item"
-              :class="[checkin.checkinType.toLowerCase(), 'checkin-type-' + checkin.checkinType.toLowerCase()]"
+              :class="[
+                checkin.checkinType.toLowerCase(), 
+                'checkin-type-' + checkin.checkinType.toLowerCase(),
+                'status-' + getCheckinStatus(checkin)
+              ]"
               :style="{ '--i': index }">
               <!-- 添加点击区域，排除操作按钮 -->
               <!-- @ts-ignore -->
@@ -1105,9 +1119,9 @@ function confirmDeleteCourse() {
               <!-- 教师可以删除签到任务 -->
               <!-- @ts-ignore -->
               <view v-if="isTeacher" class="checkin-actions" @click.stop>
-                <wd-button type="danger" size="mini" custom-style="padding: 4rpx 12rpx; min-width: auto;" 
+                <wd-button type="danger" size="mini" custom-style="padding: 8rpx 16rpx; min-width: auto; background-color: #ff4d4f;" 
                   @click.stop="handleDeleteCheckin(checkin)">
-                  <wd-icon name="delete" size="28rpx" color="#ff0000" style="color: #ff0000 !important;" />
+                  <wd-icon name="delete" size="32rpx" color="#ffffff" style="color: #ffffff !important; fill: #ffffff !important;" />
                 </wd-button>
               </view>
             </view>
@@ -1150,9 +1164,9 @@ function confirmDeleteCourse() {
               <!-- 教师可以移除学生成员 -->
               <!-- @ts-ignore -->
               <view v-if="isTeacher && member.role !== 'TEACHER'" class="member-actions">
-                <wd-button type="danger" size="mini" custom-style="padding: 4rpx 12rpx; min-width: auto;" 
+                <wd-button type="danger" size="mini" custom-style="padding: 8rpx 16rpx; min-width: auto; background-color: #ff4d4f;" 
                   @click="handleRemoveMember(member)">
-                  <wd-icon name="delete" size="28rpx" color="#ff0000" style="color: #ff0000 !important;" />
+                  <wd-icon name="delete" size="32rpx" color="#ffffff" style="color: #ffffff !important; fill: #ffffff !important;" />
                 </wd-button>
               </view>
             </view>
@@ -1348,9 +1362,12 @@ function confirmDeleteCourse() {
             <wd-icon name="download" size="40rpx" color="#4caf50" />
             <text>导出考勤数据</text>
           </view>
-          <view class="operation-item delete-operation" @click="handleOpenDeleteConfirm" v-if="isTeacher">
+          <view class="operation-item delete-operation" v-if="isTeacher">
             <wd-icon name="delete" size="40rpx" color="#f44336" style="color: #f44336 !important;" />
-            <text>删除课程</text>
+            <wd-button type="danger" size="small" custom-style="margin-left: 16rpx;" :loading="isDeletingCourse" @click="handleDeleteCourse">
+              <wd-icon name="delete" size="28rpx" color="#ffffff" />
+              <text style="margin-left: 8rpx;">{{ isDeletingCourse ? '删除中...' : '删除课程' }}</text>
+            </wd-button>
           </view>
         </view>
         <wd-button type="primary" @click="showOperations = false" block custom-style="margin-top: 30rpx;">取消</wd-button>
@@ -1558,8 +1575,15 @@ function confirmDeleteCourse() {
 
 .info-value.date-value {
   font-size: 24rpx;
-  width: auto;
+  width: 100%;
   flex: 1;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #333;
+  display: block;
+  word-break: break-all;
+  line-height: 1.4;
 }
 
 .info-value.description {
@@ -1595,7 +1619,6 @@ function confirmDeleteCourse() {
   box-shadow: 0 8rpx 20rpx rgba(106, 17, 203, 0.08);
   border: 1rpx solid rgba(106, 17, 203, 0.05);
   padding: 5rpx;
-  position: sticky;
   top: 90rpx;
   z-index: 90;
   backdrop-filter: blur(5px);
@@ -1699,10 +1722,22 @@ function confirmDeleteCourse() {
 
 .delete-operation {
   background-color: rgba(244, 67, 54, 0.05);
+  align-items: center;
+  justify-content: flex-start;
+  padding: 16rpx 24rpx;
+}
+
+.delete-operation:active {
+  background-color: rgba(244, 67, 54, 0.1);
 }
 
 .delete-operation text {
-  color: #f44336;
+  color: #ffffff;
+}
+
+.operation-item.delete-operation .wd-button {
+  flex: 1;
+  margin-left: 16rpx;
 }
 
 /* 标签页内容区域 */
@@ -1742,23 +1777,23 @@ function confirmDeleteCourse() {
 .checkin-list {
   display: flex;
   flex-direction: column;
-  gap: 24rpx;
+  gap: 20rpx;
   will-change: transform;
 }
 
 .checkin-item {
   position: relative;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(249, 250, 254, 0.9) 100%);
-  border-radius: 24rpx;
-  padding: 30rpx;
-  margin-bottom: 10rpx;
-  box-shadow: 0 4rpx 15rpx rgba(0, 0, 0, 0.05);
+  border-radius: 20rpx;
+  padding: 22rpx 18rpx 22rpx 20rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
   display: flex;
   justify-content: space-between;
+  align-items: center;
   animation: fadeIn 0.3s ease forwards;
   animation-delay: calc(var(--i) * 0.05s);
   opacity: 0;
-  border-left: 8rpx solid transparent;
+  border-left: 6rpx solid transparent;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   overflow: hidden;
 }
@@ -1783,16 +1818,20 @@ function confirmDeleteCourse() {
 
 .checkin-content {
   flex: 1;
-  margin-right: 20rpx;
+  margin-right: 16rpx;
   position: relative;
   z-index: 1;
+  min-width: 0; /* 确保内容在有限宽度内可以缩小 */
+  overflow: hidden;
 }
 
 .checkin-actions {
   display: flex;
   align-items: center;
+  justify-content: center;
   position: relative;
   z-index: 1;
+  margin-left: 8rpx;
 }
 
 .checkin-title {
@@ -1805,36 +1844,68 @@ function confirmDeleteCourse() {
 .checkin-info-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10rpx;
   flex-wrap: wrap;
-  gap: 10rpx;
+  gap: 12rpx;
+  margin: 12rpx 0;
 }
 
 .checkin-time {
   display: flex;
   align-items: center;
-  gap: 8rpx;
+  gap: 6rpx;
   background-color: rgba(0, 0, 0, 0.03);
-  padding: 4rpx 10rpx;
-  border-radius: 20rpx;
+  padding: 6rpx 10rpx;
+  border-radius: 16rpx;
+  max-width: 100%;
+  flex: 1;
+  min-width: 0;
 }
 
 .checkin-time text {
   font-size: 24rpx;
   color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
 }
 
 .checkin-type-badge {
   display: flex;
   align-items: center;
-  gap: 5rpx;
-  padding: 4rpx 12rpx;
+  gap: 8rpx;
+  padding: 8rpx 12rpx;
   border-radius: 24rpx;
+  font-weight: 500;
 }
 
 .checkin-type-badge text {
   font-size: 24rpx;
+  white-space: nowrap;
+}
+
+.checkin-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8rpx;
+  padding-right: 80rpx; /* 为状态腾出空间 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.checkin-status {
+  position: absolute;
+  top: 16rpx;
+  right: 16rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 50rpx;
+  font-size: 22rpx;
+  font-weight: 500;
+  z-index: 2;
+  box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
 }
 
 .checkin-item.qr_code {
@@ -1855,30 +1926,23 @@ function confirmDeleteCourse() {
   color: #4caf50;
 }
 
-.checkin-status {
-  position: absolute;
-  top: 20rpx;
-  right: 0;
-  padding: 6rpx 16rpx;
-  border-radius: 50rpx;
-  font-size: 22rpx;
-  font-weight: 500;
-  z-index: 2;
-}
-
 .checkin-status.not-started {
-  background-color: rgba(158, 158, 158, 0.1);
+  background-color: rgba(117, 117, 117, 0.1);
   color: #757575;
+  border: 1px solid rgba(117, 117, 117, 0.2);
 }
 
 .checkin-status.in-progress {
   background-color: rgba(33, 150, 243, 0.1);
   color: #2196f3;
+  border: 1px solid rgba(33, 150, 243, 0.2);
+  font-weight: bold;
 }
 
 .checkin-status.ended {
   background-color: rgba(76, 175, 80, 0.1);
   color: #4caf50;
+  border: 1px solid rgba(76, 175, 80, 0.2);
 }
 
 /* 成员列表样式优化 */
@@ -1972,6 +2036,7 @@ function confirmDeleteCourse() {
   margin-left: auto;
   display: flex;
   align-items: center;
+  justify-content: center;
 }
 
 /* 统计数据样式优化 */
@@ -2371,19 +2436,52 @@ function confirmDeleteCourse() {
 /* 确保删除按钮的图标颜色总是红色 */
 .checkin-actions .wd-icon, 
 .member-actions .wd-icon {
-  color: #ff0000 !important;
+  color: #ffffff !important;
 }
 
 .operation-item.delete-operation .wd-icon {
   color: #f44336 !important;
 }
 
-/* 添加强制性的样式，确保图标颜色正确显示 */
-.wd-button--danger .wd-icon {
-  color: #ff0000 !important;
+/* 添加强化的图标颜色样式规则 */
+.wd-button--danger .wd-icon,
+.checkin-actions .wd-icon, 
+.member-actions .wd-icon {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+/* 处理全局图标样式 */
+:deep(.wd-button--danger) .wd-icon {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+/* 强制覆盖所有删除按钮的图标颜色 */
+[class*="wd-button"][type="danger"] .wd-icon {
+  color: #ffffff !important;
+  fill: #ffffff !important;
 }
 
 .operation-item.delete-operation {
   color: #f44336;
+}
+
+/* 根据状态添加卡片背景和样式变化 */
+.checkin-item.status-not-started {
+  background: linear-gradient(135deg, rgba(250, 250, 250, 0.9) 0%, rgba(245, 245, 250, 0.9) 100%);
+  border-left-color: #757575;
+}
+
+.checkin-item.status-in-progress {
+  background: linear-gradient(135deg, rgba(235, 246, 255, 0.9) 0%, rgba(227, 242, 253, 0.9) 100%);
+  border-left-color: #2196f3;
+  box-shadow: 0 6rpx 16rpx rgba(33, 150, 243, 0.1);
+}
+
+.checkin-item.status-ended {
+  background: linear-gradient(135deg, rgba(237, 247, 237, 0.9) 0%, rgba(232, 245, 233, 0.9) 100%);
+  border-left-color: #4caf50;
+  box-shadow: 0 4rpx 12rpx rgba(76, 175, 80, 0.08);
 }
 </style>
