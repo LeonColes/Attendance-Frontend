@@ -46,8 +46,7 @@
       "path": "pages/create-course/index",
       "type": "page",
       "style": {
-        "navigationBarTitleText": "创建课程",
-        "navigationStyle": "custom"
+        "navigationBarTitleText": "创建课程"
       }
     },
     {

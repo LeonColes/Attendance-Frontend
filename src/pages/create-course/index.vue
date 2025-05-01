@@ -11,7 +11,6 @@
 import { ref, reactive } from 'vue'
 import { useUserStore } from '@/store/user'
 import { createCourse, type Course } from '@/api/courses'
-import { formatDate, toChineseISOString, toChineseTimezone } from '@/utils/dateTime'
 
 const userStore = useUserStore()
 const loading = ref(false)
@@ -27,21 +26,9 @@ const showStartDatePicker = ref(false)
 const showEndDatePicker = ref(false)
 
 // 表单数据初始化
-const now = toChineseTimezone(new Date())
-console.log('当前时间:', now)
-console.log('当前时间戳:', now.getTime())
-console.log('当前时间字符串:', now.toISOString())
-console.log('当前时间本地字符串:', now.toLocaleString())
-console.log('当前时间时区:', now.getTimezoneOffset())
-
-const endDate = toChineseTimezone(new Date(now.getTime()))
+const now = new Date()
+const endDate = new Date()
 endDate.setMonth(now.getMonth() + 4) // 默认结束日期为4个月后（一个学期）
-
-console.log('结束时间:', endDate)
-console.log('结束时间戳:', endDate.getTime())
-console.log('结束时间字符串:', endDate.toISOString())
-console.log('结束时间本地字符串:', endDate.toLocaleString())
-console.log('结束时间时区:', endDate.getTimezoneOffset())
 
 const formData = reactive({
   name: '',
@@ -50,6 +37,15 @@ const formData = reactive({
   endDate: endDate.getTime(),
   type: 'COURSE'
 })
+
+// 简单的日期格式化函数，将时间戳转为YYYY-MM-DD格式，不进行时区转换
+function simpleDateFormat(timestamp: number): string {
+  const date = new Date(timestamp)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 // 表单校验
 function validateForm() {
@@ -129,12 +125,12 @@ async function submitForm() {
     loading.value = true
     errorMessage.value = ''
     
-    // 调用创建课程API，使用统一的时区处理
+    // 调用创建课程API，使用简单日期格式，避免时区转换
     const response = await createCourse({
       name: formData.name,
       description: formData.description,
-      startDate: toChineseISOString(new Date(formData.startDate)).split('T')[0],
-      endDate: toChineseISOString(new Date(formData.endDate)).split('T')[0],
+      startDate: simpleDateFormat(formData.startDate),
+      endDate: simpleDateFormat(formData.endDate),
       type: formData.type
     } as any)
     
@@ -258,7 +254,7 @@ function goBack() {
               <text class="required">*</text>
             </view>
             <view class="date-input" @click="showStartDatePicker = true">
-              <text>{{ formatDate(formData.startDate) }}</text>
+              <text>{{ simpleDateFormat(formData.startDate) }}</text>
               <wd-icon name="arrow-down" size="28rpx" color="#999" />
             </view>
           </view>
@@ -271,7 +267,7 @@ function goBack() {
               <text class="required">*</text>
             </view>
             <view class="date-input" @click="showEndDatePicker = true">
-              <text>{{ formatDate(formData.endDate) }}</text>
+              <text>{{ simpleDateFormat(formData.endDate) }}</text>
               <wd-icon name="arrow-down" size="28rpx" color="#999" />
             </view>
           </view>
@@ -321,6 +317,7 @@ function goBack() {
         confirm-button-text="确定"
         cancel-button-text="取消"
         :formatter="formatter"
+        loading-color="#6a11cb"
       />
     </wd-popup>
     
@@ -338,6 +335,7 @@ function goBack() {
         confirm-button-text="确定"
         cancel-button-text="取消"
         :formatter="formatter"
+        loading-color="#6a11cb"
       />
     </wd-popup>
   </view>
@@ -382,6 +380,15 @@ function goBack() {
   padding: 40rpx;
   box-shadow: 0 20rpx 40rpx rgba(0, 0, 0, 0.15);
   margin-bottom: 40rpx;
+  
+  // 添加微妙的阴影效果，提升视觉深度
+  transform: translateY(0);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  
+  &:active {
+    transform: translateY(2rpx);
+    box-shadow: 0 10rpx 20rpx rgba(0, 0, 0, 0.1);
+  }
 }
 
 .form-item {
@@ -415,26 +422,33 @@ function goBack() {
 
 .date-row {
   display: flex;
-  flex-direction: column;
-  gap: 30rpx;
-}
-
-.date-item {
-  flex: 1;
-}
-
-.date-input {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20rpx 30rpx;
-  background-color: #f5f5f5;
-  border-radius: 8rpx;
-  border: 1px solid #e0e0e0;
+  gap: 24rpx;
+  margin-top: 10rpx;
   
-  text {
-    font-size: 28rpx;
-    color: #333;
+  .date-item {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .date-input {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24rpx 30rpx;
+    background-color: #f8f9fa;
+    border-radius: 12rpx;
+    border: 1px solid #e0e0e0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    
+    &:active {
+      background-color: #f0f2f5;
+    }
+    
+    text {
+      font-size: 28rpx;
+      color: #333;
+    }
   }
 }
 
@@ -472,32 +486,42 @@ function goBack() {
   }
 }
 
-.button-content {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.submit-button {
+  height: 100rpx !important;
+  border-radius: 50rpx !important;
+  background: linear-gradient(45deg, #6a11cb, #2575fc) !important;
+  border: none !important;
+  box-shadow: 0 8rpx 16rpx rgba(37, 117, 252, 0.3) !important;
   
-  .button-icon {
-    margin-right: 10rpx;
+  .button-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    .button-icon {
+      margin-right: 12rpx;
+    }
+    
+    text {
+      font-size: 32rpx;
+      font-weight: bold;
+    }
   }
 }
 
-:deep(.submit-button) {
-  background-image: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-  border: none;
-  height: 100rpx;
-  font-size: 36rpx;
-  font-weight: bold;
-  border-radius: 50rpx;
-  box-shadow: 0 10rpx 20rpx rgba(0, 0, 0, 0.2);
-}
-
-:deep(.name-input),
-:deep(.desc-textarea) {
-  background-color: rgba(106, 17, 203, 0.05);
-  border: 1px solid rgba(106, 17, 203, 0.1);
-  border-radius: 16rpx;
-  font-size: 30rpx;
+// 优化日期选择器样式
+:deep(.wd-datetime-picker-view) {
+  border-radius: 24rpx 24rpx 0 0;
+  overflow: hidden;
+  
+  .wd-picker-view__header {
+    background-color: #f8f9fa;
+  }
+  
+  .wd-picker-view__title {
+    color: #6a11cb;
+    font-weight: 600;
+  }
 }
 </style>
 

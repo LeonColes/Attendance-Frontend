@@ -1,6 +1,5 @@
 import { post, get } from '@/utils/request'
 import { getToken } from '@/utils/request'
-import { formatDateTimeFull } from '@/utils/dateTime'
 
 /**
  * 分页查询参数
