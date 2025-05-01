@@ -130,10 +130,13 @@ onMounted(() => {
   // 延迟初始化时间，确保日期选择器已经加载
   setTimeout(() => {
     try {
-      // 初始化时间 - 使用当前时间作为默认值
+      // 初始化时间 - 开始时间为当前时间+1分钟
       const now = new Date();
-      const future = new Date();
-      future.setMinutes(future.getMinutes() + 30);
+      now.setMinutes(now.getMinutes() + 1); // 当前时间+1分钟
+      
+      // 结束时间为开始时间+45分钟
+      const future = new Date(now.getTime());
+      future.setMinutes(future.getMinutes() + 45); // 开始时间+45分钟
       
       // 设置日期和时间
       formData.startDate = formatDateForPicker(now);
@@ -458,8 +461,8 @@ function handleRadiusChange(value: string | number) {
           <picker
             mode="date"
             :value="formData.startDate"
-            start="2023-01-01"
-            end="2030-12-31"
+            start="2025-01-01"
+            end="2035-12-31"
             @change="onStartDateChange"
           >
             <view class="picker-view">

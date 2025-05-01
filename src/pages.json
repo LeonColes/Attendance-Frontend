@@ -30,14 +30,16 @@
     },
     {
       "path": "pages/course-detail/index",
-      "type": "page"
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "课程详情"
+      }
     },
     {
       "path": "pages/create-checkin/index",
       "type": "page",
       "style": {
-        "navigationBarTitleText": "创建签到",
-        "navigationStyle": "custom"
+        "navigationBarTitleText": "创建签到"
       }
     },
     {
@@ -76,7 +78,10 @@
     },
     {
       "path": "pages/register/index",
-      "type": "page"
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "注册"
+      }
     },
     {
       "path": "pages/scanner/index",
@@ -93,7 +98,6 @@
     "navigationStyle": "default"
   },
   "tabBar": {
-    "custom": true,
     "height": "0",
     "color": "#bfbfbf",
     "selectedColor": "#0165FF",

@@ -17,7 +17,6 @@ export default defineUniPages({
     navigationStyle: 'default',
   },
   tabBar: {
-    custom: true,
     height: '0',
     color: '#bfbfbf',
     selectedColor: '#0165FF',
