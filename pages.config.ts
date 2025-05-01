@@ -12,9 +12,9 @@ import { defineUniPages } from '@uni-helper/vite-plugin-uni-pages'
 export default defineUniPages({
   pages: [],
   globalStyle: {
-    "navigationBarTextStyle": "black",
-    "navigationBarBackgroundColor": "#ffffff",
-    "navigationStyle": 'default',
+    navigationBarTextStyle: 'black',
+    navigationBarBackgroundColor: '#ffffff',
+    navigationStyle: 'default',
   },
   tabBar: {
     custom: true,
@@ -23,10 +23,10 @@ export default defineUniPages({
     selectedColor: '#0165FF',
     list: [{
       pagePath: 'pages/index',
-      text: '首页'
+      text: '首页',
     }, {
       pagePath: 'pages/my/index',
-      text: '我的'
+      text: '我的',
     }],
   },
 })

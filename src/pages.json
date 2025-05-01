@@ -3,55 +3,56 @@
     {
       "path": "pages/index",
       "type": "home",
-      "layout": "tabbar",
-      "name": "home",
-      "style": {
-        "navigationBarTitleText": "智能考勤"
-      }
+      "navigationBarTitleText": "课程考勤"
     },
     {
       "path": "pages/checkin-detail/index",
       "type": "page",
       "style": {
-        "navigationBarTitleText": "签到详情"
+        "navigationBarTitleText": "签到详情",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages/checkin-location/index",
-      "type": "page"
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "位置签到"
+      }
     },
     {
       "path": "pages/checkin-qrcode/index",
       "type": "page",
       "style": {
-        "navigationBarTitleText": "签到二维码"
+        "navigationBarTitleText": "签到二维码",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages/course-detail/index",
-      "type": "page",
-      "style": {
-        "navigationBarTitleText": "课程详情"
-      }
+      "type": "page"
     },
     {
       "path": "pages/create-checkin/index",
       "type": "page",
       "style": {
-        "navigationBarTitleText": "创建签到"
+        "navigationBarTitleText": "创建签到",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages/create-course/index",
       "type": "page",
       "style": {
-        "navigationBarTitleText": "创建课程"
+        "navigationBarTitleText": "创建课程",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages/join-course/index",
       "type": "page",
       "style": {
+        "navigationStyle": "custom",
         "navigationBarTitleText": "加入课程"
       }
     },
@@ -78,25 +79,24 @@
     },
     {
       "path": "pages/register/index",
-      "type": "page",
-      "style": {
-        "navigationStyle": "custom"
-      }
+      "type": "page"
     },
     {
       "path": "pages/scanner/index",
       "type": "page",
       "style": {
+        "navigationStyle": "custom",
         "navigationBarTitleText": "扫码签到"
       }
     }
   ],
   "globalStyle": {
     "navigationBarTextStyle": "black",
-    "navigationBarBackgroundColor": "#ffffff"
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationStyle": "default"
   },
   "tabBar": {
-    "custom": false,
+    "custom": true,
     "height": "0",
     "color": "#bfbfbf",
     "selectedColor": "#0165FF",

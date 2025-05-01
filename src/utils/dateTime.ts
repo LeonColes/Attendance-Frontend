@@ -4,8 +4,8 @@
  */
 
 // 中国时区偏移（UTC+8小时）
-const CHINA_TIMEZONE_OFFSET = 8 * 60 * 60 * 1000;
-const TIMEZONE_IDENTIFIER = 'Asia/Shanghai';
+const _CHINA_TIMEZONE_OFFSET = 8 * 60 * 60 * 1000;
+const _TIMEZONE_IDENTIFIER = 'Asia/Shanghai';
 
 /**
  * 将日期转换为中国时区
@@ -16,7 +16,7 @@ export function toChineseTimezone(date: Date): Date {
   // 创建一个新的日期对象，并将其设置为中国时区
   try {
     // 检查date是否为有效日期
-    if (isNaN(date.getTime())) {
+    if (Number.isNaN(date.getTime())) {
       console.warn('Invalid date passed to toChineseTimezone:', date);
       return new Date(); // 返回当前日期作为回退
     }
@@ -58,9 +58,9 @@ export function safeParseDate(dateString: string | number | Date): Date {
   
   // 处理字符串格式
   if (typeof dateString === 'string') {
-    // 对于格式为 "YYYY-MM-DD HH:MM" 的字符串，转换为 "YYYY-MM-DDTHH:MM:00" 格式以兼容iOS
-    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(dateString)) {
-      dateString = dateString.replace(' ', 'T') + ':00';
+    // 对于格式为 "YYYY-MM-DD HH:MM:SS" 的字符串，转换为 "YYYY-MM-DDTHH:MM:SS" 格式以兼容iOS
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dateString)) {
+      dateString = dateString.replace(' ', 'T');
     }
     
     // 对于格式为 "YYYY-MM-DD" 的字符串，兼容所有设备
@@ -96,6 +96,27 @@ export function formatDate(timestamp: number | string | Date): string {
 }
 
 /**
+ * 格式化日期和时间为YYYY-MM-DD HH:MM:SS格式（中国时区）
+ * @param timestamp 时间戳或日期对象
+ * @returns 格式化后的日期时间字符串
+ */
+export function formatDateTimeFull(timestamp: number | string | Date): string {
+  if (!timestamp) return '';
+  
+  const date = safeParseDate(timestamp);
+  const chinaDate = toChineseTimezone(date);
+  
+  const year = chinaDate.getFullYear();
+  const month = String(chinaDate.getMonth() + 1).padStart(2, '0');
+  const day = String(chinaDate.getDate()).padStart(2, '0');
+  const hour = String(chinaDate.getHours()).padStart(2, '0');
+  const minute = String(chinaDate.getMinutes()).padStart(2, '0');
+  const second = String(chinaDate.getSeconds()).padStart(2, '0');
+  
+  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+}
+
+/**
  * 格式化日期和时间为MM-DD HH:MM格式（中国时区），更简短易读
  * @param timestamp 时间戳或日期对象
  * @returns 格式化后的日期时间字符串
@@ -128,7 +149,7 @@ export function getCurrentChineseDate(): Date {
  * @returns 默认的开始时间字符串
  */
 export function getDefaultStartTime(): string {
-  return formatDateTime(getCurrentChineseDate());
+  return formatDateTimeFull(getCurrentChineseDate());
 }
 
 /**
@@ -139,7 +160,21 @@ export function getDefaultStartTime(): string {
 export function getDefaultEndTime(addMinutes: number = 5): string {
   const endDate = getCurrentChineseDate();
   endDate.setMinutes(endDate.getMinutes() + addMinutes);
-  return formatDateTime(endDate);
+  return formatDateTimeFull(endDate);
+}
+
+/**
+ * 计算两个日期之间的时间差
+ * @param start 开始时间
+ * @param end 结束时间
+ * @returns 格式化的时间差字符串
+ */
+export function getTimeDiff(start: Date, end: Date): string {
+  const diff = end.getTime() - start.getTime();
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  return `${days}天${hours}小时${minutes}分钟`;
 }
 
 /**
