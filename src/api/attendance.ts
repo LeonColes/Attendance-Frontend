@@ -133,18 +133,7 @@ export interface CheckinSubmitParams {
  * @param params 签到任务参数
  */
 export function createCheckin(params: CheckinCreateParams) {
-  // 确保日期格式正确，使用Asia/Shanghai时区
-  const formattedParams = {
-    ...params,
-    // 将时间格式转换为 YYYY-MM-DD HH:mm:ss 格式
-    startTime: formatDateTimeFull(params.startTime),
-    endTime: formatDateTimeFull(params.endTime)
-  };
-  
-  // 打印日志以便调试
-  console.log('创建签到任务，使用Asia/Shanghai时区:', formattedParams);
-  
-  return post<CheckinTask>('/api/courses/attendance/create', formattedParams);
+  return post<CheckinTask>('/api/courses/attendance/create', params);
 }
 
 /**

@@ -11,7 +11,6 @@
 import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { useUserStore } from '@/store/user'
 import { CheckInType, createCheckin } from '@/api/attendance'
-import { formatDateTime, getCurrentChineseDate, toChineseISOString, getDefaultStartTime, getDefaultEndTime, safeParseDate } from '@/utils/dateTime'
 
 // 为window.uni声明类型，解决TypeScript错误
 declare global {
@@ -163,6 +162,13 @@ function formatTimeForPicker(date: Date): string {
   return `${hours}:${minutes}`;
 }
 
+// 简单字符串转换，将ISO格式转为后端需要的格式，不进行时区转换
+function convertToBackendFormat(isoString: string): string {
+  if (!isoString) return '';
+  // 只是替换"T"为空格，从 "YYYY-MM-DDThh:mm:ss" 到 "YYYY-MM-DD hh:mm:ss"
+  return isoString.replace('T', ' ');
+}
+
 // 日期选择器变更处理函数
 function onStartDateChange(e: any) {
   formData.startDate = e.detail.value;
@@ -280,13 +286,13 @@ async function submitForm() {
     loading.value = true;
     errorMessage.value = '';
     
-    // 准备API参数，使用Asia/Shanghai时区
+    // 准备API参数，直接使用字符串转换，不进行时区转换
     const checkinParams = {
       courseId: courseId.value,
       title: formData.name,
       description: formData.description || '',
-      startTime: computedStartTime.value,
-      endTime: computedEndTime.value,
+      startTime: convertToBackendFormat(computedStartTime.value),
+      endTime: convertToBackendFormat(computedEndTime.value),
       checkInType: formData.checkinType,
       verifyParams: '{}' // 默认空对象字符串
     };
