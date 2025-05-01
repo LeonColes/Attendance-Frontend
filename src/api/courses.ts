@@ -208,8 +208,16 @@ export function getCourseMemberList(courseId: string, params: PageQueryParams) {
  * 移除课程成员（教师）
  * @param courseId 课程ID
  * @param userId 用户ID
+ * @param reason 移除原因(可选)
  */
-export function removeCourseMember(courseId: string, userId: string) {
+export function removeCourseMember(courseId: string, userId: string, reason?: string) {
+  if (reason) {
+    return post<void>(`/api/courses/members/remove`, {
+      courseId,
+      userId,
+      reason
+    })
+  }
   return post<void>(`/api/courses/members/remove?courseId=${courseId}&userId=${userId}`)
 }
 
@@ -302,4 +310,12 @@ export function getCourseQRCode(courseId: string): Promise<any> {
     // 发送请求
     uni.request(requestOptions);
   });
+}
+
+/**
+ * 删除课程（教师）
+ * @param courseId 课程ID
+ */
+export function deleteCourse(courseId: string) {
+  return post<void>(`/api/courses/delete?courseId=${courseId}`)
 } 

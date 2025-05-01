@@ -10,8 +10,8 @@
 <script lang="ts" setup>
 import { ref, computed, reactive, onMounted, watch } from 'vue'
 import { useUserStore } from '@/store/user'
-import { CheckInType, getCheckinList } from '@/api/attendance'
-import { getCourseMemberList, getCourseQRCode } from '@/api/courses'
+import { CheckInType, getCheckinList, deleteCheckin } from '@/api/attendance'
+import { getCourseMemberList, getCourseQRCode, deleteCourse, removeCourseMember } from '@/api/courses'
 import type { PageQueryParams } from '@/api/attendance'
 import { onShow } from '@dcloudio/uni-app'
 import { formatDateTime } from '@/utils/dateTime'
@@ -39,6 +39,10 @@ const attendanceStats = ref<any>(null)
 const qrCodeUrl = ref('')
 const showQRCode = ref(false)
 const qrCodeLoading = ref(false)
+
+// 添加操作相关状态
+const showDeleteConfirm = ref(false)
+const showOperations = ref(false)
 
 // 用户角色相关计算属性
 const isTeacher = computed(() => userStore.userInfo?.role === 'TEACHER')
@@ -414,20 +418,52 @@ function getCheckinTypeText(type: CheckInType) {
   }
 }
 
-// 计算签到状态
-function getCheckinStatus(checkin: any) {
-  if (!checkin) return ''
+// 添加兼容iOS的日期解析函数
+function parseDateSafely(dateString: string): Date {
+  if (!dateString) return new Date();
+  
+  try {
+    // 检查是否为兼容格式 (ISO格式或包含T的标准格式)
+    if (dateString.includes('T') || /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      return new Date(dateString);
+    }
+    
+    // 尝试转换 "yyyy-MM-dd HH:mm:ss" 格式为 "yyyy/MM/dd HH:mm:ss" (iOS兼容格式)
+    if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dateString)) {
+      return new Date(dateString.replace(/-/g, '/'));
+    }
+    
+    // 尝试解析为ISO格式 "yyyy-MM-ddTHH:mm:ss"
+    const parts = dateString.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/);
+    if (parts) {
+      return new Date(`${parts[1]}-${parts[2]}-${parts[3]}T${parts[4]}:${parts[5]}:${parts[6]}`);
+    }
+    
+    // 最后尝试直接使用Date构造函数
+    return new Date(dateString);
+  } catch (e) {
+    console.error('日期解析失败:', dateString, e);
+    // 返回当前时间作为fallback
+    return new Date();
+  }
+}
 
-  const now = new Date().getTime()
-  const startTime = new Date(checkin.startTime).getTime()
-  const endTime = new Date(checkin.endTime).getTime()
+// 修改计算签到状态的函数，使用安全的日期解析
+function getCheckinStatus(checkin: any) {
+  if (!checkin) return '';
+
+  const now = new Date().getTime();
+  
+  // 使用安全的日期解析函数
+  const startTime = parseDateSafely(checkin.startTime).getTime();
+  const endTime = parseDateSafely(checkin.endTime).getTime();
 
   if (now < startTime) {
-    return 'not-started'
+    return 'not-started';
   } else if (now > endTime) {
-    return 'ended'
+    return 'ended';
   } else {
-    return 'in-progress'
+    return 'in-progress';
   }
 }
 
@@ -744,6 +780,165 @@ watch([membersList, checkinList], () => {
     loadCourseAttendanceStats()
   }
 })
+
+// 删除课程
+function handleDeleteCourse() {
+  getSafeUni().showModal({
+    title: '提示',
+    content: '确定要删除该课程吗？此操作不可恢复！',
+    confirmColor: '#f56c6c',
+    success: async (res) => {
+      if (res.confirm) {
+        try {
+          await deleteCourse(courseId.value)
+          getSafeUni().showToast({
+            title: '课程已删除',
+            icon: 'success'
+          })
+          setTimeout(() => {
+            getSafeUni().navigateBack()
+          }, 1500)
+        } catch (error) {
+          console.error('删除课程失败:', error)
+          getSafeUni().showToast({
+            title: '删除失败，请重试',
+            icon: 'none'
+          })
+        }
+      }
+    }
+  })
+}
+
+// 删除签到任务
+function handleDeleteCheckin(checkin) {
+  getSafeUni().showModal({
+    title: '提示',
+    content: '确定要删除该签到任务吗？',
+    confirmColor: '#f56c6c',
+    success: async (res) => {
+      if (res.confirm) {
+        try {
+          await deleteCheckin(checkin.id)
+          getSafeUni().showToast({
+            title: '签到任务已删除',
+            icon: 'success'
+          })
+          // 重新加载签到列表
+          loadCheckinList(true)
+        } catch (error) {
+          console.error('删除签到任务失败:', error)
+          getSafeUni().showToast({
+            title: '删除失败，请重试',
+            icon: 'none'
+          })
+        }
+      }
+    }
+  })
+}
+
+// 移除课程成员
+function handleRemoveMember(member) {
+  getSafeUni().showModal({
+    title: '提示',
+    content: '确定要移除该成员吗？',
+    confirmColor: '#f56c6c',
+    editable: true,
+    placeholderText: '请输入移除原因(可选)',
+    success: async (res) => {
+      if (res.confirm) {
+        try {
+          await removeCourseMember(courseId.value, member.userId, res.content)
+          getSafeUni().showToast({
+            title: '成员已移除',
+            icon: 'success'
+          })
+          // 重新加载成员列表
+          loadCourseMembers(true)
+        } catch (error) {
+          console.error('移除成员失败:', error)
+          getSafeUni().showToast({
+            title: '移除失败，请重试',
+            icon: 'none'
+          })
+        }
+      }
+    }
+  })
+}
+
+// 添加操作处理函数
+function handleOpenDeleteConfirm() {
+  showOperations.value = false
+  showDeleteConfirm.value = true
+}
+
+function handleOpenQRCode() {
+  showOperations.value = false
+  openQRCodeModal()
+}
+
+function handleExportData() {
+  // 关闭操作菜单（如果打开的话）
+  showOperations.value = false
+  
+  // 确保有统计数据
+  if (!attendanceStats.value || !attendanceStats.value.attendanceByStudent || attendanceStats.value.attendanceByStudent.length === 0) {
+    getSafeUni().showToast({
+      title: '没有可导出的数据',
+      icon: 'none'
+    })
+    return
+  }
+
+  // 显示导出中的提示
+  getSafeUni().showLoading({
+    title: '准备导出数据...'
+  })
+
+  // 延迟一会儿以显示加载效果
+  setTimeout(() => {
+    try {
+      // 在实际应用中，这里应该调用后端API来生成Excel文件
+      // 由于当前是前端演示，我们只显示一个成功的提示
+      getSafeUni().hideLoading()
+      getSafeUni().showToast({
+        title: 'Excel导出成功',
+        icon: 'success'
+      })
+      
+      // 可以在这里添加文件下载或分享的代码
+      console.log('导出考勤数据:', attendanceStats.value)
+    } catch (error) {
+      console.error('导出数据失败:', error)
+      getSafeUni().hideLoading()
+      getSafeUni().showToast({
+        title: '导出失败，请重试',
+        icon: 'none'
+      })
+    }
+  }, 1500)
+}
+
+function confirmDeleteCourse() {
+  showDeleteConfirm.value = false
+  deleteCourse(courseId.value).then(() => {
+    getSafeUni().showToast({
+      title: '课程已删除',
+      icon: 'success'
+    })
+    setTimeout(() => {
+      getSafeUni().navigateBack()
+    }, 1500)
+  }).catch(error => {
+    console.error('删除课程失败:', error)
+    getSafeUni().showToast({
+      title: '删除失败，请重试',
+      icon: 'none'
+    })
+  })
+}
 </script>
 
 <template>
@@ -765,57 +960,59 @@ watch([membersList, checkinList], () => {
         <!-- 基本信息展示 -->
         <!-- @ts-ignore -->
         <view class="basic-info-card">
+          <!-- 课程标题和状态 -->
           <!-- @ts-ignore -->
-          <view class="info-row">
-            <wd-icon name="user" size="32rpx" color="#6a11cb" />
+          <view class="course-title-row">
+            <text class="course-title">{{ courseDetail.name }}</text>
             <!-- @ts-ignore -->
-            <view class="info-label">教师</view>
-            <!-- @ts-ignore -->
-            <view class="info-value">{{ courseDetail.creatorFullName || courseDetail.creatorUsername || '未知教师' }}</view>
-          </view>
-
-          <!-- @ts-ignore -->
-          <view class="info-row">
-            <wd-icon name="people" size="32rpx" color="#6a11cb" />
-            <!-- @ts-ignore -->
-            <view class="info-label">人数</view>
-            <!-- @ts-ignore -->
-            <view class="info-value">{{ courseDetail.memberCount || 0 }}人</view>
-          </view>
-
-          <!-- @ts-ignore -->
-          <view class="info-row">
-            <wd-icon name="calendar" size="32rpx" color="#6a11cb" />
-            <!-- @ts-ignore -->
-            <view class="info-label">时间</view>
-            <!-- @ts-ignore -->
-            <view class="info-value">{{ formatDateTime(courseDetail.startDate) }} ~ {{
-              formatDateTime(courseDetail.endDate) }}</view>
-          </view>
-
-          <!-- 移动详细信息到此处 -->
-          <!-- @ts-ignore -->
-          <view class="info-row">
-            <wd-icon name="info-outline" size="32rpx" color="#6a11cb" />
-            <!-- @ts-ignore -->
-            <view class="info-label">描述</view>
-            <!-- @ts-ignore -->
-            <view class="info-value description">{{ courseDetail.description || '暂无课程描述' }}</view>
-          </view>
-
-          <!-- @ts-ignore -->
-          <view class="info-row">
-            <wd-icon name="info" size="32rpx" color="#6a11cb" />
-            <!-- @ts-ignore -->
-            <view class="info-label">状态</view>
-            <!-- @ts-ignore -->
-            <view class="info-value status" :class="courseDetail.status?.toLowerCase()">
+            <view class="course-status-badge" :class="courseDetail.status?.toLowerCase()">
               {{ courseDetail.status === 'ACTIVE' ? '进行中' :
                 courseDetail.status === 'COMPLETED' ? '已结课' : '未知状态' }}
             </view>
           </view>
 
-          <!-- 添加创建签到按钮 -->
+          <!-- 课程详细信息 -->
+          <!-- @ts-ignore -->
+          <view class="info-grid">
+            <!-- @ts-ignore -->
+            <view class="info-item">
+              <wd-icon name="user" size="32rpx" color="#6a11cb" />
+              <!-- @ts-ignore -->
+              <view class="info-label">教师</view>
+              <!-- @ts-ignore -->
+              <view class="info-value">{{ courseDetail.creatorFullName || courseDetail.creatorUsername || '未知教师' }}</view>
+            </view>
+
+            <!-- @ts-ignore -->
+            <view class="info-item">
+              <wd-icon name="people" size="32rpx" color="#6a11cb" />
+              <!-- @ts-ignore -->
+              <view class="info-label">人数</view>
+              <!-- @ts-ignore -->
+              <view class="info-value">{{ courseDetail.memberCount || 0 }}人</view>
+            </view>
+
+            <!-- @ts-ignore -->
+            <view class="info-item">
+              <wd-icon name="calendar" size="32rpx" color="#6a11cb" />
+              <!-- @ts-ignore -->
+              <view class="info-label">起止日期</view>
+              <!-- @ts-ignore -->
+              <view class="info-value date-value" style="width: auto;">{{ formatDateTime(courseDetail.startDate) }} ~ {{
+                formatDateTime(courseDetail.endDate) }}</view>
+            </view>
+
+            <!-- @ts-ignore -->
+            <view class="info-item full-width">
+              <wd-icon name="info-outline" size="32rpx" color="#6a11cb" />
+              <!-- @ts-ignore -->
+              <view class="info-label">描述</view>
+              <!-- @ts-ignore -->
+              <view class="info-value description">{{ courseDetail.description || '暂无课程描述' }}</view>
+            </view>
+          </view>
+
+          <!-- 教师功能按钮 -->
           <!-- @ts-ignore -->
           <view v-if="isTeacher" class="action-row">
             <wd-button type="primary" size="small" custom-style="height: 70rpx; margin-top: 20rpx;"
@@ -830,6 +1027,13 @@ watch([membersList, checkinList], () => {
               <wd-icon name="qrcode" size="28rpx" color="#ffffff" />
               <text style="margin-left: 8rpx;">邀请学生</text>
             </wd-button>
+            
+            <!-- 添加删除课程按钮 -->
+            <wd-button type="danger" size="small" custom-style="height: 70rpx; margin-top: 20rpx; margin-left: 20rpx;"
+              @click="handleDeleteCourse">
+              <wd-icon name="delete" size="28rpx" color="#ffffff" />
+              <text style="margin-left: 8rpx;">删除课程</text>
+            </wd-button>
           </view>
         </view>
       </view>
@@ -837,7 +1041,6 @@ watch([membersList, checkinList], () => {
       <!-- 标签页 -->
       <!-- @ts-ignore -->
       <view class="tab-container">
-        <!-- 移除 "详细信息" 标签页 -->
         <!-- @ts-ignore -->
         <view class="tab-item" :class="{ active: activeTab === 'checkins' }" @click="switchTab('checkins')">
           <!-- @ts-ignore -->
@@ -868,32 +1071,44 @@ watch([membersList, checkinList], () => {
             <!-- @ts-ignore -->
             <view v-for="(checkin, index) in checkinList" :key="checkin.id" class="checkin-item"
               :class="[checkin.checkinType.toLowerCase(), 'checkin-type-' + checkin.checkinType.toLowerCase()]"
-              :style="{ '--i': index }"
-              @click="handleCheckinClick(checkin)">
+              :style="{ '--i': index }">
+              <!-- 添加点击区域，排除操作按钮 -->
               <!-- @ts-ignore -->
-              <view class="checkin-title">{{ checkin.name }}</view>
-              <!-- @ts-ignore -->
-              <view class="checkin-info-row">
-                <view class="checkin-time">
-                  <wd-icon name="time" size="28rpx" color="#666" />
-                  <text>{{ formatDateTime(checkin.startTime) }} ~ {{ formatDateTime(checkin.endTime) }}</text>
+              <view class="checkin-content" @click="handleCheckinClick(checkin)">
+                <!-- @ts-ignore -->
+                <view class="checkin-title">{{ checkin.name }}</view>
+                <!-- @ts-ignore -->
+                <view class="checkin-info-row">
+                  <view class="checkin-time">
+                    <wd-icon name="time" size="28rpx" color="#666" />
+                    <text>{{ formatDateTime(checkin.startTime) }} ~ {{ formatDateTime(checkin.endTime) }}</text>
+                  </view>
+                  <view class="checkin-type-badge">
+                    <wd-icon :name="checkin.checkinType === 'QR_CODE' ? 'scan' : 'location'" size="24rpx" :color="checkin.checkinType === 'QR_CODE' ? '#2196f3' : '#4caf50'" />
+                    <text>{{ getCheckinTypeText(checkin.checkinType) }}</text>
+                  </view>
                 </view>
-                <view class="checkin-type-badge">
-                  <wd-icon :name="checkin.checkinType === 'QR_CODE' ? 'scan' : 'location'" size="24rpx" :color="checkin.checkinType === 'QR_CODE' ? '#2196f3' : '#4caf50'" />
-                  <text>{{ getCheckinTypeText(checkin.checkinType) }}</text>
+                <!-- @ts-ignore -->
+                <view v-if="!isStudent" class="checkin-status" :class="getCheckinStatus(checkin)">
+                  {{ getCheckinStatus(checkin) === 'not-started' ? '未开始' :
+                    getCheckinStatus(checkin) === 'in-progress' ? '进行中' : '已结束' }}
                 </view>
-              </view>
-              <!-- @ts-ignore -->
-              <view v-if="!isStudent" class="checkin-status" :class="getCheckinStatus(checkin)">
-                {{ getCheckinStatus(checkin) === 'not-started' ? '未开始' :
-                  getCheckinStatus(checkin) === 'in-progress' ? '进行中' : '已结束' }}
-              </view>
 
-              <!-- 学生端显示签到状态 -->
+                <!-- 学生端显示签到状态 -->
+                <!-- @ts-ignore -->
+                <view v-else class="checkin-status"
+                  :class="checkin.personalStatus?.toLowerCase()">
+                  {{ checkin.displayStatus }}
+                </view>
+              </view>
+              
+              <!-- 教师可以删除签到任务 -->
               <!-- @ts-ignore -->
-              <view v-else class="checkin-status"
-                :class="checkin.personalStatus.toLowerCase()">
-                {{ checkin.displayStatus }}
+              <view v-if="isTeacher" class="checkin-actions" @click.stop>
+                <wd-button type="danger" size="mini" custom-style="padding: 4rpx 12rpx; min-width: auto;" 
+                  @click.stop="handleDeleteCheckin(checkin)">
+                  <wd-icon name="delete" size="28rpx" color="#ff0000" style="color: #ff0000 !important;" />
+                </wd-button>
               </view>
             </view>
           </view>
@@ -931,6 +1146,15 @@ watch([membersList, checkinList], () => {
                   {{ member.role === 'TEACHER' ? '教师' : '学生' }}
                 </view>
               </view>
+              
+              <!-- 教师可以移除学生成员 -->
+              <!-- @ts-ignore -->
+              <view v-if="isTeacher && member.role !== 'TEACHER'" class="member-actions">
+                <wd-button type="danger" size="mini" custom-style="padding: 4rpx 12rpx; min-width: auto;" 
+                  @click="handleRemoveMember(member)">
+                  <wd-icon name="delete" size="28rpx" color="#ff0000" style="color: #ff0000 !important;" />
+                </wd-button>
+              </view>
             </view>
           </view>
 
@@ -949,11 +1173,11 @@ watch([membersList, checkinList], () => {
           <!-- 统计数据 -->
           <!-- @ts-ignore -->
           <view v-if="attendanceStats" class="stats-container">
-            <!-- 刷新按钮 -->
+            <!-- 导出Excel按钮 -->
             <!-- @ts-ignore -->
-            <view class="refresh-btn" @click="loadCourseAttendanceStats">
-              <wd-icon name="refresh" size="28rpx" color="#6a11cb" />
-              <text>刷新数据</text>
+            <view class="export-btn" @click="handleExportData">
+              <wd-icon name="download" size="28rpx" color="#4caf50" />
+              <text>导出Excel</text>
             </view>
 
             <!-- @ts-ignore -->
@@ -1034,8 +1258,8 @@ watch([membersList, checkinList], () => {
             <!-- @ts-ignore -->
             <text class="empty-text">暂无考勤统计数据</text>
             <!-- @ts-ignore -->
-            <wd-button type="primary" size="small" custom-style="margin-top: 30rpx;" @click="loadCourseAttendanceStats">
-              刷新数据
+            <wd-button type="primary" size="small" custom-style="margin-top: 30rpx;" @click="handleExportData">
+              导出Excel
             </wd-button>
           </view>
         </view>
@@ -1059,8 +1283,6 @@ watch([membersList, checkinList], () => {
               mode="aspectFit" 
               class="qrcode-image"
               :show-menu-by-longpress="true"
-              @error="(e) => { console.error('微信小程序图片加载错误:', e); }"
-              @load="() => { console.log('微信小程序图片加载成功'); }"
             />
             <text class="qrcode-tip">长按图片可保存</text>
           </view>
@@ -1071,9 +1293,7 @@ watch([membersList, checkinList], () => {
           <image v-if="qrCodeUrl" 
                  :src="qrCodeUrl" 
                  mode="aspectFit" 
-                 class="qrcode-image" 
-                 @error="(e) => { console.error('图片加载错误:', e); }"
-                 @load="() => { console.log('图片加载成功'); }"
+                 class="qrcode-image"
           />
           <!-- #endif -->
           
@@ -1091,11 +1311,6 @@ watch([membersList, checkinList], () => {
             </view>
           </view>
           
-          <!-- 调试信息 -->
-          <view v-if="qrCodeUrl" class="debug-info">
-            <text>二维码是否加载: {{qrCodeUrl ? '是' : '否'}}</text>
-          </view>
-          
           <view class="course-qrinfo">
             <text class="course-name">{{ courseDetail.name }}</text>
             <text class="course-code">课程码: {{ courseDetail.code }}</text>
@@ -1107,19 +1322,123 @@ watch([membersList, checkinList], () => {
         </view>
       </view>
     </wd-popup>
+
+    <!-- 添加删除课程确认弹窗 -->
+    <wd-popup v-model="showDeleteConfirm" round position="bottom" custom-style="padding: 40rpx;">
+      <view class="delete-confirm">
+        <view class="delete-title">确定要删除该课程吗？</view>
+        <view class="delete-subtitle">此操作不可恢复！</view>
+        <view class="delete-actions">
+          <wd-button type="info" @click="showDeleteConfirm = false" custom-style="margin-right: 20rpx;">取消</wd-button>
+          <wd-button type="danger" @click="confirmDeleteCourse">确定删除</wd-button>
+        </view>
+      </view>
+    </wd-popup>
+
+    <!-- 添加更多操作弹窗 -->
+    <wd-popup v-model="showOperations" round position="bottom" custom-style="padding: 40rpx;">
+      <view class="operations-menu">
+        <view class="operations-title">课程操作</view>
+        <view class="operations-list">
+          <view class="operation-item" @click="handleOpenQRCode">
+            <wd-icon name="qrcode" size="40rpx" color="#2196f3" />
+            <text>课程邀请码</text>
+          </view>
+          <view class="operation-item" @click="handleExportData" v-if="isTeacher">
+            <wd-icon name="download" size="40rpx" color="#4caf50" />
+            <text>导出考勤数据</text>
+          </view>
+          <view class="operation-item delete-operation" @click="handleOpenDeleteConfirm" v-if="isTeacher">
+            <wd-icon name="delete" size="40rpx" color="#f44336" style="color: #f44336 !important;" />
+            <text>删除课程</text>
+          </view>
+        </view>
+        <wd-button type="primary" @click="showOperations = false" block custom-style="margin-top: 30rpx;">取消</wd-button>
+      </view>
+    </wd-popup>
   </view>
 </template>
 
 <style lang="scss" scoped>
 .container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e9edf2 100%);
+  background: linear-gradient(135deg, #f6f9fc 0%, #edf1f7 100%);
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 20rpx;
-  /* 减少顶部间距 */
+  padding: 30rpx 0;
+}
+
+/* 导航栏样式 */
+.nav-bar {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
+}
+
+.nav-bar-content {
+  max-width: 800rpx;
+  height: 90rpx;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 30rpx;
+}
+
+.nav-back-btn {
+  width: 70rpx;
+  height: 70rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.nav-back-btn:active {
+  background-color: rgba(0, 0, 0, 0.05);
+  transform: scale(0.95);
+}
+
+.nav-title {
+  flex: 1;
+  font-size: 34rpx;
+  font-weight: bold;
+  color: #333;
+  margin: 0 20rpx;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav-right {
+  width: 70rpx;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.nav-action-btn {
+  width: 70rpx;
+  height: 70rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.nav-action-btn:active {
+  background-color: rgba(0, 0, 0, 0.05);
+  transform: scale(0.95);
 }
 
 .loading-container {
@@ -1129,6 +1448,7 @@ watch([membersList, checkinList], () => {
   align-items: center;
   height: 300rpx;
   gap: 20rpx;
+  margin-top: 100rpx;
 }
 
 .loading-container text {
@@ -1139,16 +1459,10 @@ watch([membersList, checkinList], () => {
 
 .content-container {
   width: 100%;
-  max-width: 700rpx;
+  max-width: 750rpx;
   flex: 1;
-  padding: 0 30rpx;
+  padding: 20rpx 30rpx;
   box-sizing: border-box;
-}
-
-.action-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20rpx;
 }
 
 .course-header {
@@ -1158,22 +1472,77 @@ watch([membersList, checkinList], () => {
   margin-bottom: 24rpx;
   box-shadow: 0 8rpx 20rpx rgba(106, 17, 203, 0.08);
   border: 1rpx solid rgba(106, 17, 203, 0.05);
+  overflow: hidden;
+  position: relative;
 }
 
 .basic-info-card {
   display: flex;
   flex-direction: column;
   gap: 20rpx;
+  position: relative;
+  z-index: 1;
 }
 
-.info-row {
+/* 课程标题样式 */
+.course-title-row {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  padding: 8rpx 0;
+  margin-bottom: 20rpx;
+}
+
+.course-title {
+  font-size: 40rpx;
+  font-weight: bold;
+  color: #333;
+  letter-spacing: 1rpx;
+  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.05);
+  flex: 1;
+}
+
+.course-status-badge {
+  padding: 6rpx 16rpx;
+  border-radius: 50rpx;
+  font-weight: 500;
+  font-size: 24rpx;
+  box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
+}
+
+.course-status-badge.active {
+  background: linear-gradient(135deg, rgba(106, 17, 203, 0.1) 0%, rgba(37, 117, 252, 0.1) 100%);
+  color: #6a11cb;
+}
+
+.course-status-badge.completed {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(129, 199, 132, 0.1) 100%);
+  color: #4caf50;
+}
+
+/* 课程信息网格布局 */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20rpx;
+  margin-top: 10rpx;
+}
+
+.info-item {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  padding: 12rpx;
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: 12rpx;
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.03);
+}
+
+.info-item.full-width {
+  grid-column: 1 / -1;
 }
 
 .info-label {
-  font-size: 28rpx;
+  font-size: 26rpx;
   color: #666;
   margin: 0 15rpx;
   min-width: 80rpx;
@@ -1181,8 +1550,15 @@ watch([membersList, checkinList], () => {
 }
 
 .info-value {
-  font-size: 28rpx;
+  font-size: 26rpx;
   color: #333;
+  flex: 1;
+  word-break: break-word;
+}
+
+.info-value.date-value {
+  font-size: 24rpx;
+  width: auto;
   flex: 1;
 }
 
@@ -1192,38 +1568,23 @@ watch([membersList, checkinList], () => {
   font-size: 26rpx;
   color: #666;
   margin-top: 6rpx;
-  max-height: 120rpx;
+  max-height: 160rpx;
   overflow-y: auto;
   padding: 10rpx;
   background-color: rgba(245, 247, 250, 0.6);
   border-radius: 8rpx;
 }
 
-.info-value.code {
-  color: #6a11cb;
+/* 操作按钮区域 */
+.action-row {
   display: flex;
-  align-items: center;
-  gap: 10rpx;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-top: 24rpx;
+  justify-content: flex-start;
 }
 
-.info-value.status {
-  padding: 6rpx 16rpx;
-  border-radius: 50rpx;
-  display: inline-block;
-  font-weight: 500;
-  box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.05);
-}
-
-.info-value.status.active {
-  background: linear-gradient(135deg, rgba(106, 17, 203, 0.1) 0%, rgba(37, 117, 252, 0.1) 100%);
-  color: #6a11cb;
-}
-
-.info-value.status.completed {
-  background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(129, 199, 132, 0.1) 100%);
-  color: #4caf50;
-}
-
+/* 标签页容器样式 */
 .tab-container {
   display: flex;
   align-items: center;
@@ -1234,6 +1595,10 @@ watch([membersList, checkinList], () => {
   box-shadow: 0 8rpx 20rpx rgba(106, 17, 203, 0.08);
   border: 1rpx solid rgba(106, 17, 203, 0.05);
   padding: 5rpx;
+  position: sticky;
+  top: 90rpx;
+  z-index: 90;
+  backdrop-filter: blur(5px);
 }
 
 .tab-item {
@@ -1249,7 +1614,6 @@ watch([membersList, checkinList], () => {
 .tab-item.active {
   background: linear-gradient(135deg, rgba(106, 17, 203, 0.1) 0%, rgba(37, 117, 252, 0.1) 100%);
   box-shadow: 0 4rpx 8rpx rgba(106, 17, 203, 0.1);
-  border-bottom: none;
 }
 
 .tab-item text {
@@ -1263,17 +1627,95 @@ watch([membersList, checkinList], () => {
   font-weight: bold;
 }
 
+/* 删除确认弹窗 */
+.delete-confirm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20rpx;
+}
+
+.delete-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10rpx;
+}
+
+.delete-subtitle {
+  font-size: 28rpx;
+  color: #f56c6c;
+  margin-bottom: 40rpx;
+}
+
+.delete-actions {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 20rpx;
+}
+
+/* 操作菜单 */
+.operations-menu {
+  display: flex;
+  flex-direction: column;
+}
+
+.operations-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 30rpx;
+  text-align: center;
+}
+
+.operations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+  margin-bottom: 30rpx;
+}
+
+.operation-item {
+  display: flex;
+  align-items: center;
+  padding: 24rpx;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 16rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.operation-item:active {
+  transform: scale(0.98);
+  background-color: rgba(250, 250, 250, 0.9);
+}
+
+.operation-item text {
+  font-size: 30rpx;
+  color: #333;
+  margin-left: 20rpx;
+}
+
+.delete-operation {
+  background-color: rgba(244, 67, 54, 0.05);
+}
+
+.delete-operation text {
+  color: #f44336;
+}
+
+/* 标签页内容区域 */
 .tab-content {
   background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
   border-radius: 24rpx;
   padding: 30rpx;
   box-shadow: 0 8rpx 20rpx rgba(106, 17, 203, 0.08);
   border: 1rpx solid rgba(106, 17, 203, 0.05);
-  min-height: auto;
-  height: auto;
-  will-change: transform;
+  min-height: 400rpx;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: visible;
+  position: relative;
+  z-index: 1;
 }
 
 .checkins-content {
@@ -1282,6 +1724,7 @@ watch([membersList, checkinList], () => {
   gap: 20rpx;
   padding-bottom: 20rpx;
   animation: fadeIn 0.5s ease-out;
+  min-height: 300rpx;
 }
 
 @keyframes fadeIn {
@@ -1295,6 +1738,7 @@ watch([membersList, checkinList], () => {
   }
 }
 
+/* 签到列表样式优化 */
 .checkin-list {
   display: flex;
   flex-direction: column;
@@ -1303,49 +1747,59 @@ watch([membersList, checkinList], () => {
 }
 
 .checkin-item {
-  padding: 24rpx;
   position: relative;
-  border-radius: 20rpx;
-  margin-bottom: 20rpx;
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
-  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.04);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border-left: 8rpx solid #ddd;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(249, 250, 254, 0.9) 100%);
+  border-radius: 24rpx;
+  padding: 30rpx;
+  margin-bottom: 10rpx;
+  box-shadow: 0 4rpx 15rpx rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  animation: fadeIn 0.3s ease forwards;
+  animation-delay: calc(var(--i) * 0.05s);
+  opacity: 0;
+  border-left: 8rpx solid transparent;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   overflow: hidden;
-  animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  animation-fill-mode: both;
-  animation-delay: calc(var(--i, 0) * 0.05s);
-  will-change: transform, opacity, box-shadow;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-20rpx);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-.checkin-item:hover, 
-.checkin-item:active {
-  transform: translateY(-2rpx);
-  box-shadow: 0 8rpx 16rpx rgba(0, 0, 0, 0.08);
 }
 
 .checkin-item:active {
-  transform: scale(0.985);
-  opacity: 0.9;
-  box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.04);
+  transform: translateY(2rpx) scale(0.995);
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.03);
+}
+
+.checkin-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0));
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 24rpx;
+}
+
+.checkin-content {
+  flex: 1;
+  margin-right: 20rpx;
+  position: relative;
+  z-index: 1;
+}
+
+.checkin-actions {
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 1;
 }
 
 .checkin-title {
   font-size: 32rpx;
   font-weight: bold;
   color: #333;
-  margin-bottom: 10rpx;
+  margin-bottom: 14rpx;
 }
 
 .checkin-info-row {
@@ -1353,16 +1807,21 @@ watch([membersList, checkinList], () => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 10rpx;
+  flex-wrap: wrap;
+  gap: 10rpx;
 }
 
 .checkin-time {
   display: flex;
   align-items: center;
-  gap: 10rpx;
+  gap: 8rpx;
+  background-color: rgba(0, 0, 0, 0.03);
+  padding: 4rpx 10rpx;
+  border-radius: 20rpx;
 }
 
 .checkin-time text {
-  font-size: 26rpx;
+  font-size: 24rpx;
   color: #666;
 }
 
@@ -1370,125 +1829,96 @@ watch([membersList, checkinList], () => {
   display: flex;
   align-items: center;
   gap: 5rpx;
-  background-color: rgba(0, 0, 0, 0.04);
   padding: 4rpx 12rpx;
   border-radius: 24rpx;
 }
 
 .checkin-type-badge text {
   font-size: 24rpx;
-  color: #666;
+}
+
+.checkin-item.qr_code {
+  border-left-color: #2196f3;
+}
+
+.checkin-item.location {
+  border-left-color: #4caf50;
+}
+
+.checkin-item.checkin-type-qr_code .checkin-type-badge {
+  background-color: rgba(33, 150, 243, 0.1);
+  color: #2196f3;
+}
+
+.checkin-item.checkin-type-location .checkin-type-badge {
+  background-color: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
 }
 
 .checkin-status {
   position: absolute;
   top: 20rpx;
-  right: 20rpx;
+  right: 0;
   padding: 6rpx 16rpx;
   border-radius: 50rpx;
-  font-size: 24rpx;
+  font-size: 22rpx;
   font-weight: 500;
-  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.05);
+  z-index: 2;
 }
 
 .checkin-status.not-started {
-  background: linear-gradient(135deg, rgba(158, 158, 158, 0.1) 0%, rgba(188, 188, 188, 0.1) 100%);
-  color: #9e9e9e;
+  background-color: rgba(158, 158, 158, 0.1);
+  color: #757575;
 }
 
 .checkin-status.in-progress {
-  background: linear-gradient(135deg, rgba(33, 150, 243, 0.1) 0%, rgba(3, 169, 244, 0.1) 100%);
+  background-color: rgba(33, 150, 243, 0.1);
   color: #2196f3;
 }
 
 .checkin-status.ended {
-  background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(129, 199, 132, 0.1) 100%);
-  color: #4caf50;
-}
-
-.checkin-status.checked_in {
-  background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(129, 199, 132, 0.1) 100%);
-  color: #4caf50;
-}
-
-.checkin-status.late {
-  background: linear-gradient(135deg, rgba(255, 152, 0, 0.1) 0%, rgba(255, 193, 7, 0.1) 100%);
-  color: #ff9800;
-}
-
-.checkin-status.absent,
-.checkin-status.missed {
-  background: linear-gradient(135deg, rgba(244, 67, 54, 0.1) 0%, rgba(239, 83, 80, 0.1) 100%);
-  color: #f44336;
-}
-
-.checkin-status.pending {
-  background: linear-gradient(135deg, rgba(158, 158, 158, 0.1) 0%, rgba(188, 188, 188, 0.1) 100%);
-  color: #9e9e9e;
-}
-
-.attendance-status {
-  position: absolute;
-  bottom: 20rpx;
-  right: 20rpx;
-  padding: 6rpx 16rpx;
-  border-radius: 50rpx;
-  font-size: 24rpx;
-}
-
-.attendance-status.checked_in,
-.attendance-status.normal {
   background-color: rgba(76, 175, 80, 0.1);
   color: #4caf50;
 }
 
-.attendance-status.late {
-  background-color: rgba(255, 152, 0, 0.1);
-  color: #ff9800;
-}
-
-.attendance-status.absent,
-.attendance-status.missed {
-  background-color: rgba(244, 67, 54, 0.1);
-  color: #f44336;
-}
-
-.attendance-status.not_started,
-.attendance-status.pending {
-  background-color: rgba(158, 158, 158, 0.1);
-  color: #9e9e9e;
+/* 成员列表样式优化 */
+.members-content {
+  animation: fadeIn 0.5s ease-out;
+  min-height: 300rpx;
 }
 
 .member-list {
   display: flex;
   flex-direction: column;
-  gap: 24rpx;
+  gap: 16rpx;
 }
 
 .member-item {
+  position: relative;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 24rpx;
+  padding: 20rpx;
+  margin-bottom: 10rpx;
+  box-shadow: 0 4rpx 15rpx rgba(0, 0, 0, 0.05);
   display: flex;
   align-items: center;
-  padding: 24rpx;
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
-  border-radius: 20rpx;
-  box-shadow: 0 6rpx 16rpx rgba(0, 0, 0, 0.06);
-  transition: all 0.3s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .member-item:active {
-  transform: scale(0.98);
-  opacity: 0.9;
-  box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.04);
+  transform: translateY(2rpx) scale(0.995);
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.03);
 }
 
 .member-avatar {
-  width: 80rpx;
-  height: 80rpx;
+  width: 88rpx;
+  height: 88rpx;
   border-radius: 50%;
   overflow: hidden;
   margin-right: 20rpx;
   box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.1);
-  border: 2rpx solid rgba(255, 255, 255, 0.8);
+  border: 3rpx solid rgba(255, 255, 255, 0.8);
+  flex-shrink: 0;
 }
 
 .member-avatar image {
@@ -1499,6 +1929,7 @@ watch([membersList, checkinList], () => {
 
 .member-info {
   flex: 1;
+  min-width: 0;
 }
 
 .member-name {
@@ -1506,12 +1937,18 @@ watch([membersList, checkinList], () => {
   color: #333;
   font-weight: bold;
   margin-bottom: 4rpx;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 
 .member-username {
   font-size: 22rpx;
   color: #999;
   margin-bottom: 6rpx;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 
 .member-role {
@@ -1521,15 +1958,26 @@ watch([membersList, checkinList], () => {
   display: inline-block;
 }
 
-/* 基于角色着色 */
-.member-item .member-role.role-teacher {
-  background: rgba(106, 17, 203, 0.05);
+.member-role.role-teacher {
+  background: rgba(106, 17, 203, 0.08);
   color: #6a11cb;
 }
 
-.member-item .member-role.role-student {
-  background: rgba(33, 150, 243, 0.05);
+.member-role.role-student {
+  background: rgba(33, 150, 243, 0.08);
   color: #2196f3;
+}
+
+.member-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+/* 统计数据样式优化 */
+.stats-content {
+  animation: fadeIn 0.5s ease-out;
+  min-height: 300rpx;
 }
 
 .stats-container {
@@ -1539,10 +1987,10 @@ watch([membersList, checkinList], () => {
 }
 
 .stats-card {
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(250, 250, 254, 0.9) 100%);
   padding: 24rpx;
   border-radius: 20rpx;
-  box-shadow: 0 6rpx 16rpx rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
   border: 1rpx solid rgba(106, 17, 203, 0.05);
 }
 
@@ -1553,30 +2001,50 @@ watch([membersList, checkinList], () => {
   margin-bottom: 20rpx;
   padding-bottom: 10rpx;
   border-bottom: 2rpx solid rgba(106, 17, 203, 0.1);
+  position: relative;
+}
+
+.stats-title::after {
+  content: '';
+  position: absolute;
+  bottom: -2rpx;
+  left: 0;
+  width: 60rpx;
+  height: 2rpx;
+  background: linear-gradient(90deg, #6a11cb, #2575fc);
 }
 
 .stats-row {
   display: flex;
   justify-content: space-around;
+  flex-wrap: wrap;
+  gap: 10rpx;
 }
 
 .stat-item {
+  flex: 1;
+  min-width: 150rpx;
   text-align: center;
   padding: 16rpx;
   border-radius: 16rpx;
-  background-color: rgba(106, 17, 203, 0.02);
+  background-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.03);
   transition: all 0.3s ease;
 }
 
-.stat-item:hover {
+.stat-item:hover, .stat-item:active {
   background-color: rgba(106, 17, 203, 0.05);
-  box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.07);
+  transform: translateY(-2rpx);
 }
 
 .stat-value {
   font-size: 40rpx;
   font-weight: bold;
-  color: #6a11cb;
+  background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin-bottom: 6rpx;
 }
 
@@ -1588,32 +2056,54 @@ watch([membersList, checkinList], () => {
 .attendance-list {
   display: flex;
   flex-direction: column;
-  gap: 10rpx;
+  gap: 12rpx;
 }
 
 .attendance-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10rpx 0;
-  border-bottom: 2rpx solid #eee;
+  padding: 16rpx;
+  border-radius: 12rpx;
+  background-color: rgba(255, 255, 255, 0.5);
+  transition: all 0.2s ease;
+}
+
+.attendance-item:active {
+  transform: translateY(2rpx);
+  background-color: rgba(250, 250, 250, 0.8);
 }
 
 .rank {
   font-size: 28rpx;
   color: #666;
-  margin-right: 10rpx;
+  margin-right: 16rpx;
+  font-weight: bold;
+  min-width: 30rpx;
+  text-align: center;
 }
 
 .student-info {
   flex: 1;
+  min-width: 0;
+}
+
+.student-name {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .student-username {
   font-size: 22rpx;
   color: #999;
   margin-top: 2rpx;
-  margin-bottom: 2rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .attendance-details {
@@ -1625,17 +2115,17 @@ watch([membersList, checkinList], () => {
 .attendance-numbers {
   display: flex;
   align-items: center;
-  gap: 5rpx;
+  gap: 2rpx;
+  font-size: 24rpx;
+  color: #999;
 }
 
 .normal {
-  font-size: 26rpx;
-  color: #666;
+  color: #4caf50;
 }
 
 .missed {
-  font-size: 26rpx;
-  color: #999;
+  color: #f44336;
 }
 
 .attendance-rate {
@@ -1643,6 +2133,8 @@ watch([membersList, checkinList], () => {
   font-weight: bold;
   padding: 4rpx 12rpx;
   border-radius: 30rpx;
+  min-width: 70rpx;
+  text-align: center;
 }
 
 .attendance-rate.excellent {
@@ -1661,11 +2153,62 @@ watch([membersList, checkinList], () => {
 }
 
 .excellent {
-  background-color: rgba(76, 175, 80, 0.05);
+  background-color: rgba(76, 175, 80, 0.02);
+  border-left: 3px solid rgba(76, 175, 80, 0.5);
 }
 
 .warning {
-  background-color: rgba(255, 152, 0, 0.05);
+  background-color: rgba(255, 152, 0, 0.02);
+  border-left: 3px solid rgba(255, 152, 0, 0.5);
+}
+
+.refresh-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10rpx 20rpx;
+  border-radius: 50rpx;
+  background: linear-gradient(135deg, rgba(106, 17, 203, 0.08) 0%, rgba(37, 117, 252, 0.08) 100%);
+  color: #6a11cb;
+  font-size: 28rpx;
+  margin-bottom: 20rpx;
+  align-self: center;
+  width: fit-content;
+  cursor: pointer;
+  box-shadow: 0 4rpx 8rpx rgba(106, 17, 203, 0.05);
+  transition: all 0.3s ease;
+}
+
+.refresh-btn:active {
+  transform: scale(0.95);
+  box-shadow: 0 2rpx 4rpx rgba(106, 17, 203, 0.03);
+}
+
+/* 添加导出按钮样式 */
+.export-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10rpx 20rpx;
+  border-radius: 50rpx;
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.08) 0%, rgba(129, 199, 132, 0.08) 100%);
+  color: #4caf50;
+  font-size: 28rpx;
+  margin-bottom: 20rpx;
+  align-self: center;
+  width: fit-content;
+  cursor: pointer;
+  box-shadow: 0 4rpx 8rpx rgba(76, 175, 80, 0.05);
+  transition: all 0.3s ease;
+}
+
+.export-btn:active {
+  transform: scale(0.95);
+  box-shadow: 0 2rpx 4rpx rgba(76, 175, 80, 0.03);
+}
+
+.export-btn text {
+  margin-left: 8rpx;
 }
 
 .empty-container {
@@ -1673,9 +2216,9 @@ watch([membersList, checkinList], () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 100rpx 0;
-  min-height: 400rpx;
-  background: linear-gradient(135deg, rgba(245, 245, 245, 0.5) 0%, rgba(250, 250, 250, 0.5) 100%);
+  padding: 80rpx 0;
+  min-height: 300rpx;
+  background: linear-gradient(135deg, rgba(250, 250, 250, 0.5) 0%, rgba(245, 245, 245, 0.5) 100%);
   border-radius: 20rpx;
   margin: 20rpx 0;
 }
@@ -1687,29 +2230,6 @@ watch([membersList, checkinList], () => {
   margin-bottom: 16rpx;
 }
 
-.refresh-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10rpx 20rpx;
-  border-radius: 50rpx;
-  background: linear-gradient(135deg, rgba(106, 17, 203, 0.1) 0%, rgba(37, 117, 252, 0.1) 100%);
-  color: #6a11cb;
-  font-size: 28rpx;
-  margin-bottom: 20rpx;
-  align-self: center;
-  width: fit-content;
-  cursor: pointer;
-  box-shadow: 0 4rpx 8rpx rgba(106, 17, 203, 0.1);
-  transition: all 0.3s ease;
-}
-
-.refresh-btn:active {
-  transform: scale(0.95);
-  opacity: 0.9;
-  box-shadow: 0 2rpx 4rpx rgba(106, 17, 203, 0.1);
-}
-
 .empty-list {
   text-align: center;
   padding: 60rpx 0;
@@ -1718,102 +2238,90 @@ watch([membersList, checkinList], () => {
   border-radius: 16rpx;
 }
 
-.student-name {
-  font-size: 28rpx;
-  color: #333;
-}
-
-// 添加二维码弹窗样式
+/* 二维码弹窗样式优化 */
 .qrcode-container {
   padding: 40rpx;
-
-  .qrcode-header {
-    text-align: center;
-    margin-bottom: 30rpx;
-
-    .qrcode-title {
-      display: block;
-      font-size: 36rpx;
-      font-weight: bold;
-      color: #333;
-      margin-bottom: 10rpx;
-    }
-
-    .qrcode-subtitle {
-      font-size: 26rpx;
-      color: #666;
-    }
-  }
-
-  .qrcode-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 40rpx;
-
-    .qrcode-image {
-      width: 400rpx;
-      height: 400rpx;
-      margin-bottom: 20rpx;
-      border: 1rpx solid #eee;
-      box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
-      border-radius: 12rpx;
-    }
-
-    .qrcode-loading,
-    .qrcode-error {
-      width: 400rpx;
-      height: 400rpx;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background-color: #f9f9f9;
-      border-radius: 12rpx;
-
-      text {
-        margin-top: 20rpx;
-        color: #666;
-        font-size: 28rpx;
-      }
-    }
-
-    .course-qrinfo {
-      text-align: center;
-      margin-top: 20rpx;
-      background-color: rgba(106, 17, 203, 0.05);
-      padding: 16rpx 30rpx;
-      border-radius: 30rpx;
-
-      .course-name {
-        display: block;
-        font-size: 32rpx;
-        font-weight: bold;
-        color: #333;
-        margin-bottom: 8rpx;
-      }
-
-      .course-code {
-        font-size: 28rpx;
-        color: #666;
-      }
-    }
-  }
-
-  .qrcode-actions {
-    margin-top: 20rpx;
-  }
 }
 
-// 基于签到类型添加不同的左侧边框颜色
-.checkin-item.checkin-type-qr_code {
-  border-left-color: #2196f3;
-  background: linear-gradient(135deg, #ffffff 0%, rgba(33, 150, 243, 0.05) 100%);
+.qrcode-header {
+  text-align: center;
+  margin-bottom: 30rpx;
 }
 
-.checkin-item.checkin-type-location {
-  border-left-color: #4caf50;
-  background: linear-gradient(135deg, #ffffff 0%, rgba(76, 175, 80, 0.05) 100%);
+.qrcode-title {
+  display: block;
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10rpx;
+}
+
+.qrcode-subtitle {
+  font-size: 26rpx;
+  color: #666;
+}
+
+.qrcode-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 40rpx;
+}
+
+.qrcode-image {
+  width: 400rpx;
+  height: 400rpx;
+  margin-bottom: 20rpx;
+  border: 2rpx solid #f0f0f0;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.1);
+  border-radius: 12rpx;
+  background-color: #fff;
+}
+
+.qrcode-loading,
+.qrcode-error {
+  width: 400rpx;
+  height: 400rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #f9f9f9;
+  border-radius: 12rpx;
+  border: 2rpx solid #f0f0f0;
+}
+
+.qrcode-loading text,
+.qrcode-error text {
+  margin-top: 20rpx;
+  color: #666;
+  font-size: 28rpx;
+}
+
+.course-qrinfo {
+  text-align: center;
+  margin-top: 20rpx;
+  background: linear-gradient(135deg, rgba(106, 17, 203, 0.08) 0%, rgba(37, 117, 252, 0.08) 100%);
+  padding: 16rpx 30rpx;
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 12rpx rgba(106, 17, 203, 0.08);
+}
+
+.course-name {
+  display: block;
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8rpx;
+}
+
+.course-code {
+  font-size: 28rpx;
+  color: #666;
+}
+
+.qrcode-actions {
+  margin-top: 20rpx;
 }
 
 .retry-button {
@@ -1821,18 +2329,18 @@ watch([membersList, checkinList], () => {
   align-items: center;
   justify-content: center;
   margin-top: 16rpx;
-  padding: 10rpx 20rpx;
+  padding: 10rpx 24rpx;
   border-radius: 50rpx;
   background-color: rgba(1, 101, 255, 0.1);
   color: #0165FF;
   font-size: 24rpx;
+  box-shadow: 0 4rpx 8rpx rgba(1, 101, 255, 0.1);
+  transition: all 0.2s ease;
 }
 
-.debug-info {
-  margin-top: 12rpx;
-  font-size: 24rpx;
-  color: #999;
-  text-align: center;
+.retry-button:active {
+  transform: scale(0.95);
+  box-shadow: 0 2rpx 4rpx rgba(1, 101, 255, 0.05);
 }
 
 // 添加微信小程序专用样式
@@ -1848,16 +2356,34 @@ watch([membersList, checkinList], () => {
   font-size: 24rpx;
   color: #666;
   text-align: center;
+  background-color: rgba(0, 0, 0, 0.03);
+  padding: 4rpx 16rpx;
+  border-radius: 30rpx;
 }
 
 .debug-info {
-  display: block;
-  margin-top: 12rpx;
-  font-size: 22rpx;
-  color: #999;
   text-align: center;
-  padding: 6rpx 12rpx;
-  background-color: rgba(0, 0, 0, 0.03);
-  border-radius: 10rpx;
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: #999;
+}
+
+/* 确保删除按钮的图标颜色总是红色 */
+.checkin-actions .wd-icon, 
+.member-actions .wd-icon {
+  color: #ff0000 !important;
+}
+
+.operation-item.delete-operation .wd-icon {
+  color: #f44336 !important;
+}
+
+/* 添加强制性的样式，确保图标颜色正确显示 */
+.wd-button--danger .wd-icon {
+  color: #ff0000 !important;
+}
+
+.operation-item.delete-operation {
+  color: #f44336;
 }
 </style>

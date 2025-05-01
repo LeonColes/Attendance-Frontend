@@ -49,6 +49,18 @@ export interface ApiResponse<T = any> {
   data: T
 }
 
+
+/**
+ * 修改密码
+ * @param params 密码信息
+ */
+export interface ChangePasswordParams {
+  oldPassword: string
+  newPassword: string
+  confirmPassword: string
+}
+
+
 /**
  * 用户注册
  * @param params 注册参数
@@ -79,16 +91,6 @@ export function getUserInfo() {
  */
 export function updateUserInfo(params: Partial<UserInfo>) {
   return post<null>('/api/users/update', params)
-}
-
-/**
- * 修改密码
- * @param params 密码信息
- */
-export interface ChangePasswordParams {
-  oldPassword: string
-  newPassword: string
-  confirmPassword: string
 }
 
 export function changePassword(params: ChangePasswordParams) {

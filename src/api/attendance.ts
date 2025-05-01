@@ -254,5 +254,13 @@ export function getCheckinStatistics(checkinId: string, params: PageQueryParams)
  * @param checkinId 签到任务ID
  */
 export function getCheckinDetail(checkinId: string) {
-  return get<CheckinTask>(`/api/courses/attendance/detail?checkinId=${checkinId}`)
+  return get<CheckinTask>(`/api/courses/attendance/detail?id=${checkinId}`)
+}
+
+/**
+ * 删除签到任务（教师）
+ * @param checkinId 签到任务ID
+ */
+export function deleteCheckin(checkinId: string) {
+  return post<void>(`/api/courses/attendance/delete?checkinId=${checkinId}`)
 }
