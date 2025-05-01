@@ -15,18 +15,8 @@ import { useUserStore } from '@/store/user'
 // 界面数据
 const userStore = useUserStore()
 const darkMode = ref(false)
-const loading = ref(false)
-const attendanceStats = ref({
-  totalCount: 0,
-  normalCount: 0,
-  lateCount: 0,
-  absentCount: 0,
-  attendanceRate: 0
-})
 
 // 计算属性
-const isTeacher = computed(() => userStore.role === 'TEACHER')
-const isStudent = computed(() => userStore.role === 'STUDENT')
 const roleName = computed(() => {
   const role = userStore.role
   if (role === 'TEACHER') return '教师'
@@ -46,9 +36,6 @@ onShow(() => {
   
   // 加载主题设置
   loadThemeSetting()
-  
-  // 加载用户数据
-  loadUserData()
 })
 
 // 初始化
@@ -75,23 +62,9 @@ function loadThemeSetting() {
   }
 }
 
-// 加载用户数据
-function loadUserData() {
-  loading.value = true
-  
-  // 模拟加载数据
-  setTimeout(() => {
-    // 这里应该是从服务器获取数据
-    attendanceStats.value = {
-      totalCount: 25,
-      normalCount: 20,
-      lateCount: 3,
-      absentCount: 2,
-      attendanceRate: 92
-    }
-    
-    loading.value = false
-  }, 500)
+// 通用导航函数
+function navigateTo(url: string) {
+  getSafeUni().navigateTo({ url })
 }
 
 // 切换主题
@@ -105,9 +78,6 @@ function toggleTheme() {
 
 // 更新主题
 function updateTheme() {
-  // 小程序环境中不使用document对象
-  // 在小程序中可以通过样式类或状态变量控制主题
-  // darkMode.value已经绑定到了模板中的class条件
   console.log('主题已更新为:', darkMode.value ? 'dark' : 'light')
 }
 
@@ -119,15 +89,8 @@ function logout() {
     success: (res) => {
       if (res.confirm) {
         userStore.logout()
-        getSafeUni().navigateTo({
-          url: '/pages/login/index',
-          fail: (err) => {
-            console.error('导航到登录页失败:', err)
-            // 备选方案
-            getSafeUni().redirectTo({
-              url: '/pages/login/index'
-            })
-          }
+        getSafeUni().redirectTo({
+          url: '/pages/login/index'
         })
       }
     }
@@ -136,9 +99,7 @@ function logout() {
 
 // 前往个人信息编辑页面
 function goToProfile() {
-  getSafeUni().navigateTo({
-    url: '/pages/profile/index'
-  })
+  navigateTo('/pages/profile/index')
 }
 
 // 前往关于页面
@@ -157,130 +118,51 @@ function goToSettings() {
 </script>
 
 <template>
-  <!-- @ts-ignore -->
   <view class="container" :class="{ 'dark-mode': darkMode }">
     <!-- 个人信息卡片 -->
-    <!-- @ts-ignore -->
     <view class="user-card">
-      <!-- @ts-ignore -->
       <view class="user-info">
-        <image class="avatar" src="https://picsum.photos/200?random=1" mode="aspectFill" />
-        <!-- @ts-ignore -->
+        <image class="avatar" :src="userStore.userInfo?.avatarUrl || '/static/images/default-avatar.png'" mode="aspectFill" />
         <view class="info">
-          <!-- @ts-ignore -->
           <text class="name">{{ userStore.fullName || '未登录' }}</text>
-          <!-- @ts-ignore -->
           <text class="role">{{ roleName }}</text>
         </view>
       </view>
       
-      <!-- @ts-ignore -->
       <view class="theme-toggle" @click="toggleTheme">
         <wd-icon :name="darkMode ? 'sunny' : 'moon'" size="48rpx" color="#6a11cb" />
       </view>
     </view>
     
-    <!-- 考勤统计卡片 -->
-    <!-- @ts-ignore -->
-    <view class="stats-card">
-      <!-- @ts-ignore -->
-      <view class="stats-header">
-        <!-- @ts-ignore -->
-        <text class="stats-title">考勤统计</text>
-      </view>
-      
-      <!-- @ts-ignore -->
-      <view class="stats-content">
-        <!-- @ts-ignore -->
-        <view class="stat-item highlight">
-          <!-- @ts-ignore -->
-          <text class="stat-value">{{ attendanceStats.attendanceRate }}%</text>
-          <!-- @ts-ignore -->
-          <text class="stat-label">出勤率</text>
-        </view>
-        
-        <!-- @ts-ignore -->
-        <view class="stats-grid">
-          <!-- @ts-ignore -->
-          <view class="stat-item">
-            <!-- @ts-ignore -->
-            <text class="stat-value">{{ attendanceStats.totalCount }}</text>
-            <!-- @ts-ignore -->
-            <text class="stat-label">总次数</text>
-          </view>
-          
-          <!-- @ts-ignore -->
-          <view class="stat-item">
-            <!-- @ts-ignore -->
-            <text class="stat-value">{{ attendanceStats.normalCount }}</text>
-            <!-- @ts-ignore -->
-            <text class="stat-label">正常</text>
-          </view>
-          
-          <!-- @ts-ignore -->
-          <view class="stat-item">
-            <!-- @ts-ignore -->
-            <text class="stat-value">{{ attendanceStats.lateCount }}</text>
-            <!-- @ts-ignore -->
-            <text class="stat-label">迟到</text>
-          </view>
-          
-          <!-- @ts-ignore -->
-          <view class="stat-item">
-            <!-- @ts-ignore -->
-            <text class="stat-value">{{ attendanceStats.absentCount }}</text>
-            <!-- @ts-ignore -->
-            <text class="stat-label">缺勤</text>
-          </view>
-        </view>
-      </view>
-    </view>
-    
-    <!-- 菜单列表 -->
-    <!-- @ts-ignore -->
-    <view class="menu-list">
-      <!-- @ts-ignore -->
+    <!-- 核心菜单 -->
+    <view class="menu-card">
       <view class="menu-item" @click="goToProfile">
-        <view class="menu-icon">
-          <wd-icon name="person-setting" size="48rpx" />
-        </view>
-        <!-- @ts-ignore -->
+        <wd-icon name="person-setting" size="42rpx" color="#6a11cb" />
         <text class="menu-text">个人信息</text>
-        <wd-icon name="arrow-right" size="36rpx" class="arrow-icon" />
+        <wd-icon name="arrow-right" size="32rpx" class="arrow-icon" />
       </view>
       
-      <!-- @ts-ignore -->
       <view class="menu-item" @click="goToSettings">
-        <view class="menu-icon">
-          <wd-icon name="setting" size="48rpx" />
-        </view>
-        <!-- @ts-ignore -->
+        <wd-icon name="setting" size="42rpx" color="#6a11cb" />
         <text class="menu-text">应用设置</text>
-        <wd-icon name="arrow-right" size="36rpx" class="arrow-icon" />
+        <wd-icon name="arrow-right" size="32rpx" class="arrow-icon" />
       </view>
       
-      <!-- @ts-ignore -->
       <view class="menu-item" @click="goToAbout">
-        <view class="menu-icon">
-          <wd-icon name="info" size="48rpx" />
-        </view>
-        <!-- @ts-ignore -->
-        <text class="menu-text">关于应用</text>
-        <wd-icon name="arrow-right" size="36rpx" class="arrow-icon" />
+        <wd-icon name="info" size="42rpx" color="#6a11cb" />
+        <text class="menu-text">关于我们</text>
+        <wd-icon name="arrow-right" size="32rpx" class="arrow-icon" />
       </view>
     </view>
     
     <!-- 退出登录按钮 -->
-    <!-- @ts-ignore -->
     <view class="logout-button" @click="logout">
-      <!-- @ts-ignore -->
+      <wd-icon name="exit" size="36rpx" color="#f56c6c" />
       <text>退出登录</text>
     </view>
     
     <!-- 版本信息 -->
-    <!-- @ts-ignore -->
     <view class="version-info">
-      <!-- @ts-ignore -->
       <text>智能考勤 v1.0.0</text>
     </view>
   </view>
@@ -289,242 +171,195 @@ function goToSettings() {
 <style lang="scss">
 .container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-  padding: 30rpx;
+  background: linear-gradient(135deg, #7f7fd5 0%, #86a8e7 50%, #91eae4 100%);
+  padding: 40rpx 30rpx;
   box-sizing: border-box;
   color: #333;
-  transition: all 0.3s ease;
+  transition: all 0.4s ease;
   display: flex;
   flex-direction: column;
   align-items: center;
   
   &.dark-mode {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    background: linear-gradient(135deg, #141e30 0%, #243b55 100%);
     color: #eee;
     
-    .user-card, .stats-card, .menu-list, .logout-button {
-      background-color: rgba(255, 255, 255, 0.1);
-      box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.2);
+    .user-card, .menu-card, .logout-button {
+      background-color: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.25);
     }
     
-    .menu-item, .stats-header {
-      border-bottom-color: rgba(255, 255, 255, 0.1);
-    }
-    
-    .menu-text, .stats-title, .user-name {
-      color: #fff;
-    }
-    
-    .arrow-icon, .stat-label, .user-meta text {
-      color: rgba(255, 255, 255, 0.7);
-    }
-    
-    .logout-button {
-      background-color: rgba(255, 255, 255, 0.1);
-      color: #fff;
+    .menu-item {
+      border-bottom-color: rgba(255, 255, 255, 0.08);
       
       &:active {
-        background-color: rgba(255, 255, 255, 0.2);
+        background-color: rgba(255, 255, 255, 0.05);
       }
     }
     
-    .version-info {
-      color: rgba(255, 255, 255, 0.5);
+    .menu-text, .name {
+      color: #fff;
     }
+    
+    .role, .arrow-icon, .version-info text {
+      color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .theme-toggle {
+      background-color: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 5rpx 15rpx rgba(0, 0, 0, 0.2);
+    }
+    
+    .logout-button {
+      color: #ff8a8a;
+      border: 1px solid rgba(255, 138, 138, 0.3);
+      
+      &:active {
+        background-color: rgba(255, 138, 138, 0.1);
+      }
+    }
+  }
+}
+
+/* 卡片基础样式 */
+.user-card, .menu-card, .logout-button {
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 28rpx;
+  margin-bottom: 30rpx;
+  box-shadow: 0 10rpx 40rpx rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 700rpx;
+  box-sizing: border-box;
+  backdrop-filter: blur(10rpx);
+  transition: all 0.3s ease;
+  
+  &:active {
+    transform: translateY(2rpx);
   }
 }
 
 /* 用户卡片 */
 .user-card {
-  background-color: rgba(255, 255, 255, 0.9);
-  border-radius: 24rpx;
-  padding: 30rpx;
-  margin-bottom: 30rpx;
-  box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.1);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 100%;
-  max-width: 700rpx;
-  box-sizing: border-box;
+  padding: 40rpx;
+  margin-top: 20rpx;
   
   .user-info {
     display: flex;
     align-items: center;
     
     .avatar {
-      width: 120rpx;
-      height: 120rpx;
+      width: 130rpx;
+      height: 130rpx;
       border-radius: 50%;
       margin-right: 30rpx;
-      flex-shrink: 0;
+      border: 4rpx solid #fff;
+      box-shadow: 0 5rpx 15rpx rgba(0, 0, 0, 0.1);
     }
     
     .info {
       .name {
-        font-size: 36rpx;
+        font-size: 38rpx;
         font-weight: bold;
-        margin-bottom: 10rpx;
+        margin-bottom: 12rpx;
         display: block;
       }
       
       .role {
-        font-size: 24rpx;
+        font-size: 26rpx;
         color: #666;
+        background-color: rgba(106, 17, 203, 0.1);
+        padding: 6rpx 16rpx;
+        border-radius: 30rpx;
+        display: inline-block;
       }
     }
   }
   
   .theme-toggle {
-    width: 80rpx;
-    height: 80rpx;
+    width: 90rpx;
+    height: 90rpx;
     border-radius: 50%;
-    background-color: rgba(0, 0, 0, 0.05);
+    background-color: rgba(255, 255, 255, 0.8);
     display: flex;
     justify-content: center;
     align-items: center;
     transition: all 0.3s ease;
-    flex-shrink: 0;
+    box-shadow: 0 5rpx 15rpx rgba(0, 0, 0, 0.1);
     
     &:active {
       transform: scale(0.95);
-      background-color: rgba(0, 0, 0, 0.1);
+      background-color: rgba(0, 0, 0, 0.05);
     }
   }
 }
 
-/* 统计卡片 */
-.stats-card {
-  background-color: rgba(255, 255, 255, 0.9);
-  border-radius: 24rpx;
-  margin-bottom: 30rpx;
-  box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.1);
+/* 菜单卡片 */
+.menu-card {
+  padding: 0;
   overflow: hidden;
-  width: 100%;
-  max-width: 700rpx;
-  box-sizing: border-box;
-  
-  .stats-header {
-    padding: 24rpx 30rpx;
-    border-bottom: 1rpx solid rgba(0, 0, 0, 0.05);
-    
-    .stats-title {
-      font-size: 32rpx;
-      font-weight: bold;
-      text-align: center;
-      display: block;
-    }
-  }
-  
-  .stats-content {
-    padding: 20rpx;
-    
-    .stat-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 20rpx 0;
-      
-      .stat-value {
-        font-size: 36rpx;
-        font-weight: bold;
-        margin-bottom: 8rpx;
-      }
-      
-      .stat-label {
-        font-size: 24rpx;
-        color: #666;
-      }
-      
-      &.highlight {
-        margin-bottom: 20rpx;
-        
-        .stat-value {
-          font-size: 60rpx;
-          color: #6a11cb;
-        }
-      }
-    }
-    
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      width: 100%;
-    }
-  }
-}
-
-/* 菜单列表 */
-.menu-list {
-  background-color: rgba(255, 255, 255, 0.9);
   border-radius: 24rpx;
-  margin-bottom: 30rpx;
-  box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  width: 100%;
-  max-width: 700rpx;
-  box-sizing: border-box;
   
   .menu-item {
     display: flex;
     align-items: center;
-    padding: 30rpx;
+    padding: 34rpx 40rpx;
     border-bottom: 1rpx solid rgba(0, 0, 0, 0.05);
+    transition: background-color 0.2s ease;
     
     &:last-child {
       border-bottom: none;
     }
     
     &:active {
-      background-color: rgba(0, 0, 0, 0.05);
+      background-color: rgba(0, 0, 0, 0.03);
     }
     
-    .menu-icon {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      width: 60rpx;
-      margin-right: 20rpx;
-      color: #6a11cb;
+    wd-icon:first-child {
+      margin-right: 24rpx;
     }
     
     .menu-text {
       flex: 1;
-      font-size: 30rpx;
+      font-size: 32rpx;
     }
     
     .arrow-icon {
-      color: #999;
+      color: #bbb;
     }
   }
 }
 
 /* 退出按钮 */
 .logout-button {
-  background-color: rgba(255, 255, 255, 0.9);
-  border-radius: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 30rpx;
-  margin-bottom: 30rpx;
-  box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.1);
   text-align: center;
   font-size: 32rpx;
   color: #f56c6c;
   font-weight: bold;
-  width: 100%;
-  max-width: 700rpx;
-  box-sizing: border-box;
+  border: 1px solid rgba(245, 108, 108, 0.3);
+  margin-top: 40rpx;
+  
+  wd-icon {
+    margin-right: 12rpx;
+  }
   
   &:active {
-    background-color: rgba(255, 255, 255, 0.7);
+    background-color: rgba(245, 108, 108, 0.05);
   }
 }
 
 /* 版本信息 */
 .version-info {
   text-align: center;
-  padding: 20rpx 0;
+  padding: 30rpx 0;
   width: 100%;
+  margin-top: auto;
   
   text {
     font-size: 24rpx;
