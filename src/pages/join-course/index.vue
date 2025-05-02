@@ -408,7 +408,6 @@ function goBack() {
 <route lang="json">
 {
   "style": {
-    "navigationStyle": "custom",
     "navigationBarTitleText": "加入课程"
   }
 }

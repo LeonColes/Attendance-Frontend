@@ -826,8 +826,7 @@ function handleRadiusChange(value: string | number) {
 <route lang="json">
 {
   "style": {
-    "navigationBarTitleText": "创建签到",
-    "navigationStyle": "custom"
+    "navigationBarTitleText": "创建签到"
   }
 }
 </route> 

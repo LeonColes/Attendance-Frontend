@@ -528,8 +528,7 @@ function goBack() {
 <route lang="json">
 {
   "style": {
-    "navigationBarTitleText": "创建课程",
-    "navigationStyle": "custom"
+    "navigationBarTitleText": "创建课程"
   }
 }
 </route> 

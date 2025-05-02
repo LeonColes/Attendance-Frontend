@@ -612,7 +612,6 @@ function goBack() {
 <route lang="json">
 {
   "style": {
-    "navigationStyle": "custom",
     "navigationBarTitleText": "扫码签到"
   }
 }

@@ -231,8 +231,7 @@ function goBack() {
 <route lang="json">
 {
   "style": {
-    "navigationBarTitleText": "签到二维码",
-    "navigationStyle": "custom"
+    "navigationBarTitleText": "签到二维码"
   }
 }
 </route> 

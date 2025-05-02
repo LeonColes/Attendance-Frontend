@@ -546,8 +546,7 @@ onUnmounted(() => {
 <route lang="json">
 {
   "style": {
-    "navigationBarTitleText": "签到详情",
-    "navigationStyle": "custom"
+    "navigationBarTitleText": "签到详情"
   }
 }
 </route> 

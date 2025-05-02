@@ -1,4 +1,24 @@
 {
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationStyle": "default"
+  },
+  "tabBar": {
+    "height": "0",
+    "color": "#bfbfbf",
+    "selectedColor": "#0165FF",
+    "list": [
+      {
+        "pagePath": "pages/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/my/index",
+        "text": "我的"
+      }
+    ]
+  },
   "pages": [
     {
       "path": "pages/index",
@@ -28,10 +48,7 @@
     },
     {
       "path": "pages/course-detail/index",
-      "type": "page",
-      "style": {
-        "navigationBarTitleText": "课程详情"
-      }
+      "type": "page"
     },
     {
       "path": "pages/create-checkin/index",
@@ -61,10 +78,7 @@
     },
     {
       "path": "pages/login/index",
-      "type": "page",
-      "style": {
-        "navigationStyle": "custom"
-      }
+      "type": "page"
     },
     {
       "path": "pages/my/index",
@@ -77,39 +91,15 @@
     },
     {
       "path": "pages/register/index",
-      "type": "page",
-      "style": {
-        "navigationBarTitleText": "注册"
-      }
+      "type": "page"
     },
     {
       "path": "pages/scanner/index",
       "type": "page",
       "style": {
-        "navigationStyle": "custom",
         "navigationBarTitleText": "扫码签到"
       }
     }
   ],
-  "globalStyle": {
-    "navigationBarTextStyle": "black",
-    "navigationBarBackgroundColor": "#ffffff",
-    "navigationStyle": "default"
-  },
-  "tabBar": {
-    "height": "0",
-    "color": "#bfbfbf",
-    "selectedColor": "#0165FF",
-    "list": [
-      {
-        "pagePath": "pages/index",
-        "text": "首页"
-      },
-      {
-        "pagePath": "pages/my/index",
-        "text": "我的"
-      }
-    ]
-  },
   "subPackages": []
 }
