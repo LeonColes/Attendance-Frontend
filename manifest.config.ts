@@ -75,7 +75,7 @@ export default defineManifestConfig({
     themeLocation: 'theme.json',
     requiredPrivateInfos: [
       'getLocation',
-      "chooseLocation"
+      'chooseLocation'
     ],
     permission: {
       'scope.userLocation': {
