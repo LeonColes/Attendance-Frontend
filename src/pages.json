@@ -9,8 +9,7 @@
       "path": "pages/checkin-detail/index",
       "type": "page",
       "style": {
-        "navigationBarTitleText": "签到详情",
-        "navigationStyle": "custom"
+        "navigationBarTitleText": "签到详情"
       }
     },
     {
@@ -24,8 +23,7 @@
       "path": "pages/checkin-qrcode/index",
       "type": "page",
       "style": {
-        "navigationBarTitleText": "签到二维码",
-        "navigationStyle": "custom"
+        "navigationBarTitleText": "签到二维码"
       }
     },
     {
@@ -53,7 +51,6 @@
       "path": "pages/join-course/index",
       "type": "page",
       "style": {
-        "navigationStyle": "custom",
         "navigationBarTitleText": "加入课程"
       }
     },
@@ -64,7 +61,10 @@
     },
     {
       "path": "pages/login/index",
-      "type": "page"
+      "type": "page",
+      "style": {
+        "navigationStyle": "custom"
+      }
     },
     {
       "path": "pages/my/index",
