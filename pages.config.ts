@@ -101,6 +101,7 @@ export default defineUniPages({
     height: '0',
     color: '#bfbfbf',
     selectedColor: '#0165FF',
+    backgroundColor: '#ffffff',
     list: [{
       pagePath: 'pages/index',
       text: '首页',

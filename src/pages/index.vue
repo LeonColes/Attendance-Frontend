@@ -60,18 +60,18 @@ onShow(() => {
 async function checkLoginStatus() {
   try {
     const token = getSafeUni().getStorageSync('token')
-    
+
     if (!token) {
       // 没有token，跳转到登录页
       redirectToLogin()
       return false
     }
-    
+
     // 已有token，检查是否有用户信息
     if (!userStore.isLoggedIn) {
       // 尝试获取用户信息
       const success = await userStore.getUserInfo()
-      
+
       if (!success) {
         // 获取用户信息失败，可能是token已过期
         console.log('自动登录失败，token可能已过期')
@@ -79,7 +79,7 @@ async function checkLoginStatus() {
         return false
       }
     }
-    
+
     return true
   } catch (e) {
     console.error('检查登录状态失败:', e)
@@ -100,10 +100,10 @@ async function loadCourseData() {
   // 确保已登录
   const isLoggedIn = await checkLoginStatus()
   if (!isLoggedIn) return
-  
+
   try {
     coursesLoading.value = true
-    
+
     // 调用真实API获取课程列表
     const response = await getCourseList({
       page: 0,
@@ -111,18 +111,18 @@ async function loadCourseData() {
       sort: [{ field: 'createdAt', direction: 'DESC' }],
       filters: {}
     })
-    
+
     if (response && typeof response === 'object' && 'code' in response && response.code === 200) {
       // 使用类型断言处理响应数据
       const apiResponse = response as { code: number; data: any }
       const data = apiResponse.data || {}
       const courses = data.courses || []
       console.log('获取到课程数据:', courses)
-      
+
       // 根据课程状态分类
       activeCourses.value = courses.filter((course) => course.status === 'ACTIVE')
       allCourses.value = courses // 所有课程
-      
+
       // 更新计数
       activeCourseCount.value = activeCourses.value.length
       allCourseCount.value = allCourses.value.length
@@ -199,7 +199,7 @@ function viewCourseDetail(course) {
         },
         checkinData: response.data
       }))
-      
+
       getSafeUni().navigateTo({
         url: `/pages/course-detail/index?courseData=${courseData}`
       })
@@ -218,7 +218,7 @@ function viewCourseDetail(course) {
         startDate: course.startDate,
         endDate: course.endDate
       }))
-      
+
       getSafeUni().navigateTo({
         url: `/pages/course-detail/index?courseInfo=${courseInfo}`
       })
@@ -239,7 +239,7 @@ function viewCourseDetail(course) {
       startDate: course.startDate,
       endDate: course.endDate
     }))
-    
+
     getSafeUni().navigateTo({
       url: `/pages/course-detail/index?courseInfo=${courseInfo}`
     })
@@ -269,7 +269,7 @@ function openScanner() {
           icon: 'success',
           duration: 1000
         })
-        
+
         // 尝试从二维码获取签到码和任务ID
         processCheckInQRCode(res.result)
       } catch (e) {
@@ -292,46 +292,31 @@ function openScanner() {
 
 // 处理签到二维码
 async function processCheckInQRCode(qrContent) {
+  // 获取设备信息
+  const deviceInfo = getSafeUni().getSystemInfoSync()
+  const deviceModel = deviceInfo.model || '设备不明'
+
+  // 准备API调用参数
+  const params = {
+    checkinId: qrContent,                   // 使用checkinId而非taskId
+    verifyMethod: CheckInType.QR_CODE,                 // 使用扫码结果作为verifyData
+    device: deviceModel,                    // 设备信息
+  }
+  console.log('签到API参数:', params)
+
   try {
-    // 获取设备信息
-    const deviceInfo = getSafeUni().getSystemInfoSync()
-    const deviceModel = deviceInfo.model || '设备不明'
-    
-    // 准备API调用参数
-    const params = {
-      checkinId: qrContent,                   // 使用checkinId而非taskId
-      verifyMethod: CheckInType.QR_CODE,                 // 使用扫码结果作为verifyData
-      device: deviceModel,                    // 设备信息
-    }
-    console.log('签到API参数:', params)
-    
-    try {
-      // 使用封装好的 API 进行签到
-      const response = await submitCheckin(params)
-      
-      if (response.code === 200) {
-        getSafeUni().showToast({
-          title: response.message,
-          icon: 'success',
-          duration: 1500
-        })
-        // 延迟后刷新当前页面
-        setTimeout(() => {
-          // 刷新当前页面数据
-          refreshCourses()
-        }, 1000)
-      } else {
-        getSafeUni().showToast({
-          title: response.message || '签到失败',
-          icon: 'error'
-        })
-      }
-    } catch (error) {
-      console.error('API请求失败:', error)
-      getSafeUni().hideLoading()
+    // 使用封装好的 API 进行签到
+    const response = await submitCheckin(params)
+    if (response.code === 200) {
       getSafeUni().showToast({
-        title: '签到请求失败，请重试',
-        icon: 'none'
+        title: response.message,
+        icon: 'success',
+        duration: 1500
+      })
+    } else {
+      getSafeUni().showToast({
+        title: response.message || '签到失败',
+        icon: 'error'
       })
     }
   } catch (error) {
@@ -342,7 +327,13 @@ async function processCheckInQRCode(qrContent) {
       icon: 'none'
     })
   }
+  // 延迟后刷新当前页面
+  setTimeout(() => {
+    // 刷新当前页面数据
+    refreshCourses()
+  }, 1000)
 }
+
 </script>
 
 <template>
@@ -355,66 +346,46 @@ async function processCheckInQRCode(qrContent) {
       <!-- @ts-ignore -->
       <view class="header-action">
         <!-- 教师端：创建课程 -->
-        <wd-button 
-          v-if="isTeacher" 
-          type="primary"
-          size="small"
-          custom-style="margin-left: 20rpx;"
-          icon="add"
-          @click="createCourse"
-        >
+        <wd-button v-if="isTeacher" type="primary" size="small" custom-style="margin-left: 20rpx;" icon="add"
+          @click="createCourse">
           创建课程
         </wd-button>
-        
+
         <!-- 学生端：加入课程 -->
-        <wd-button 
-          v-if="isStudent" 
-          type="primary"
-          size="small"
-          custom-style="margin-left: 20rpx;"
-          icon="add"
-          @click="joinCourse"
-        >
+        <wd-button v-if="isStudent" type="primary" size="small" custom-style="margin-left: 20rpx;" icon="add"
+          @click="joinCourse">
           加入课程
         </wd-button>
       </view>
     </view>
-    
+
     <!-- 标签页 -->
     <!-- @ts-ignore -->
     <view class="tab-container">
       <!-- @ts-ignore -->
-      <view 
-        class="tab-item" 
-        :class="{ active: activeTab === 'active' }"
-        @click="switchTab('active')"
-      >
+      <view class="tab-item" :class="{ active: activeTab === 'active' }" @click="switchTab('active')">
         <!-- @ts-ignore -->
         <text class="tab-text">进行中</text>
         <!-- @ts-ignore -->
         <text class="tab-count">{{ activeCourseCount }}</text>
       </view>
-      
+
       <!-- @ts-ignore -->
-      <view 
-        class="tab-item" 
-        :class="{ active: activeTab === 'all' }"
-        @click="switchTab('all')"
-      >
+      <view class="tab-item" :class="{ active: activeTab === 'all' }" @click="switchTab('all')">
         <!-- @ts-ignore -->
         <text class="tab-text">全部</text>
         <!-- @ts-ignore -->
         <text class="tab-count">{{ allCourseCount }}</text>
       </view>
     </view>
-    
+
     <!-- 加载状态 -->
     <!-- @ts-ignore -->
     <view v-if="coursesLoading || allCoursesLoading" class="loading-container">
       <wd-loading color="#6a11cb" size="80rpx" />
       <text>加载中...</text>
     </view>
-    
+
     <!-- 课程内容区域 -->
     <!-- @ts-ignore -->
     <view v-else class="content-area">
@@ -423,24 +394,19 @@ async function processCheckInQRCode(qrContent) {
         <!-- @ts-ignore -->
         <view v-if="activeCourses.length > 0" class="course-list">
           <!-- @ts-ignore -->
-          <view
-            v-for="course in activeCourses"
-            :key="course.id"
-            class="course-card"
-            @click="viewCourseDetail(course)"
-          >
+          <view v-for="course in activeCourses" :key="course.id" class="course-card" @click="viewCourseDetail(course)">
             <!-- @ts-ignore -->
             <view class="course-card-cover">
               <image :src="'https://picsum.photos/500/300?random=' + course.id.slice(0, 8)" mode="aspectFill" />
               <!-- @ts-ignore -->
               <view class="course-status active">进行中</view>
             </view>
-            
+
             <!-- @ts-ignore -->
             <view class="course-card-content">
               <!-- @ts-ignore -->
               <view class="course-name">{{ course.name }}</view>
-              
+
               <!-- 教师视图 -->
               <!-- @ts-ignore -->
               <view v-if="isTeacher" class="course-meta">
@@ -451,7 +417,7 @@ async function processCheckInQRCode(qrContent) {
                   <text>{{ course.memberCount || 0 }}人</text>
                 </view>
               </view>
-              
+
               <!-- 学生视图 -->
               <!-- @ts-ignore -->
               <view v-else-if="isStudent" class="course-meta">
@@ -462,7 +428,7 @@ async function processCheckInQRCode(qrContent) {
                   <text>{{ course.creatorFullName || course.creatorUsername || '未知教师' }}</text>
                 </view>
               </view>
-              
+
               <!-- @ts-ignore -->
               <view class="course-time">
                 <wd-icon name="calendar" size="28rpx" color="#999" />
@@ -479,78 +445,60 @@ async function processCheckInQRCode(qrContent) {
             </view>
           </view>
         </view>
-        
+
         <!-- 无进行中课程 -->
         <!-- @ts-ignore -->
         <view v-else class="empty-container">
           <wd-icon name="info-outline" size="120rpx" color="#cccccc" />
           <!-- @ts-ignore -->
           <text class="empty-text">暂无进行中的课程</text>
-          
+
           <!-- 引导按钮 -->
           <!-- @ts-ignore -->
           <view class="action-button-container">
-            <wd-button
-              v-if="isTeacher"
-              type="primary"
-              size="medium"
-              custom-style="margin-top: 40rpx;"
-              @click="createCourse"
-            >
+            <wd-button v-if="isTeacher" type="primary" size="medium" custom-style="margin-top: 40rpx;"
+              @click="createCourse">
               创建课程
             </wd-button>
-            <wd-button
-              v-else-if="isStudent"
-              type="primary"
-              size="medium"
-              custom-style="margin-top: 40rpx;"
-              @click="joinCourse"
-            >
+            <wd-button v-else-if="isStudent" type="primary" size="medium" custom-style="margin-top: 40rpx;"
+              @click="joinCourse">
               加入课程
             </wd-button>
           </view>
         </view>
       </template>
-      
+
       <!-- 全部课程 -->
       <template v-else-if="activeTab === 'all'">
         <!-- @ts-ignore -->
         <view v-if="allCourses.length > 0" class="course-list">
           <!-- @ts-ignore -->
-          <view
-            v-for="course in allCourses"
-            :key="course.id"
-            class="course-card"
-            @click="viewCourseDetail(course)"
-          >
+          <view v-for="course in allCourses" :key="course.id" class="course-card" @click="viewCourseDetail(course)">
             <!-- @ts-ignore -->
             <view class="course-card-cover">
               <image :src="'https://picsum.photos/500/300?random=' + course.id.slice(0, 8)" mode="aspectFill" />
               <!-- 根据课程状态显示不同标签 -->
               <!-- @ts-ignore -->
-              <view 
-                class="course-status" 
-                :class="{
-                  'active': course.status === 'ACTIVE',
-                  'completed': course.status === 'COMPLETED',
-                  'created': course.status === 'CREATED',
-                  'ended': course.status === 'ENDED',
-                  'canceled': course.status === 'CANCELED'
-                }"
-              >
-                {{ course.status === 'ACTIVE' ? '进行中' : 
-                   course.status === 'COMPLETED' ? '已结课' : 
-                   course.status === 'CREATED' ? '未开始' :
-                   course.status === 'ENDED' ? '已结束' :
-                   course.status === 'CANCELED' ? '已取消' : '未知状态' }}
+              <view class="course-status" :class="{
+                'active': course.status === 'ACTIVE',
+                'completed': course.status === 'COMPLETED',
+                'created': course.status === 'CREATED',
+                'ended': course.status === 'ENDED',
+                'canceled': course.status === 'CANCELED'
+              }">
+                {{ course.status === 'ACTIVE' ? '进行中' :
+                  course.status === 'COMPLETED' ? '已结课' :
+                    course.status === 'CREATED' ? '未开始' :
+                      course.status === 'ENDED' ? '已结束' :
+                        course.status === 'CANCELED' ? '已取消' : '未知状态' }}
               </view>
             </view>
-            
+
             <!-- @ts-ignore -->
             <view class="course-card-content">
               <!-- @ts-ignore -->
               <view class="course-name">{{ course.name }}</view>
-              
+
               <!-- 教师视图 -->
               <!-- @ts-ignore -->
               <view v-if="isTeacher" class="course-meta">
@@ -561,7 +509,7 @@ async function processCheckInQRCode(qrContent) {
                   <text>{{ course.memberCount || 0 }}人</text>
                 </view>
               </view>
-              
+
               <!-- 学生视图 -->
               <!-- @ts-ignore -->
               <view v-else-if="isStudent" class="course-meta">
@@ -572,7 +520,7 @@ async function processCheckInQRCode(qrContent) {
                   <text>{{ course.creatorFullName || course.creatorUsername || '未知教师' }}</text>
                 </view>
               </view>
-              
+
               <!-- @ts-ignore -->
               <view class="course-time">
                 <wd-icon name="calendar" size="28rpx" color="#999" />
@@ -589,7 +537,7 @@ async function processCheckInQRCode(qrContent) {
             </view>
           </view>
         </view>
-        
+
         <!-- 无全部课程 -->
         <!-- @ts-ignore -->
         <view v-else class="empty-container">
@@ -626,13 +574,13 @@ async function processCheckInQRCode(qrContent) {
   justify-content: space-between;
   padding: 40rpx 30rpx 20rpx;
   box-sizing: border-box;
-  
+
   &-title {
     font-size: 40rpx;
     font-weight: bold;
     color: #333;
   }
-  
+
   &-action {
     display: flex;
     align-items: center;
@@ -647,28 +595,29 @@ async function processCheckInQRCode(qrContent) {
   padding: 20rpx 30rpx;
   box-sizing: border-box;
   position: relative;
-  
+
   .tab-item {
     display: flex;
     align-items: center;
     margin-right: 40rpx;
     padding-bottom: 16rpx;
     border-bottom: 6rpx solid transparent;
-    
+
     &.active {
       border-bottom-color: #6a11cb;
-      
-      .tab-text, .tab-count {
+
+      .tab-text,
+      .tab-count {
         color: #6a11cb;
         font-weight: bold;
       }
     }
-    
+
     .tab-text {
       font-size: 30rpx;
       color: #666;
     }
-    
+
     .tab-count {
       font-size: 26rpx;
       color: #666;
@@ -705,7 +654,7 @@ async function processCheckInQRCode(qrContent) {
   justify-content: center;
   padding: 100rpx 0;
   gap: 20rpx;
-  
+
   text {
     font-size: 28rpx;
     color: #999;
@@ -719,23 +668,23 @@ async function processCheckInQRCode(qrContent) {
   overflow: hidden;
   box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
-  
+
   &:active {
     transform: scale(0.98);
     box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.1);
   }
-  
+
   &-cover {
     width: 100%;
     height: 200rpx;
     position: relative;
-    
+
     image {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
-    
+
     .course-status {
       position: absolute;
       right: 20rpx;
@@ -745,76 +694,76 @@ async function processCheckInQRCode(qrContent) {
       font-size: 24rpx;
       color: #fff;
       background-color: rgba(0, 0, 0, 0.5);
-      
+
       &.active {
         background-color: rgba(52, 152, 219, 0.8);
       }
-      
+
       &.completed {
         background-color: rgba(46, 204, 113, 0.8);
       }
-      
+
       &.created {
         background-color: rgba(155, 89, 182, 0.8);
       }
-      
+
       &.ended {
         background-color: rgba(52, 73, 94, 0.8);
       }
-      
+
       &.canceled {
         background-color: rgba(231, 76, 60, 0.8);
       }
     }
   }
-  
+
   &-content {
     padding: 20rpx 30rpx 30rpx;
-    
+
     .course-name {
       font-size: 32rpx;
       font-weight: bold;
       color: #333;
       margin-bottom: 16rpx;
     }
-    
+
     .course-meta {
       display: flex;
       flex-wrap: wrap;
       gap: 20rpx;
       margin-bottom: 16rpx;
-      
+
       .meta-item {
         display: flex;
         align-items: center;
         font-size: 26rpx;
         color: #666;
-        
+
         text {
           margin-left: 8rpx;
         }
       }
     }
-    
+
     .course-time {
       display: flex;
       align-items: center;
       font-size: 26rpx;
       color: #999;
       margin-bottom: 16rpx;
-      
+
       text {
         margin-left: 8rpx;
       }
     }
-    
+
     .view-details {
       display: flex;
       align-items: center;
       justify-content: flex-end;
       font-size: 26rpx;
       color: #6a11cb;
-      
+
       text {
         margin-left: 8rpx;
       }
@@ -829,13 +778,13 @@ async function processCheckInQRCode(qrContent) {
   align-items: center;
   justify-content: center;
   padding: 100rpx 0;
-  
+
   .empty-text {
     font-size: 30rpx;
     color: #999;
     margin: 30rpx 0;
   }
-  
+
   .action-button-container {
     display: flex;
     gap: 20rpx;
@@ -855,7 +804,7 @@ async function processCheckInQRCode(qrContent) {
   align-items: center;
   justify-content: center;
   z-index: 10;
-  
+
   &:active {
     transform: scale(0.95);
     box-shadow: 0 4rpx 8rpx rgba(106, 17, 203, 0.3);
@@ -870,8 +819,6 @@ async function processCheckInQRCode(qrContent) {
 }
 </style>
 
-<route lang="json">
-{
+<route lang="json">{
   "navigationBarTitleText": "课程考勤"
-}
-</route>
+}</route>
