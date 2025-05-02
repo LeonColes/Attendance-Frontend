@@ -74,27 +74,6 @@ watch(() => formData.checkinType, (newType) => {
   }
 })
 
-// 获取系统信息
-function getSystemInfo() {
-  try {
-    // 使用推荐的新API
-    const windowInfo = uni.getWindowInfo()
-    const deviceInfo = uni.getDeviceInfo()
-    return {
-      platform: deviceInfo.platform,
-      model: deviceInfo.model,
-      windowWidth: windowInfo.windowWidth,
-      windowHeight: windowInfo.windowHeight,
-      statusBarHeight: windowInfo.statusBarHeight,
-      safeArea: windowInfo.safeArea
-    }
-  } catch (e) {
-    console.error('获取系统信息失败:', e)
-    // 如果新API不可用，回退到旧API
-    return uni.getSystemInfoSync()
-  }
-}
-
 // 初始化
 onMounted(() => {
   // 从路由参数获取课程ID
@@ -191,7 +170,6 @@ function chooseLocation() {
   try {
     // 首先检查平台
     const systemInfo = uni.getSystemInfoSync();
-    const isWechat = systemInfo.platform === 'mp-weixin';
     
     // 显示加载提示
     uni.showLoading({

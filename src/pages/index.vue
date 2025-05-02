@@ -41,59 +41,6 @@ const otherCourses = ref<any[]>([])
 const isTeacher = computed(() => userStore.userInfo?.role === 'TEACHER')
 const isStudent = computed(() => userStore.userInfo?.role === 'STUDENT')
 
-// 获取系统信息
-function getSystemInfo() {
-  try {
-    // 使用推荐的新API
-    if (typeof getSafeUni().getWindowInfo === 'function' && 
-        typeof getSafeUni().getDeviceInfo === 'function') {
-      const windowInfo = getSafeUni().getWindowInfo()
-      const deviceInfo = getSafeUni().getDeviceInfo()
-      
-      return {
-        platform: deviceInfo.platform,
-        model: deviceInfo.model,
-        windowWidth: windowInfo.windowWidth,
-        windowHeight: windowInfo.windowHeight,
-        statusBarHeight: windowInfo.statusBarHeight,
-        safeArea: windowInfo.safeAreaInsets ? {
-          top: windowInfo.safeAreaInsets.top,
-          right: windowInfo.safeAreaInsets.right,
-          bottom: windowInfo.safeAreaInsets.bottom,
-          left: windowInfo.safeAreaInsets.left
-        } : undefined
-      }
-    } else {
-      // 如果新API不可用，尝试使用老的API，但要捕获可能的错误
-      try {
-        return getSafeUni().getSystemInfoSync()
-      } catch (e) {
-        console.error('获取系统信息失败:', e)
-        // 返回默认值
-        return {
-          platform: 'unknown',
-          model: 'unknown',
-          windowWidth: 375,
-          windowHeight: 667,
-          statusBarHeight: 20,
-          safeArea: { top: 0, right: 0, bottom: 0, left: 0 }
-        }
-      }
-    }
-  } catch (e) {
-    console.error('获取系统信息失败:', e)
-    // 如果所有方法都失败，返回默认值
-    return {
-      platform: 'unknown',
-      model: 'unknown',
-      windowWidth: 375,
-      windowHeight: 667,
-      statusBarHeight: 20,
-      safeArea: { top: 0, right: 0, bottom: 0, left: 0 }
-    }
-  }
-}
-
 // 初始化
 onMounted(async () => {
   // 检查登录状态

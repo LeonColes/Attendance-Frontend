@@ -123,7 +123,7 @@ const safeAreaInsetBottom = ref(0)
 const loading = ref(true)
 const scanResult = ref('')
 const scannerError = ref('')
-let timer: number | null = null
+let timer: number | NodeJS.Timeout | null = null
 
 // 扫描结果状态
 const showResult = ref(false)
@@ -460,13 +460,17 @@ async function submitCheckIn(checkInId: string) {
       model: deviceInfo.model || '测试设备'
     }
     
-    // 准备签到参数
+    // 准备签到参数 - 确保与API要求匹配
     const checkinParams: any = {
       checkinId: checkInId,
       verifyMethod: 'QR_CODE',
+      // 将设备信息转为字符串
       device: JSON.stringify(deviceData),
-      verifyData: ''
+      // 添加空的verifyData字段
+      verifyData: checkInId
     }
+    
+    console.log('签到API参数:', checkinParams)
     
     // 调用API提交考勤
     const response = await submitCheckin(checkinParams)

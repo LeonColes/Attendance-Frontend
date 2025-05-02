@@ -252,39 +252,6 @@ function goBack() {
   uni.navigateBack()
 }
 
-// 获取系统信息
-function getSystemInfo() {
-  try {
-    // 使用新API替代已弃用的getSystemInfoSync
-    const deviceInfo = uni.getDeviceInfo()
-    const windowInfo = uni.getWindowInfo()
-    const appBaseInfo = uni.getAppBaseInfo()
-    
-    return {
-      platform: deviceInfo.platform,
-      model: deviceInfo.model,
-      brand: deviceInfo.brand,
-      system: deviceInfo.system,
-      windowWidth: windowInfo.windowWidth,
-      windowHeight: windowInfo.windowHeight,
-      statusBarHeight: windowInfo.statusBarHeight,
-      safeArea: windowInfo.safeArea,
-      appLanguage: appBaseInfo.language,
-      appVersion: appBaseInfo.version
-    }
-  } catch (e) {
-    console.error('获取系统信息失败:', e)
-    // 在新API不可用的情况下，尝试使用旧API（带警告但可用）
-    const fallbackInfo = uni.getSystemInfoSync()
-    return {
-      platform: fallbackInfo.platform,
-      model: fallbackInfo.model, 
-      brand: fallbackInfo.brand,
-      system: fallbackInfo.system
-    }
-  }
-}
-
 // 初始化
 onMounted(async () => {
   try {
