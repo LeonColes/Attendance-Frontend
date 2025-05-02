@@ -195,108 +195,104 @@ function chooseLocation() {
     
     // 显示加载提示
     uni.showLoading({
-      title: '正在获取位置...'
+      title: '正在准备位置服务...'
     });
     
-    // 首先授权位置
-    uni.authorize({
-      scope: 'scope.userLocation',
-      success() {
-        // 授权成功后，调用chooseLocation
-        uni.chooseLocation({
-          success: (res) => {
-            uni.hideLoading();
-            if (res.latitude && res.longitude) {
-              formData.location.latitude = res.latitude;
-              formData.location.longitude = res.longitude;
-              formData.location.address = res.address || '已选择位置';
-              
-              console.log('位置选择成功:', res);
-              
-              // 显示成功提示
-              uni.showToast({
-                title: '位置已设置',
-                icon: 'success'
-              });
-            } else {
-              uni.showToast({
-                title: '获取位置信息失败',
-                icon: 'none'
-              });
-            }
-          },
-          fail: (err) => {
-            uni.hideLoading();
-            console.error('选择位置失败:', err);
-            
-            // 检查是否是因为权限问题
-            if (err.errMsg && (
-              err.errMsg.includes('authorize') || 
-              err.errMsg.includes('permission') || 
-              err.errMsg.includes('auth')
-            )) {
-              // 打开设置页面引导用户授权
-              uni.showModal({
-                title: '需要位置权限',
-                content: '请在设置中允许使用位置权限',
-                confirmText: '去设置',
-                success(res) {
-                  if (res.confirm) {
-                    // 打开设置
-                    uni.openSetting({
-                      success(settingRes) {
-                        console.log('设置结果:', settingRes);
-                        // 如果用户设置了位置权限，再次尝试获取位置
-                        if (settingRes.authSetting && settingRes.authSetting['scope.userLocation']) {
-                          setTimeout(() => {
-                            chooseLocation();
-                          }, 500);
-                        }
-                      }
-                    });
-                  }
-                }
-              });
-            } else if (err.errMsg && err.errMsg.includes('cancel')) {
-              // 用户取消
-              uni.showToast({
-                title: '已取消选择位置',
-                icon: 'none'
-              });
-            } else {
-              // 其他错误
-              uni.showToast({
-                title: '选择位置失败，请重试',
-                icon: 'none'
-              });
-            }
-          },
-          complete: () => {
-            uni.hideLoading();
-          }
-        });
-      },
-      fail(err) {
+    // 直接尝试选择位置，如果权限未授权会自动弹出授权请求
+    uni.chooseLocation({
+      success: (res) => {
         uni.hideLoading();
-        console.error('授权失败:', err);
-        // 如果授权失败，提示用户去设置
-        uni.showModal({
-          title: '需要位置权限',
-          content: '请在设置中允许使用位置权限',
-          confirmText: '去设置',
-          success(res) {
-            if (res.confirm) {
-              uni.openSetting();
+        if (res.latitude && res.longitude) {
+          formData.location.latitude = res.latitude;
+          formData.location.longitude = res.longitude;
+          formData.location.address = res.address || '已选择位置';
+          
+          console.log('位置选择成功:', res);
+          
+          // 显示成功提示并添加振动反馈
+          uni.showToast({
+            title: '位置已设置',
+            icon: 'success'
+          });
+          
+          // 尝试振动反馈
+          try {
+            uni.vibrateShort({
+              success: () => {
+                console.log('振动反馈成功');
+              },
+              fail: () => {}
+            });
+          } catch (error) {}
+        } else {
+          uni.showToast({
+            title: '获取位置信息失败',
+            icon: 'none'
+          });
+        }
+      },
+      fail: (err) => {
+        uni.hideLoading();
+        console.error('选择位置失败:', err);
+        
+        // 检查是否是因为权限问题
+        if (err.errMsg && (
+          err.errMsg.includes('authorize') || 
+          err.errMsg.includes('permission') || 
+          err.errMsg.includes('auth') ||
+          err.errMsg.includes('deny')
+        )) {
+          // 打开设置页面引导用户授权
+          uni.showModal({
+            title: '需要位置权限',
+            content: '请在设置中允许微信获取位置信息',
+            confirmText: '去设置',
+            success(res) {
+              if (res.confirm) {
+                // 在微信小程序环境下打开权限设置页面
+                uni.openSetting({
+                  success(settingRes) {
+                    console.log('设置结果:', settingRes);
+                    if (settingRes.authSetting && settingRes.authSetting['scope.userLocation']) {
+                      uni.showToast({
+                        title: '授权成功，请重新选择位置',
+                        icon: 'none',
+                        duration: 2000
+                      });
+                      
+                      // 短暂延迟后重试
+                      setTimeout(() => {
+                        chooseLocation();
+                      }, 1000);
+                    }
+                  }
+                });
+              }
             }
-          }
-        });
+          });
+        } else if (err.errMsg && err.errMsg.includes('cancel')) {
+          // 用户取消
+          uni.showToast({
+            title: '已取消选择位置',
+            icon: 'none'
+          });
+        } else {
+          // 其他错误
+          uni.showToast({
+            title: '选择位置失败，请重试',
+            icon: 'none'
+          });
+        }
+      },
+      complete: () => {
+        uni.hideLoading();
       }
     });
   } catch (err) {
     uni.hideLoading();
     console.error('选择位置错误', err);
     uni.showToast({
-      title: '选择位置失败，请重试',
+      title: '位置服务异常，请重试',
       icon: 'none'
     });
   }

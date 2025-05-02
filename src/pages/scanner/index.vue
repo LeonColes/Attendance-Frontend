@@ -45,7 +45,7 @@
     
     <!-- 扫描区域 -->
     <!-- @ts-ignore -->
-    <view v-show="!loading && !scannerError" class="scanner-container">
+    <view v-show="!loading && !scannerError && !showResult" class="scanner-container">
       <!-- @ts-ignore -->
       <view id="scanner" class="scanner-view"></view>
       
@@ -59,9 +59,48 @@
       </view>
     </view>
     
+    <!-- 扫描结果显示 -->
+    <!-- @ts-ignore -->
+    <view v-if="showResult" class="result-container">
+      <view class="result-card">
+        <!-- 加载状态 -->
+        <view v-if="resultStatus === 'processing'" class="status-processing">
+          <wd-loading color="#6a11cb" size="60rpx" />
+          <text class="status-text">正在处理签到...</text>
+        </view>
+        
+        <!-- 成功状态 -->
+        <view v-else-if="resultStatus === 'success'" class="status-success">
+          <wd-icon name="success" size="80rpx" color="#52c41a" />
+          <text class="status-title">签到成功</text>
+          <text class="status-info">我们已记录您的签到信息</text>
+          
+          <wd-button type="primary" custom-style="margin-top: 40rpx;" @click="goBack">
+            返回首页
+          </wd-button>
+        </view>
+        
+        <!-- 失败状态 -->
+        <view v-else-if="resultStatus === 'error'" class="status-error">
+          <wd-icon name="warning" size="80rpx" color="#f5222d" />
+          <text class="status-title">签到失败</text>
+          <text class="status-info">{{ resultMessage }}</text>
+          
+          <view class="button-group">
+            <wd-button type="info" custom-style="margin-right: 20rpx;" @click="resetScanner">
+              重新扫码
+            </wd-button>
+            <wd-button type="primary" @click="goBack">
+              返回
+            </wd-button>
+          </view>
+        </view>
+      </view>
+    </view>
+    
     <!-- 手动扫码按钮 -->
     <!-- @ts-ignore -->
-    <view v-if="!loading" class="footer" :style="{ paddingBottom: safeAreaInsetBottom + 'px' }">
+    <view v-if="!loading && !showResult" class="footer" :style="{ paddingBottom: safeAreaInsetBottom + 'px' }">
       <wd-button block type="primary" @click="handleScan">
         点击使用系统扫码
       </wd-button>
@@ -85,6 +124,11 @@ const loading = ref(true)
 const scanResult = ref('')
 const scannerError = ref('')
 let timer: number | null = null
+
+// 扫描结果状态
+const showResult = ref(false)
+const resultStatus = ref('')  // processing, success, error
+const resultMessage = ref('')
 
 // 获取系统信息
 function getDeviceInfo() {
@@ -270,6 +314,19 @@ function processQRCode(result: string) {
       return
     }
     
+    // 更新界面状态
+    showResult.value = true
+    resultStatus.value = 'processing'
+    
+    // 尝试振动反馈
+    try {
+      getSafeUni().vibrateShort({
+        success: () => {
+          console.log('振动反馈成功')
+        }
+      })
+    } catch (e) {}
+    
     // 检查是否是考勤二维码
     if (isAttendanceQRCode(result)) {
       // 处理考勤二维码
@@ -278,12 +335,14 @@ function processQRCode(result: string) {
       // 处理课程二维码
       handleCourseQRCode(result)
     } else {
-      // 未知格式，尝试作为URL处理
-      showToast('未知的二维码格式')
+      // 未知格式
+      resultStatus.value = 'error'
+      resultMessage.value = '未知的二维码格式'
     }
   } catch (error) {
     console.error('处理二维码失败:', error)
-    showToast('处理二维码失败')
+    resultStatus.value = 'error'
+    resultMessage.value = '处理二维码失败'
   }
 }
 
@@ -390,10 +449,9 @@ function extractCourseCodeFromQR(qrContent: string): string {
 // 提交考勤
 async function submitCheckIn(checkInId: string) {
   try {
-    // 显示加载提示
-    getSafeUni().showLoading({
-      title: '正在提交考勤...'
-    })
+    // 显示处理状态
+    showResult.value = true
+    resultStatus.value = 'processing'
     
     // 准备设备信息
     const deviceInfo = getDeviceInfo()
@@ -413,17 +471,16 @@ async function submitCheckIn(checkInId: string) {
     // 调用API提交考勤
     const response = await submitCheckin(checkinParams)
     
-    // 关闭加载提示
-    getSafeUni().hideLoading()
-    
     if (response && response.code === 200) {
-      // 显示成功提示
-      getSafeUni().showToast({
-        title: '签到成功',
-        icon: 'success'
-      })
+      // 更新成功状态
+      resultStatus.value = 'success'
       
-      // 返回首页
+      // 尝试再次振动反馈
+      try {
+        getSafeUni().vibrateLong()
+      } catch (e) {}
+      
+      // 延迟返回首页
       setTimeout(() => {
         // #ifdef MP-WEIXIN
         // 微信小程序中使用reLaunch避免switchTab超时问题
@@ -438,15 +495,29 @@ async function submitCheckIn(checkInId: string) {
           url: '/pages/index'
         })
         // #endif
-      }, 1500)
+      }, 2500)
     } else {
-      throw new Error(response?.message || '签到失败')
+      // 更新失败状态
+      resultStatus.value = 'error'
+      resultMessage.value = response?.message || '签到失败'
     }
   } catch (error) {
     console.error('提交考勤失败:', error)
-    getSafeUni().hideLoading()
-    showToast('提交考勤失败，请重试')
+    // 更新失败状态
+    resultStatus.value = 'error'
+    resultMessage.value = '提交考勤失败，请重试'
   }
+}
+
+// 重置扫描器
+function resetScanner() {
+  showResult.value = false
+  resultStatus.value = ''
+  resultMessage.value = ''
+  scanResult.value = ''
+  
+  // 重新初始化扫描器
+  initScanner()
 }
 
 // 显示提示信息
@@ -606,6 +677,65 @@ function goBack() {
   left: 0;
   right: 0;
   padding: 40rpx;
+}
+
+.result-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 100;
+  padding: 30rpx;
+}
+
+.result-card {
+  width: 100%;
+  max-width: 600rpx;
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 40rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  
+  .status-processing,
+  .status-success,
+  .status-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30rpx 0;
+  }
+  
+  .status-text {
+    margin-top: 30rpx;
+    font-size: 32rpx;
+    color: #333;
+  }
+  
+  .status-title {
+    margin-top: 30rpx;
+    font-size: 36rpx;
+    font-weight: bold;
+    color: #333;
+  }
+  
+  .status-info {
+    margin-top: 16rpx;
+    font-size: 28rpx;
+    color: #666;
+  }
+  
+  .button-group {
+    display: flex;
+    margin-top: 40rpx;
+  }
 }
 </style>
 
