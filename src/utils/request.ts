@@ -12,7 +12,7 @@ interface RequestOptions extends UniNamespace.RequestOptions {
 }
 
 // 接口基础URL
-const BASE_URL = 'http://localhost:8080'
+const BASE_URL = 'http://172.20.10.2:8080'
 
 // token的存储键名
 const TOKEN_KEY = 'token'

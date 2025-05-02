@@ -1006,7 +1006,7 @@ function confirmDeleteCourse() {
               <!-- @ts-ignore -->
               <view class="info-label">起止日期</view>
               <!-- @ts-ignore -->
-              <view class="info-value date-value">{{ formatDateTime(courseDetail.startDate) }} ~ {{formatDateTime(courseDetail.endDate) }}</view>
+              <view class="info-value date-value">{{ courseDetail.startDate }} ~ {{ courseDetail.endDate }}</view>
             </view>
 
             <!-- @ts-ignore -->
@@ -1095,7 +1095,7 @@ function confirmDeleteCourse() {
                 <view class="checkin-info-row">
                   <view class="checkin-time">
                     <wd-icon name="time" size="28rpx" color="#666" />
-                    <text>{{ formatDateTime(checkin.startTime) }} ~ {{ formatDateTime(checkin.endTime) }}</text>
+                    <text>{{ checkin.startTime }} ~ {{ checkin.endTime }}</text>
                   </view>
                   <view class="checkin-type-badge">
                     <wd-icon :name="checkin.checkinType === 'QR_CODE' ? 'scan' : 'location'" size="24rpx" :color="checkin.checkinType === 'QR_CODE' ? '#2196f3' : '#4caf50'" />
