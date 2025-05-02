@@ -293,97 +293,44 @@ function openScanner() {
 // 处理签到二维码
 async function processCheckInQRCode(qrContent) {
   try {
-    // 显示签到中提示
-    getSafeUni().showLoading({
-      title: '正在签到...'
-    })
-    
     // 获取设备信息
     const deviceInfo = getSafeUni().getSystemInfoSync()
-    const deviceModel = deviceInfo.model || 'iPhone 13'
-    
-    // 构造位置信息
-    const location = {
-      latitude: 39.9042,
-      longitude: 116.4074
-    }
+    const deviceModel = deviceInfo.model || '设备不明'
     
     // 准备API调用参数
-    const apiParams = {
-      checkinId: qrContent,                 // 使用checkinId而非taskId
-      verifyData: qrContent,                // 使用扫码结果作为verifyData
-      location: JSON.stringify(location),    // 位置信息
-      device: deviceModel,                   // 设备信息
-      verifyMethod: "QR_CODE"               // 使用常量字符串
+    const params = {
+      checkinId: qrContent,                   // 使用checkinId而非taskId
+      verifyMethod: CheckInType.QR_CODE,                 // 使用扫码结果作为verifyData
+      device: deviceModel,                    // 设备信息
     }
-    
-    console.log('签到API参数:', apiParams)
-    
-    // 获取token
-    const token = uni.getStorageSync('token')
-    let authHeader = ''
+    console.log('签到API参数:', params)
     
     try {
-      // 尝试解析token
-      if (typeof token === 'string') {
-        try {
-          const parsedToken = JSON.parse(token)
-          authHeader = `${parsedToken.tokenType || 'Bearer'} ${parsedToken.accessToken || ''}`
-        } catch {
-          // 如果token不是JSON格式，直接使用
-          authHeader = `Bearer ${token}`
-        }
-      }
+      // 使用封装好的 API 进行签到
+      const response = await submitCheckin(params)
       
-      // 调用原生请求接口
-      uni.request({
-        url: 'http://localhost:8080/api/courses/attendance/check-in',
-        method: 'POST',
-        header: {
-          'Authorization': authHeader,
-          'Content-Type': 'application/json',
-          'Accept': '*/*',
-          'User-Agent': 'Apifox/1.0.0 (https://apifox.com)',
-          'Host': 'localhost:8080',
-          'Connection': 'keep-alive'
-        },
-        data: apiParams,
-        success: (res: any) => {
-          // 隐藏加载提示
-          getSafeUni().hideLoading()
-          
-          if (res.statusCode === 200 && res.data && res.data.code === 200) {
-            getSafeUni().showToast({
-              title: '签到成功',
-              icon: 'success'
-            })
-            
-            // 延迟后刷新当前页面
-            setTimeout(() => {
-              // 刷新当前页面数据
-              refreshCourses()
-            }, 1500)
-          } else {
-            getSafeUni().showToast({
-              title: res.data?.message || '签到失败',
-              icon: 'none'
-            })
-          }
-        },
-        fail: (err) => {
-          console.error('API请求失败:', err)
-          getSafeUni().hideLoading()
-          getSafeUni().showToast({
-            title: '签到请求失败，请重试',
-            icon: 'none'
-          })
-        }
-      })
+      if (response.code === 200) {
+        getSafeUni().showToast({
+          title: response.message,
+          icon: 'success',
+          duration: 1500
+        })
+        // 延迟后刷新当前页面
+        setTimeout(() => {
+          // 刷新当前页面数据
+          refreshCourses()
+        }, 1000)
+      } else {
+        getSafeUni().showToast({
+          title: response.message || '签到失败',
+          icon: 'error'
+        })
+      }
     } catch (error) {
-      console.error('签到过程中发生错误:', error)
+      console.error('API请求失败:', error)
       getSafeUni().hideLoading()
       getSafeUni().showToast({
-        title: '签到失败，请重试',
+        title: '签到请求失败，请重试',
         icon: 'none'
       })
     }
@@ -394,25 +341,6 @@ async function processCheckInQRCode(qrContent) {
       title: '签到失败，请重试',
       icon: 'none'
     })
-  }
-}
-
-// 处理新创建的课程，由创建课程页面调用
-function handleNewCourse(newCourse) {
-  if (newCourse) {
-    console.log('收到新创建的课程:', newCourse)
-    
-    // 根据课程状态添加到对应列表
-    if (newCourse.status === 'ACTIVE') {
-      // 将新课程添加到激活课程列表的开头
-      activeCourses.value.unshift(newCourse)
-      activeCourseCount.value += 1
-    } else if (newCourse.status === 'COMPLETED') {
-      allCourses.value.unshift(newCourse)
-      allCourseCount.value += 1
-    } else {
-      otherCourses.value.unshift(newCourse)
-    }
   }
 }
 </script>

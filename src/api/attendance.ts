@@ -124,7 +124,7 @@ export interface CheckinSubmitParams {
   verifyMethod: CheckInType
   device: string
   location?: string
-  verifyData: string
+  verifyData?: string
 }
 
 /**

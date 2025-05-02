@@ -265,7 +265,7 @@ export function getCourseQRCode(courseId: string): Promise<any> {
     
     // 请求选项
     const requestOptions: UniApp.RequestOptions = {
-      url: `http://localhost:8080/api/courses/qrcode?courseId=${courseId}`,
+      url: `/api/courses/qrcode?courseId=${courseId}`,
       method: 'GET',
       header: {
         'Authorization': authHeader

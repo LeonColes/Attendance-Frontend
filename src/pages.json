@@ -4,26 +4,12 @@
     "navigationBarBackgroundColor": "#ffffff",
     "navigationStyle": "default"
   },
-  "tabBar": {
-    "height": "0",
-    "color": "#bfbfbf",
-    "selectedColor": "#0165FF",
-    "list": [
-      {
-        "pagePath": "pages/index",
-        "text": "首页"
-      },
-      {
-        "pagePath": "pages/my/index",
-        "text": "我的"
-      }
-    ]
-  },
   "pages": [
     {
       "path": "pages/index",
       "type": "home",
-      "navigationBarTitleText": "课程考勤"
+      "navigationBarTitleText": "课程考勤",
+      "style": {}
     },
     {
       "path": "pages/checkin-detail/index",
@@ -48,7 +34,8 @@
     },
     {
       "path": "pages/course-detail/index",
-      "type": "page"
+      "type": "page",
+      "style": {}
     },
     {
       "path": "pages/create-checkin/index",
@@ -74,11 +61,13 @@
     {
       "path": "pages/location-checkin/index",
       "type": "page",
-      "navigationBarTitleText": "位置签到"
+      "navigationBarTitleText": "位置签到",
+      "style": {}
     },
     {
       "path": "pages/login/index",
-      "type": "page"
+      "type": "page",
+      "style": {}
     },
     {
       "path": "pages/my/index",
@@ -91,7 +80,8 @@
     },
     {
       "path": "pages/register/index",
-      "type": "page"
+      "type": "page",
+      "style": {}
     },
     {
       "path": "pages/scanner/index",
@@ -101,5 +91,20 @@
       }
     }
   ],
+  "tabBar": {
+    "height": "0",
+    "color": "#bfbfbf",
+    "selectedColor": "#0165FF",
+    "list": [
+      {
+        "pagePath": "pages/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/my/index",
+        "text": "我的"
+      }
+    ]
+  },
   "subPackages": []
 }
