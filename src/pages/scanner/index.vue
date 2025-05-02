@@ -466,44 +466,83 @@ async function submitCheckIn(checkInId: string) {
       verifyMethod: 'QR_CODE',
       // 将设备信息转为字符串
       device: JSON.stringify(deviceData),
-      // 添加空的verifyData字段
+      // 添加verifyData字段
       verifyData: checkInId
     }
     
+    console.log('扫码结果:', checkInId)
     console.log('签到API参数:', checkinParams)
     
-    // 调用API提交考勤
-    const response = await submitCheckin(checkinParams)
+    // 添加重试逻辑
+    let retryCount = 0
+    const maxRetries = 3
     
-    if (response && response.code === 200) {
-      // 更新成功状态
-      resultStatus.value = 'success'
-      
-      // 尝试再次振动反馈
+    while (retryCount < maxRetries) {
       try {
-        getSafeUni().vibrateLong()
-      } catch (e) {}
-      
-      // 延迟返回首页
-      setTimeout(() => {
-        // #ifdef MP-WEIXIN
-        // 微信小程序中使用reLaunch避免switchTab超时问题
-        getSafeUni().reLaunch({
-          url: '/pages/index'
-        })
-        // #endif
+        // 调用API提交考勤
+        const response = await submitCheckin(checkinParams)
         
-        // #ifndef MP-WEIXIN
-        // 简化导航，只使用单一方法，不使用备选方案
-        getSafeUni().switchTab({
-          url: '/pages/index'
-        })
-        // #endif
-      }, 2500)
-    } else {
-      // 更新失败状态
-      resultStatus.value = 'error'
-      resultMessage.value = response?.message || '签到失败'
+        if (response && response.code === 200) {
+          // 更新成功状态
+          resultStatus.value = 'success'
+          
+          // 尝试再次振动反馈
+          try {
+            getSafeUni().vibrateLong()
+          } catch (e) {}
+          
+          // 延迟返回首页
+          setTimeout(() => {
+            // 简化导航逻辑
+            getSafeUni().switchTab({
+              url: '/pages/index',
+              fail: () => {
+                // 如果switchTab失败，尝试reLaunch
+                getSafeUni().reLaunch({
+                  url: '/pages/index'
+                })
+              }
+            })
+          }, 2500)
+          
+          // 成功后跳出重试循环
+          break
+        } else {
+          // 记录失败原因
+          const errorMsg = response?.message || '签到失败'
+          console.error('签到请求返回错误:', errorMsg)
+          
+          // 如果已经是最后一次重试，则显示错误
+          if (retryCount === maxRetries - 1) {
+            resultStatus.value = 'error'
+            resultMessage.value = errorMsg
+          } else {
+            // 否则继续重试
+            retryCount++
+            await new Promise(resolve => setTimeout(resolve, 1000))  // 等待1秒后重试
+            continue
+          }
+        }
+      } catch (apiError: any) {
+        console.error('提交考勤请求失败:', apiError)
+        
+        // 如果已经是最后一次重试，则显示错误
+        if (retryCount === maxRetries - 1) {
+          resultStatus.value = 'error'
+          
+          // 检查错误类型，提供更有用的提示
+          if (apiError.errMsg && apiError.errMsg.includes('ERR_CONNECTION_REFUSED')) {
+            resultMessage.value = '无法连接到服务器，请检查网络设置'
+          } else {
+            resultMessage.value = '提交考勤失败，请重试'
+          }
+        } else {
+          // 否则继续重试
+          retryCount++
+          await new Promise(resolve => setTimeout(resolve, 1000))  // 等待1秒后重试
+          continue
+        }
+      }
     }
   } catch (error) {
     console.error('提交考勤失败:', error)
