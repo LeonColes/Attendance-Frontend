@@ -22,13 +22,6 @@ export default defineUniPages({
       "navigationBarTitleText": "课程考勤"
     },
     {
-      "path": "pages/checkin-location/index",
-      "type": "page",
-      "style": {
-        "navigationBarTitleText": "位置签到"
-      }
-    },
-    {
       "path": "pages/checkin-qrcode/index",
       "type": "page",
       "style": {

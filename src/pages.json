@@ -12,13 +12,6 @@
       "style": {}
     },
     {
-      "path": "pages/checkin-location/index",
-      "type": "page",
-      "style": {
-        "navigationBarTitleText": "位置签到"
-      }
-    },
-    {
       "path": "pages/checkin-qrcode/index",
       "type": "page",
       "style": {
@@ -57,6 +50,7 @@
       "path": "pages/location-checkin/index",
       "type": "page",
       "navigationBarTitleText": "位置签到",
+      "navigationStyle": "custom",
       "style": {}
     },
     {
