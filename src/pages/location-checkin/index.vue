@@ -262,9 +262,9 @@ function getLocation() {
         locationError.value = '获取位置失败，将使用默认位置签到'
         
         // 使用默认位置
-        location.latitude = 39.908823
-        location.longitude = 116.397470
-        location.address = '默认位置 (北京市天安门)'
+        location.latitude = 30.4851
+        location.longitude = 114.3072
+        location.address = '默认位置 (武昌首义学院)'
         location.updatedAt = Date.now()
         
         // 更新地图位置
@@ -277,11 +277,11 @@ function getLocation() {
     locationError.value = '获取位置异常，将使用默认位置签到'
     
     // 使用默认位置
-    location.latitude = 39.908823
-    location.longitude = 116.397470
-    location.address = '默认位置 (北京市天安门)'
+    location.latitude = 30.4851
+    location.longitude = 114.3072
+    location.address = '默认位置 (武昌首义学院)'
     location.updatedAt = Date.now()
-    
+    // 30.4851, 114.3072
     // 更新地图位置
     moveToLocation()
     uni.hideLoading();
@@ -296,12 +296,12 @@ async function submitLocationCheckin() {
     // 获取设备信息
     const deviceInfo = uni.getSystemInfoSync()
     
-    // 使用当前位置或默认位置
-    const locationStr = `${location.latitude},${location.longitude},${location.address}`
+    // 使用当前位置，并确保包含地址信息
+    const locationStr = `${location.latitude},${location.longitude},${location.address || '未知地点'}`
     
     // 准备签到数据
     const checkinData = {
-      checkinId: checkinId.value || 'cf29f64b-778f-4f26-ba9f-9829d9ae4a4d',
+      checkinId: checkinId.value,
       verifyMethod: CheckInType.LOCATION,
       location: locationStr,
       device: JSON.stringify({
