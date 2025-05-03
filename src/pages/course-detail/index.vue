@@ -222,7 +222,7 @@ async function loadCourseMembers(showLoading: boolean = false) {
 
     if (response && response.code === 200) {
       console.log('成员列表API响应:', response.data)
-      
+
       // 修复数据结构判断逻辑，优先检查最常见的数据结构
       if (response.data && typeof response.data === 'object') {
         if (Array.isArray(response.data)) {
@@ -275,7 +275,7 @@ async function loadCourseMembers(showLoading: boolean = false) {
       }
 
       console.log('成员列表加载成功，共' + membersList.value.length + '名成员:', membersList.value)
-      
+
       // 成员加载后更新统计数据
       if (activeTab.value === 'stats') {
         loadCourseAttendanceStats()
@@ -394,9 +394,9 @@ async function loadCourseAttendanceStats() {
 function switchTab(tab: string) {
   // 如果当前标签与目标标签相同，不执行任何操作
   if (activeTab.value === tab) return
-  
+
   activeTab.value = tab
-  
+
   // 切换到相应标签时刷新对应数据
   if (tab === 'members') {
     loadCourseMembers(true)
@@ -424,24 +424,24 @@ function getCheckinTypeText(type: CheckInType) {
 // 添加兼容iOS的日期解析函数
 function parseDateSafely(dateString: string): Date {
   if (!dateString) return new Date();
-  
+
   try {
     // 检查是否为兼容格式 (ISO格式或包含T的标准格式)
     if (dateString.includes('T') || /^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
       return new Date(dateString);
     }
-    
+
     // 尝试转换 "yyyy-MM-dd HH:mm:ss" 格式为 "yyyy/MM/dd HH:mm:ss" (iOS兼容格式)
     if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dateString)) {
       return new Date(dateString.replace(/-/g, '/'));
     }
-    
+
     // 尝试解析为ISO格式 "yyyy-MM-ddTHH:mm:ss"
     const parts = dateString.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/);
     if (parts) {
       return new Date(`${parts[1]}-${parts[2]}-${parts[3]}T${parts[4]}:${parts[5]}:${parts[6]}`);
     }
-    
+
     // 最后尝试直接使用Date构造函数
     return new Date(dateString);
   } catch (e) {
@@ -456,7 +456,7 @@ function getCheckinStatus(checkin: any) {
   if (!checkin) return '';
 
   const now = new Date().getTime();
-  
+
   // 使用安全的日期解析函数
   const startTime = parseDateSafely(checkin.startTime).getTime();
   const endTime = parseDateSafely(checkin.endTime).getTime();
@@ -564,140 +564,29 @@ function getAttendanceRateClass(attendanceRate: number) {
 // 添加获取课程二维码的函数 - 修复二维码渲染问题
 async function loadCourseQRCode() {
   if (!courseId.value || !isTeacher.value) return
-
   try {
     // 显示加载状态并清除之前的URL
     qrCodeLoading.value = true
     qrCodeUrl.value = '' // 清空之前的URL
-    
-    console.log('开始获取课程二维码, 课程ID:', courseId.value)
-    
-    // 调用已封装好的API
     const response = await getCourseQRCode(courseId.value)
-    console.log('二维码API响应接收成功')
-    
-    if (!response) {
-      console.error('二维码响应为空')
-      throw new Error('二维码数据为空')
-    }
-
-    // 检查响应类型并进行相应处理
-    if (response instanceof ArrayBuffer) {
-      console.log('响应类型为ArrayBuffer, 长度:', response.byteLength)
-      
-      // 直接使用小程序原生API进行Base64转换
-      try {
-        // 微信小程序环境
-        // #ifdef MP-WEIXIN
-        console.log('微信小程序环境: 开始处理ArrayBuffer')
-        // 使用同步方式处理ArrayBuffer (部分新版微信小程序支持)
-        try {
-          // 尝试直接使用wx.arrayBufferToBase64
-          // @ts-ignore
-          const base64 = wx.arrayBufferToBase64(response)
-          qrCodeUrl.value = `data:image/png;base64,${base64}`
-          console.log('微信小程序: 使用同步方法转换成功')
-        } catch (err) {
-          console.error('微信小程序: 同步方法失败，尝试异步方法', err)
-          // 回退到异步方法
-          wx.arrayBufferToBase64({
-            buffer: response,
-            success: (res) => {
-              qrCodeUrl.value = `data:image/png;base64,${res.base64}`
-              console.log('微信小程序: 异步二维码Base64转换成功')
-            },
-            fail: (err) => {
-              console.error('微信小程序: Base64转换失败', err)
-              // 失败时尝试直接使用二进制数据
-              try {
-                // 使用替代策略
-                const uint8Array = new Uint8Array(response)
-                let binary = ''
-                for (let i = 0; i < uint8Array.length; i++) {
-                  binary += String.fromCharCode(uint8Array[i])
-                }
-                const base64 = btoa(binary)
-                qrCodeUrl.value = `data:image/png;base64,${base64}`
-                console.log('微信小程序: 使用手动实现方法转换成功')
-              } catch (e) {
-                console.error('微信小程序: 所有方法都失败', e)
-              }
-            }
-          })
-        }
-        // #endif
-        
-        // 非微信小程序环境
-        // #ifndef MP-WEIXIN
-        try {
-          const base64 = uni.arrayBufferToBase64(response)
-          qrCodeUrl.value = `data:image/png;base64,${base64}`
-          console.log('二维码Base64转换成功, 长度:', base64.length)
-        } catch (err) {
-          console.error('uni.arrayBufferToBase64 转换失败:', err)
-          throw new Error('二维码数据转换失败')
-        }
-        // #endif
-      } catch (err) {
-        console.error('Base64转换失败:', err)
-        throw new Error('二维码数据转换失败')
-      }
-    } else {
-      console.log('响应不是ArrayBuffer类型:', typeof response)
-      // 非ArrayBuffer类型响应处理 (后备方案)
-      
-      if (typeof response === 'string') {
-        // 字符串类型的响应
-        const strResponse = response as string
-        if (strResponse.indexOf('data:') === 0) {
-          // 如果已经是data URI
-          qrCodeUrl.value = strResponse
-          console.log('收到data URI格式的二维码')
-        } else {
-          // 假设是base64字符串
-          qrCodeUrl.value = `data:image/png;base64,${strResponse}`
-          console.log('将字符串作为base64处理')
-        }
-      } else if (typeof response === 'object') {
-        // 对象类型响应
-        console.log('响应是对象类型:', response)
-        
-        if ((response as any).base64) {
-          qrCodeUrl.value = `data:image/png;base64,${(response as any).base64}`
-          console.log('从对象中提取base64字段')
-        } else if ((response as any).url) {
-          qrCodeUrl.value = (response as any).url
-          console.log('从对象中提取url字段')
-        } else {
-          // 尝试将整个对象转为JSON字符串并作为文本显示
-          console.error('无法识别的对象格式:', response)
-          throw new Error('无法识别的二维码数据格式')
-        }
-      } else {
-        console.error('不支持的二维码数据格式:', response)
-        throw new Error('不支持的二维码数据格式')
-      }
-    }
+    if (typeof response === 'string') qrCodeUrl.value = response
+    else if(response instanceof ArrayBuffer) qrCodeUrl.value = `data:image/png;base64,${uni.arrayBufferToBase64(response)}`
+    else qrCodeUrl.value = `data:image/png;base64,${response}` 
   } catch (e) {
-    console.error('获取课程二维码出错:', e)
-    getSafeUni().showToast({
-      title: '获取二维码失败',
-      icon: 'none'
-    })
-  } finally {
-    qrCodeLoading.value = false
+    console.error('Base64转换失败:', e)
+    throw new Error('二维码数据转换失败')
   }
+  console.log('二维码加载完成', qrCodeUrl.value)
+  qrCodeLoading.value = false;
 }
 
 // 显示二维码弹窗
 function openQRCodeModal() {
   showQRCode.value = true
-  
   // 打开弹窗时自动加载二维码
   // 先重置状态
   qrCodeUrl.value = ''
   qrCodeLoading.value = false
-  
   // 延迟一小段时间再加载，以确保弹窗已完全打开
   setTimeout(() => {
     console.log('弹窗已打开，开始加载二维码')
@@ -708,7 +597,7 @@ function openQRCodeModal() {
 // 关闭二维码弹窗
 function closeQRCodeModal() {
   showQRCode.value = false
-  
+
   // 清除二维码状态，延迟执行以等待弹窗关闭动画完成
   setTimeout(() => {
     qrCodeUrl.value = ''
@@ -788,7 +677,7 @@ watch([membersList, checkinList], () => {
 function handleDeleteCourse() {
   // 设置删除状态
   isDeletingCourse.value = true
-  
+
   getSafeUni().showModal({
     title: '提示',
     content: '确定要删除该课程吗？此操作不可恢复！',
@@ -890,7 +779,7 @@ function handleOpenQRCode() {
 function handleExportData() {
   // 关闭操作菜单（如果打开的话）
   showOperations.value = false
-  
+
   // 确保有统计数据
   if (!attendanceStats.value || !attendanceStats.value.attendanceByStudent || attendanceStats.value.attendanceByStudent.length === 0) {
     getSafeUni().showToast({
@@ -915,7 +804,7 @@ function handleExportData() {
         title: 'Excel导出成功',
         icon: 'success'
       })
-      
+
       // 可以在这里添加文件下载或分享的代码
       console.log('导出考勤数据:', attendanceStats.value)
     } catch (error) {
@@ -988,7 +877,8 @@ function confirmDeleteCourse() {
               <!-- @ts-ignore -->
               <view class="info-label">教师</view>
               <!-- @ts-ignore -->
-              <view class="info-value">{{ courseDetail.creatorFullName || courseDetail.creatorUsername || '未知教师' }}</view>
+              <view class="info-value">{{ courseDetail.creatorFullName || courseDetail.creatorUsername || '未知教师' }}
+              </view>
             </view>
 
             <!-- @ts-ignore -->
@@ -1034,14 +924,12 @@ function confirmDeleteCourse() {
               <wd-icon name="qrcode" size="28rpx" color="#ffffff" />
               <text style="margin-left: 8rpx;">邀请学生</text>
             </wd-button>
-            
+
             <!-- 添加删除课程按钮 -->
-            <wd-button type="danger" size="small" 
-              custom-style="height: 70rpx; margin-top: 20rpx; margin-left: 20rpx;"
-              :loading="isDeletingCourse"
-              :disabled="isDeletingCourse"
-              @click="handleDeleteCourse">
-              <wd-icon v-if="!isDeletingCourse" name="delete" size="28rpx" color="#ffffff" style="color: #ffffff !important; fill: #ffffff !important;" />
+            <wd-button type="danger" size="small" custom-style="height: 70rpx; margin-top: 20rpx; margin-left: 20rpx;"
+              :loading="isDeletingCourse" :disabled="isDeletingCourse" @click="handleDeleteCourse">
+              <wd-icon v-if="!isDeletingCourse" name="delete" size="28rpx" color="#ffffff"
+                style="color: #ffffff !important; fill: #ffffff !important;" />
               <text style="margin-left: 8rpx;">{{ isDeletingCourse ? '删除中...' : '删除课程' }}</text>
             </wd-button>
           </view>
@@ -1079,13 +967,11 @@ function confirmDeleteCourse() {
           <!-- @ts-ignore -->
           <view v-if="checkinList.length > 0" class="checkin-list">
             <!-- @ts-ignore -->
-            <view v-for="(checkin, index) in checkinList" :key="checkin.id" class="checkin-item"
-              :class="[
-                checkin.checkinType.toLowerCase(), 
-                'checkin-type-' + checkin.checkinType.toLowerCase(),
-                'status-' + getCheckinStatus(checkin)
-              ]"
-              :style="{ '--i': index }">
+            <view v-for="(checkin, index) in checkinList" :key="checkin.id" class="checkin-item" :class="[
+              checkin.checkinType.toLowerCase(),
+              'checkin-type-' + checkin.checkinType.toLowerCase(),
+              'status-' + getCheckinStatus(checkin)
+            ]" :style="{ '--i': index }">
               <!-- 添加点击区域，排除操作按钮 -->
               <!-- @ts-ignore -->
               <view class="checkin-content" @click="handleCheckinClick(checkin)">
@@ -1098,7 +984,8 @@ function confirmDeleteCourse() {
                     <text>{{ checkin.startTime }} ~ {{ checkin.endTime }}</text>
                   </view>
                   <view class="checkin-type-badge">
-                    <wd-icon :name="checkin.checkinType === 'QR_CODE' ? 'scan' : 'location'" size="24rpx" :color="checkin.checkinType === 'QR_CODE' ? '#2196f3' : '#4caf50'" />
+                    <wd-icon :name="checkin.checkinType === 'QR_CODE' ? 'scan' : 'location'" size="24rpx"
+                      :color="checkin.checkinType === 'QR_CODE' ? '#2196f3' : '#4caf50'" />
                     <text>{{ getCheckinTypeText(checkin.checkinType) }}</text>
                   </view>
                 </view>
@@ -1110,18 +997,19 @@ function confirmDeleteCourse() {
 
                 <!-- 学生端显示签到状态 -->
                 <!-- @ts-ignore -->
-                <view v-else class="checkin-status"
-                  :class="checkin.personalStatus?.toLowerCase()">
+                <view v-else class="checkin-status" :class="checkin.personalStatus?.toLowerCase()">
                   {{ checkin.displayStatus }}
                 </view>
               </view>
-              
+
               <!-- 教师可以删除签到任务 -->
               <!-- @ts-ignore -->
               <view v-if="isTeacher" class="checkin-actions" @click.stop>
-                <wd-button type="danger" size="mini" custom-style="padding: 8rpx 16rpx; min-width: auto; background-color: #ff4d4f;" 
+                <wd-button type="danger" size="mini"
+                  custom-style="padding: 8rpx 16rpx; min-width: auto; background-color: #ff4d4f;"
                   @click.stop="handleDeleteCheckin(checkin)">
-                  <wd-icon name="delete" size="32rpx" color="#ffffff" style="color: #ffffff !important; fill: #ffffff !important;" />
+                  <wd-icon name="delete" size="32rpx" color="#ffffff"
+                    style="color: #ffffff !important; fill: #ffffff !important;" />
                 </wd-button>
               </view>
             </view>
@@ -1156,17 +1044,20 @@ function confirmDeleteCourse() {
                 <!-- @ts-ignore -->
                 <view class="member-username">{{ member.username }}</view>
                 <!-- @ts-ignore -->
-                <view class="member-role" :class="{ 'role-teacher': member.role === 'TEACHER', 'role-student': member.role !== 'TEACHER' }">
+                <view class="member-role"
+                  :class="{ 'role-teacher': member.role === 'TEACHER', 'role-student': member.role !== 'TEACHER' }">
                   {{ member.role === 'TEACHER' ? '教师' : '学生' }}
                 </view>
               </view>
-              
+
               <!-- 教师可以移除学生成员 -->
               <!-- @ts-ignore -->
               <view v-if="isTeacher && member.role !== 'TEACHER'" class="member-actions">
-                <wd-button type="danger" size="mini" custom-style="padding: 8rpx 16rpx; min-width: auto; background-color: #ff4d4f;" 
+                <wd-button type="danger" size="mini"
+                  custom-style="padding: 8rpx 16rpx; min-width: auto; background-color: #ff4d4f;"
                   @click="handleRemoveMember(member)">
-                  <wd-icon name="delete" size="32rpx" color="#ffffff" style="color: #ffffff !important; fill: #ffffff !important;" />
+                  <wd-icon name="delete" size="32rpx" color="#ffffff"
+                    style="color: #ffffff !important; fill: #ffffff !important;" />
                 </wd-button>
               </view>
             </view>
@@ -1292,30 +1183,21 @@ function confirmDeleteCourse() {
           <!-- 为微信小程序添加特殊处理 -->
           <!-- #ifdef MP-WEIXIN -->
           <view v-if="qrCodeUrl" class="qrcode-wx-container">
-            <image 
-              :src="qrCodeUrl" 
-              mode="aspectFit" 
-              class="qrcode-image"
-              :show-menu-by-longpress="true"
-            />
+            <image :src="qrCodeUrl" mode="aspectFit" class="qrcode-image" :show-menu-by-longpress="true" />
             <text class="qrcode-tip">长按图片可保存</text>
           </view>
           <!-- #endif -->
-          
+
           <!-- 其他平台通用处理 -->
           <!-- #ifndef MP-WEIXIN -->
-          <image v-if="qrCodeUrl" 
-                 :src="qrCodeUrl" 
-                 mode="aspectFit" 
-                 class="qrcode-image"
-          />
+          <image v-if="qrCodeUrl" :src="qrCodeUrl" mode="aspectFit" class="qrcode-image" />
           <!-- #endif -->
-          
+
           <view v-if="!qrCodeUrl && qrCodeLoading" class="qrcode-loading">
             <wd-loading size="60rpx" />
             <text>获取二维码中...</text>
           </view>
-          
+
           <view v-if="!qrCodeUrl && !qrCodeLoading" class="qrcode-error">
             <wd-icon name="warning" size="60rpx" color="#f56c6c" />
             <text>获取二维码失败</text>
@@ -1324,7 +1206,7 @@ function confirmDeleteCourse() {
               <text style="margin-left: 6rpx;">重试</text>
             </view>
           </view>
-          
+
           <view class="course-qrinfo">
             <text class="course-name">{{ courseDetail.name }}</text>
             <text class="course-code">课程码: {{ courseDetail.code }}</text>
@@ -1364,7 +1246,8 @@ function confirmDeleteCourse() {
           </view>
           <view class="operation-item delete-operation" v-if="isTeacher">
             <wd-icon name="delete" size="40rpx" color="#f44336" style="color: #f44336 !important;" />
-            <wd-button type="danger" size="small" custom-style="margin-left: 16rpx;" :loading="isDeletingCourse" @click="handleDeleteCourse">
+            <wd-button type="danger" size="small" custom-style="margin-left: 16rpx;" :loading="isDeletingCourse"
+              @click="handleDeleteCourse">
               <wd-icon name="delete" size="28rpx" color="#ffffff" />
               <text style="margin-left: 8rpx;">{{ isDeletingCourse ? '删除中...' : '删除课程' }}</text>
             </wd-button>
@@ -1767,6 +1650,7 @@ function confirmDeleteCourse() {
     opacity: 0;
     transform: translateY(10rpx);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1821,7 +1705,8 @@ function confirmDeleteCourse() {
   margin-right: 16rpx;
   position: relative;
   z-index: 1;
-  min-width: 0; /* 确保内容在有限宽度内可以缩小 */
+  min-width: 0;
+  /* 确保内容在有限宽度内可以缩小 */
   overflow: hidden;
 }
 
@@ -1890,7 +1775,8 @@ function confirmDeleteCourse() {
   font-weight: bold;
   color: #333;
   margin-bottom: 8rpx;
-  padding-right: 80rpx; /* 为状态腾出空间 */
+  padding-right: 80rpx;
+  /* 为状态腾出空间 */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2097,7 +1983,8 @@ function confirmDeleteCourse() {
   transition: all 0.3s ease;
 }
 
-.stat-item:hover, .stat-item:active {
+.stat-item:hover,
+.stat-item:active {
   background-color: rgba(106, 17, 203, 0.05);
   box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.07);
   transform: translateY(-2rpx);
@@ -2434,7 +2321,7 @@ function confirmDeleteCourse() {
 }
 
 /* 确保删除按钮的图标颜色总是红色 */
-.checkin-actions .wd-icon, 
+.checkin-actions .wd-icon,
 .member-actions .wd-icon {
   color: #ffffff !important;
 }
@@ -2445,7 +2332,7 @@ function confirmDeleteCourse() {
 
 /* 添加强化的图标颜色样式规则 */
 .wd-button--danger .wd-icon,
-.checkin-actions .wd-icon, 
+.checkin-actions .wd-icon,
 .member-actions .wd-icon {
   color: #ffffff !important;
   fill: #ffffff !important;

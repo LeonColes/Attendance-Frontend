@@ -250,7 +250,9 @@ export function updateCourse(courseId: string, params: Partial<CourseCreateParam
  * @param courseId 课程ID
  */
 export function getCourseQRCode(courseId: string) {
-  return get(`/api/courses/qrcode?courseId=${courseId}`)
+  return get<ArrayBuffer>(`/api/courses/qrcode?courseId=${courseId}`, undefined, {
+    responseType: 'arraybuffer'
+  } as any)
 }
 
 /**
