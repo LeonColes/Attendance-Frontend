@@ -12,13 +12,6 @@
       "style": {}
     },
     {
-      "path": "pages/checkin-detail/index",
-      "type": "page",
-      "style": {
-        "navigationBarTitleText": "签到详情"
-      }
-    },
-    {
       "path": "pages/checkin-location/index",
       "type": "page",
       "style": {
@@ -35,7 +28,9 @@
     {
       "path": "pages/course-detail/index",
       "type": "page",
-      "style": {}
+      "style": {
+        "navigationBarTitleText": "课程详情"
+      }
     },
     {
       "path": "pages/create-checkin/index",

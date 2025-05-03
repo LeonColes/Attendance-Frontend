@@ -22,13 +22,6 @@ export default defineUniPages({
       "navigationBarTitleText": "课程考勤"
     },
     {
-      "path": "pages/checkin-detail/index",
-      "type": "page",
-      "style": {
-        "navigationBarTitleText": "签到详情"
-      }
-    },
-    {
       "path": "pages/checkin-location/index",
       "type": "page",
       "style": {
@@ -44,7 +37,10 @@ export default defineUniPages({
     },
     {
       "path": "pages/course-detail/index",
-      "type": "page"
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "课程详情"
+      }
     },
     {
       "path": "pages/create-checkin/index",

@@ -8,13 +8,14 @@
  * 记得注释
 -->
 <script lang="ts" setup>
-import { ref, computed, reactive, onMounted, watch } from 'vue'
+import { ref, computed, reactive, onMounted, watch, onBeforeUnmount } from 'vue'
 import { useUserStore } from '@/store/user'
-import { CheckInType, getCheckinList, deleteCheckin } from '@/api/attendance'
+import { CheckInType, getCheckinList, deleteCheckin, getCheckinRecordList } from '@/api/attendance'
 import { getCourseMemberList, getCourseQRCode, deleteCourse, removeCourseMember } from '@/api/courses'
 import type { PageQueryParams } from '@/api/attendance'
 import { onShow } from '@dcloudio/uni-app'
-import { formatDateTime } from '@/utils/dateTime'
+import { formatDateTime, formatDate } from '@/utils/dateTime'
+import * as XLSX from 'xlsx'
 
 // 为window.uni声明类型，解决TypeScript错误
 declare global {
@@ -59,9 +60,9 @@ watch([isStudent, activeTab], ([isStudentValue, activeTabValue]) => {
   }
 })
 
-// 安全获取uni对象
+// 获取uni对象的安全包装器
 function getSafeUni() {
-  return typeof window !== 'undefined' && window.uni ? window.uni : uni
+  return uni as any
 }
 
 // 初始化
@@ -390,18 +391,16 @@ async function loadCourseAttendanceStats() {
   }
 }
 
-// 切换标签
-function switchTab(tab: string) {
-  // 如果当前标签与目标标签相同，不执行任何操作
+// 切换标签页
+function switchTab(tab) {
   if (activeTab.value === tab) return
-
+  // 如果学生尝试切换到stats，重定向到checkins
+  if (isStudent.value && tab === 'stats') return
   activeTab.value = tab
-
+  
   // 切换到相应标签时刷新对应数据
   if (tab === 'members') {
     loadCourseMembers(true)
-  } else if (tab === 'stats' && isTeacher.value) {
-    loadCourseAttendanceStats()
   } else if (tab === 'checkins') {
     loadCheckinList(true)
   }
@@ -776,46 +775,327 @@ function handleOpenQRCode() {
   openQRCodeModal()
 }
 
-function handleExportData() {
-  // 关闭操作菜单（如果打开的话）
-  showOperations.value = false
-
-  // 确保有统计数据
-  if (!attendanceStats.value || !attendanceStats.value.attendanceByStudent || attendanceStats.value.attendanceByStudent.length === 0) {
-    getSafeUni().showToast({
-      title: '没有可导出的数据',
-      icon: 'none'
+// 修改handleExportData函数，添加引导提示
+async function handleExportData() {
+  try {
+    // 关闭操作菜单（如果打开的话）
+    showOperations.value = false
+    
+    console.log('点击了统计页面的导出按钮，显示引导提示')
+    
+    // 显示提示，引导用户使用签到任务列表中的导出功能
+    getSafeUni().showModal({
+      title: '导出考勤数据',
+      content: '请前往"签到任务"标签页，在具体的签到任务卡片上使用导出按钮，可以导出该任务的考勤统计数据。',
+      showCancel: false,
+      confirmText: '我知道了',
+      success: () => {
+        // 自动切换到签到任务标签
+        switchTab('checkins')
+      }
     })
-    return
+  } catch (error) {
+    console.error('处理导出引导提示异常:', error)
   }
+}
 
-  // 显示导出中的提示
-  getSafeUni().showLoading({
-    title: '准备导出数据...'
-  })
-
-  // 延迟一会儿以显示加载效果
-  setTimeout(() => {
+// 导出签到任务数据到Excel
+async function exportAttendanceToExcel(checkinTask) {
+  try {
+    // 显示状态提示
+    getSafeUni().showLoading({
+      title: '准备导出数据...'
+    })
+    
+    console.log('开始导出签到数据, 任务:', { id: checkinTask.id, name: checkinTask.name })
+    
+    // 使用getTaskAttendanceRecords函数获取签到记录
+    console.log('调用getTaskAttendanceRecords获取数据')
+    const result = await getTaskAttendanceRecords(checkinTask.id)
+    
+    if (!result.success) {
+      console.error('获取签到数据失败:', result.error)
+      getSafeUni().hideLoading()
+      getSafeUni().showToast({
+        title: result.error || '获取签到数据失败',
+        icon: 'none',
+        duration: 2000
+      })
+      return
+    }
+    
+    const data = result.data
+    console.log('获取到签到数据:', data)
+    const records = data.records || []
+    const checkinInfo = data.checkinInfo || {}
+    const statistics = data.statistics || {}
+    
+    if (records.length === 0 && (!statistics || !statistics.totalStudents)) {
+      console.log('无可导出的签到记录')
+      getSafeUni().hideLoading()
+      getSafeUni().showToast({
+        title: '没有可导出的签到记录',
+        icon: 'none',
+        duration: 2000
+      })
+      return
+    }
+    
+    // 准备Excel数据
+    console.log('开始生成Excel文件')
+    getSafeUni().showLoading({
+      title: '生成Excel文件...'
+    })
+    
+    // 创建签到信息工作表
+    const infoWs = XLSX.utils.aoa_to_sheet([
+      ['签到任务信息'], // 标题
+      ['任务名称', checkinInfo.name || checkinTask.name || ''],
+      ['描述', checkinInfo.description || ''],
+      ['开始时间', formatDateTime(checkinInfo.checkinStartTime || checkinTask.checkinStartTime || '')],
+      ['结束时间', formatDateTime(checkinInfo.checkinEndTime || checkinTask.checkinEndTime || '')],
+      ['签到类型', formatCheckinType(checkinInfo.checkinType || checkinTask.checkinType || '')],
+      ['任务状态', formatStatus(checkinInfo.status || checkinTask.status || '')],
+      ['创建时间', formatDateTime(checkinInfo.createdAt || '')],
+      ['', ''], // 空行
+      ['统计数据'], // 统计数据标题
+      ['学生总数', statistics.totalStudents || 0],
+      ['出勤人数', statistics.presentCount || 0],
+      ['缺勤人数', statistics.absentCount || 0],
+      ['迟到人数', statistics.lateCount || 0],
+      ['出勤率', `${statistics.attendanceRate || 0}%`]
+    ])
+    
+    // 设置合并单元格 - 标题行
+    infoWs['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }, // 签到任务信息标题
+      { s: { r: 9, c: 0 }, e: { r: 9, c: 1 } }  // 统计数据标题
+    ]
+    
+    // 设置列宽
+    infoWs['!cols'] = [
+      { wch: 15 }, // 标题列
+      { wch: 40 }  // 内容列
+    ]
+    
+    // 创建表格标题行
+    const detailHeaders = [
+      'ID', '姓名', '用户名', '签到状态', '签到时间', '设备信息', '位置'
+    ]
+    
+    // 转换数据为表格行
+    const detailRows = records.map(record => [
+      record.userId || '',
+      record.fullName || '',
+      record.username || '',
+      formatAttendanceStatus(record.status),
+      record.checkInTime ? formatDateTime(record.checkInTime) : '未签到',
+      record.device || '',
+      record.location || ''
+    ])
+    
+    // 添加表头
+    const detailData = [detailHeaders, ...detailRows]
+    
+    // 创建详细记录工作表
+    const detailWs = XLSX.utils.aoa_to_sheet(detailData)
+    
+    // 设置列宽
+    detailWs['!cols'] = [
+      { wch: 15 }, // ID
+      { wch: 10 }, // 姓名
+      { wch: 15 }, // 用户名
+      { wch: 10 }, // 签到状态
+      { wch: 20 }, // 签到时间
+      { wch: 25 }, // 设备信息
+      { wch: 25 }  // 位置
+    ]
+    
+    // 创建工作簿
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, infoWs, '签到信息')
+    XLSX.utils.book_append_sheet(wb, detailWs, '签到记录')
+    
+    // 如果有缺勤学生，添加缺勤学生表
+    if (statistics.absentStudents && statistics.absentStudents.length > 0) {
+      const absentHeaders = ['ID', '姓名', '用户名']
+      const absentRows = statistics.absentStudents.map(student => [
+        student.userId || '',
+        student.fullName || '',
+        student.username || ''
+      ])
+      
+      const absentWs = XLSX.utils.aoa_to_sheet([absentHeaders, ...absentRows])
+      
+      // 设置列宽
+      absentWs['!cols'] = [
+        { wch: 15 }, // ID
+        { wch: 10 }, // 姓名
+        { wch: 15 }  // 用户名
+      ]
+      
+      // 添加缺勤学生表
+      XLSX.utils.book_append_sheet(wb, absentWs, '缺勤学生')
+    }
+    
+    // 生成Excel文件
+    const excelFileName = `${checkinInfo.name || checkinTask.name || '签到'}_${formatDate(new Date())}.xlsx`
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' })
+    
+    // 改进文件保存逻辑，兼容多平台
     try {
-      // 在实际应用中，这里应该调用后端API来生成Excel文件
-      // 由于当前是前端演示，我们只显示一个成功的提示
+      // 判断平台
+      // #ifdef H5
+      // 在H5端，使用文件页面实现下载
+      createAndDownloadExcelInH5(excelFileName, wbout)
+      
       getSafeUni().hideLoading()
       getSafeUni().showToast({
         title: 'Excel导出成功',
         icon: 'success'
       })
-
-      // 可以在这里添加文件下载或分享的代码
-      console.log('导出考勤数据:', attendanceStats.value)
-    } catch (error) {
-      console.error('导出数据失败:', error)
+      // #endif
+      
+      // #ifdef MP-WEIXIN || MP
+      // 在小程序中使用文件系统API
+      console.log('微信小程序环境，准备使用文件系统API')
+      const mpFs = uni.getFileSystemManager()
+      const filePath = `${getSafeUni().env.USER_DATA_PATH}/${excelFileName}`
+      
+      console.log('准备写入文件:', filePath)
+      mpFs.writeFile({
+        filePath: filePath,
+        data: wbout,
+        encoding: 'base64',
+        success: function(writeRes) {
+          console.log('文件写入成功:', writeRes)
+          getSafeUni().hideLoading()
+          getSafeUni().showToast({
+            title: 'Excel生成成功',
+            icon: 'success'
+          })
+          
+          console.log('准备保存文件到本地')
+          // 使用推荐的getFileSystemManager().saveFile方法
+          mpFs.saveFile({
+            tempFilePath: filePath,
+            success: function(res) {
+              const savedFilePath = res.savedFilePath
+              console.log('文件保存成功:', savedFilePath)
+              getSafeUni().showModal({
+                title: '文件已保存',
+                content: `文件已保存至本地，可在"文件管理"中查看`,
+                showCancel: false
+              })
+            },
+            fail: function(err) {
+              console.error('保存文件失败:', err)
+              
+              // 保存失败时，尝试直接打开文件
+              getSafeUni().showModal({
+                title: '文件已生成',
+                content: '文件已生成但无法自动保存，您可以点击"确定"尝试直接打开',
+                success: function(res) {
+                  if (res.confirm) {
+                    // 尝试打开文件
+                    getSafeUni().openDocument({
+                      filePath: filePath,
+                      showMenu: true,
+                      success: function() {
+                        console.log('打开文档成功')
+                      },
+                      fail: function(openErr) {
+                        console.error('打开文档失败:', openErr)
+                        getSafeUni().showToast({
+                          title: '无法打开文件',
+                          icon: 'none'
+                        })
+                      }
+                    })
+                  }
+                }
+              })
+            }
+          })
+        },
+        fail: function(err) {
+          console.error('写入文件失败:', err)
+          getSafeUni().hideLoading()
+          getSafeUni().showToast({
+            title: '生成Excel文件失败: ' + (err.errMsg || '未知错误'),
+            icon: 'none',
+            duration: 3000
+          })
+        }
+      })
+      // #endif
+      
+      // #ifdef APP-PLUS
+      // 在APP中使用plus API
+      const appFilePath = `_doc/${excelFileName}`
+      
+      // 写入文件 - 使用更简单的方式
+      try {
+        const tempFilePath = `${plus.io.convertLocalFileSystemURL('_www')}/${excelFileName}`
+        let dtask = plus.downloader.createDownload(
+          'data:application/octet-stream;base64,' + wbout,
+          { filename: tempFilePath },
+          function(d, status) {
+            if (status === 200) {
+              getSafeUni().hideLoading()
+              getSafeUni().showToast({
+                title: 'Excel生成成功',
+                icon: 'success'
+              })
+              
+              // 打开文件
+              plus.runtime.openFile(tempFilePath)
+            } else {
+              getSafeUni().hideLoading()
+              getSafeUni().showToast({
+                title: '生成Excel文件失败',
+                icon: 'none'
+              })
+            }
+          }
+        )
+        dtask.start()
+      } catch (e) {
+        console.error('APP平台保存文件失败:', e)
+        getSafeUni().hideLoading()
+        getSafeUni().showToast({
+          title: '生成Excel文件失败',
+          icon: 'none'
+        })
+      }
+      // #endif
+      
+      // 其他平台的通用处理
+      // #ifndef H5 || MP-WEIXIN || MP || APP-PLUS
       getSafeUni().hideLoading()
       getSafeUni().showToast({
-        title: '导出失败，请重试',
+        title: 'Excel生成成功，但当前平台不支持自动保存',
+        icon: 'none',
+        duration: 3000
+      })
+      // #endif
+    } catch (error) {
+      console.error('保存Excel文件失败:', error)
+      getSafeUni().hideLoading()
+      getSafeUni().showToast({
+        title: '生成Excel文件失败',
         icon: 'none'
       })
     }
-  }, 1500)
+  } catch (error) {
+    console.error('导出Excel失败:', error)
+    getSafeUni().hideLoading()
+    getSafeUni().showToast({
+      title: '导出失败: ' + ((error as Error)?.message || '未知错误'),
+      icon: 'none',
+      duration: 3000
+    })
+  }
 }
 
 function confirmDeleteCourse() {
@@ -836,6 +1116,224 @@ function confirmDeleteCourse() {
     })
   })
 }
+
+// 格式化考勤状态文本
+function formatAttendanceStatus(status) {
+  switch (status) {
+    case 'PRESENT':
+    case 'NORMAL':
+      return '已签到'
+    case 'LATE':
+      return '迟到'
+    case 'ABSENT':
+      return '缺勤'
+    default:
+      return status || '未知'
+  }
+}
+
+// 获取特定签到任务的所有学生签到记录
+async function getTaskAttendanceRecords(checkinId) {
+  try {
+    // 显示加载状态
+    getSafeUni().showLoading({
+      title: '获取数据中...'
+    })
+    
+    console.log('开始获取签到记录，签到ID:', checkinId)
+    
+    if (!checkinId) {
+      console.error('签到ID为空，无法获取记录')
+      getSafeUni().hideLoading()
+      return {
+        success: false,
+        error: '签到ID为空，无法获取记录'
+      }
+    }
+    
+    // 获取全部记录，设置较大的size
+    console.log('调用API：getCheckinRecordList，参数:', { checkinId, page: 0, size: 100 })
+    const response = await getCheckinRecordList(checkinId, { page: 0, size: 100 })
+    console.log('API响应:', response)
+    
+    if (response && response.code === 200) {
+      console.log('获取签到记录成功，数据:', response.data)
+      return {
+        success: true,
+        data: response.data
+      }
+    } else {
+      console.error('获取签到记录失败，响应:', response)
+      return {
+        success: false,
+        error: response?.message || '获取签到记录失败'
+      }
+    }
+  } catch (error) {
+    console.error('获取签到记录异常:', error)
+    return {
+      success: false,
+      error: (error as Error)?.message || '获取签到记录异常'
+    }
+  } finally {
+    getSafeUni().hideLoading()
+  }
+}
+
+// 格式化签到类型显示文本
+function formatCheckinType(type) {
+  switch (type) {
+    case 'QR_CODE':
+      return '二维码签到'
+    case 'LOCATION':
+      return '位置签到'
+    case 'WIFI':
+      return 'WiFi签到'
+    case 'MANUAL':
+      return '手动签到'
+    default:
+      return type || '未知'
+  }
+}
+
+// 格式化状态显示文本
+function formatStatus(status) {
+  switch (status) {
+    case 'ACTIVE':
+      return '进行中'
+    case 'ENDED':
+      return '已结束'
+    case 'CANCELLED':
+      return '已取消'
+    case 'COMPLETED':
+      return '已完成'
+    default:
+      return status || '未知'
+  }
+}
+
+// H5平台 - 创建临时文件页面并下载
+function createAndDownloadExcelInH5(fileName, base64Data) {
+  // 创建二进制数据
+  const binary = atob(base64Data)
+  const buffer = new ArrayBuffer(binary.length)
+  const view = new Uint8Array(buffer)
+  for (let i = 0; i < binary.length; i++) {
+    view[i] = binary.charCodeAt(i) & 0xFF
+  }
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  
+  // 创建下载链接
+  const url = URL.createObjectURL(blob)
+  
+  // 创建临时页面元素
+  const container = document.createElement('div')
+  container.style.position = 'fixed'
+  container.style.top = '0'
+  container.style.left = '0'
+  container.style.width = '100%'
+  container.style.height = '100%'
+  container.style.zIndex = '9999'
+  container.style.background = 'rgba(255,255,255,0.9)'
+  container.style.display = 'flex'
+  container.style.flexDirection = 'column'
+  container.style.justifyContent = 'center'
+  container.style.alignItems = 'center'
+  container.style.padding = '20px'
+  
+  // 添加标题
+  const title = document.createElement('h2')
+  title.textContent = '考勤统计导出'
+  title.style.marginBottom = '20px'
+  container.appendChild(title)
+  
+  // 添加说明
+  const description = document.createElement('p')
+  description.textContent = '您的Excel文件已准备就绪，点击下面的按钮下载。'
+  description.style.marginBottom = '30px'
+  description.style.textAlign = 'center'
+  container.appendChild(description)
+  
+  // 添加按钮组
+  const buttonContainer = document.createElement('div')
+  buttonContainer.style.display = 'flex'
+  buttonContainer.style.gap = '10px'
+  
+  // 下载按钮
+  const downloadBtn = document.createElement('a')
+  downloadBtn.href = url
+  downloadBtn.download = fileName
+  downloadBtn.style.padding = '10px 20px'
+  downloadBtn.style.background = '#4caf50'
+  downloadBtn.style.color = 'white'
+  downloadBtn.style.textDecoration = 'none'
+  downloadBtn.style.borderRadius = '4px'
+  downloadBtn.style.fontWeight = 'bold'
+  downloadBtn.textContent = '下载Excel文件'
+  buttonContainer.appendChild(downloadBtn)
+  
+  // 关闭按钮
+  const closeBtn = document.createElement('button')
+  closeBtn.style.padding = '10px 20px'
+  closeBtn.style.background = '#f44336'
+  closeBtn.style.color = 'white'
+  closeBtn.style.border = 'none'
+  closeBtn.style.borderRadius = '4px'
+  closeBtn.style.fontWeight = 'bold'
+  closeBtn.style.cursor = 'pointer'
+  closeBtn.textContent = '关闭'
+  closeBtn.onclick = () => {
+    document.body.removeChild(container)
+    URL.revokeObjectURL(url)
+  }
+  buttonContainer.appendChild(closeBtn)
+  
+  container.appendChild(buttonContainer)
+  
+  // 添加到页面
+  document.body.appendChild(container)
+  
+  // 自动下载
+  setTimeout(() => {
+    downloadBtn.click()
+  }, 500)
+}
+
+// 处理单个签到任务的导出
+async function handleExportSingleCheckin(checkinTask) {
+  try {
+    console.log('开始导出单个签到任务:', { id: checkinTask.id, name: checkinTask.name })
+    // 显示状态提示
+    getSafeUni().showLoading({
+      title: '准备导出数据...'
+    })
+    
+    // 直接调用导出函数
+    await exportAttendanceToExcel(checkinTask)
+  } catch (error) {
+    console.error('导出单个签到任务异常:', error)
+    getSafeUni().hideLoading()
+    getSafeUni().showToast({
+      title: '导出操作异常: ' + ((error as Error)?.message || '未知错误'),
+      icon: 'none',
+      duration: 3000
+    })
+  }
+}
+
+// 页面初始化
+onLoad((options) => {
+  // 从路由参数获取课程ID
+  if (options && options.id) {
+    courseId.value = options.id
+    // 加载课程详情
+    getCourseDetail()
+    // 加载签到任务列表
+    loadCheckinList()
+    // 加载成员列表
+    loadCourseMembers()
+  }
+})
 </script>
 
 <template>
@@ -926,7 +1424,7 @@ function confirmDeleteCourse() {
             </wd-button>
 
             <!-- 添加删除课程按钮 -->
-            <wd-button type="danger" size="small" custom-style="height: 70rpx; margin-top: 20rpx; margin-left: 20rpx;"
+            <wd-button type="error" size="small" custom-style="height: 70rpx; margin-top: 20rpx; margin-left: 20rpx;"
               :loading="isDeletingCourse" :disabled="isDeletingCourse" @click="handleDeleteCourse">
               <wd-icon v-if="!isDeletingCourse" name="delete" size="28rpx" color="#ffffff"
                 style="color: #ffffff !important; fill: #ffffff !important;" />
@@ -936,32 +1434,21 @@ function confirmDeleteCourse() {
         </view>
       </view>
 
-      <!-- 标签页 -->
-      <!-- @ts-ignore -->
-      <view class="tab-container">
-        <!-- @ts-ignore -->
+      <!-- 标签栏 -->
+      <view class="tabs">
         <view class="tab-item" :class="{ active: activeTab === 'checkins' }" @click="switchTab('checkins')">
-          <!-- @ts-ignore -->
-          <text class="tab-text">签到任务</text>
+          <wd-icon name="time" size="32rpx" />
+          <text>签到任务</text>
         </view>
-        <!-- @ts-ignore -->
         <view class="tab-item" :class="{ active: activeTab === 'members' }" @click="switchTab('members')">
-          <!-- @ts-ignore -->
-          <text class="tab-text">成员列表</text>
-        </view>
-        <!-- 只有教师可以看到考勤统计 -->
-        <!-- @ts-ignore -->
-        <view v-if="isTeacher" class="tab-item" :class="{ active: activeTab === 'stats' }" @click="switchTab('stats')">
-          <!-- @ts-ignore -->
-          <text class="tab-text">考勤统计</text>
+          <wd-icon name="user-group" size="32rpx" />
+          <text>成员列表</text>
         </view>
       </view>
 
-      <!-- 标签页内容 -->
-      <!-- @ts-ignore -->
+      <!-- 内容区域 -->
       <view class="tab-content">
-        <!-- 签到任务标签页 -->
-        <!-- @ts-ignore -->
+        <!-- 签到任务列表 -->
         <view v-if="activeTab === 'checkins'" class="checkins-content">
           <!-- 签到任务列表 -->
           <!-- @ts-ignore -->
@@ -1005,7 +1492,15 @@ function confirmDeleteCourse() {
               <!-- 教师可以删除签到任务 -->
               <!-- @ts-ignore -->
               <view v-if="isTeacher" class="checkin-actions" @click.stop>
-                <wd-button type="danger" size="mini"
+                <!-- 添加导出按钮 -->
+                <wd-button type="primary" size="small"
+                  custom-style="padding: 8rpx 16rpx; min-width: auto; margin-right: 8rpx; background-color: #4caf50;"
+                  @click.stop="handleExportSingleCheckin(checkin)">
+                  <wd-icon name="download" size="32rpx" color="#ffffff"
+                    style="color: #ffffff !important; fill: #ffffff !important;" />
+                </wd-button>
+                
+                <wd-button type="error" size="small"
                   custom-style="padding: 8rpx 16rpx; min-width: auto; background-color: #ff4d4f;"
                   @click.stop="handleDeleteCheckin(checkin)">
                   <wd-icon name="delete" size="32rpx" color="#ffffff"
@@ -1024,8 +1519,7 @@ function confirmDeleteCourse() {
           </view>
         </view>
 
-        <!-- 成员列表标签页 -->
-        <!-- @ts-ignore -->
+        <!-- 成员列表 -->
         <view v-else-if="activeTab === 'members'" class="members-content">
           <!-- 成员列表 -->
           <!-- @ts-ignore -->
@@ -1053,7 +1547,7 @@ function confirmDeleteCourse() {
               <!-- 教师可以移除学生成员 -->
               <!-- @ts-ignore -->
               <view v-if="isTeacher && member.role !== 'TEACHER'" class="member-actions">
-                <wd-button type="danger" size="mini"
+                <wd-button type="error" size="small"
                   custom-style="padding: 8rpx 16rpx; min-width: auto; background-color: #ff4d4f;"
                   @click="handleRemoveMember(member)">
                   <wd-icon name="delete" size="32rpx" color="#ffffff"
@@ -1069,103 +1563,6 @@ function confirmDeleteCourse() {
             <wd-icon name="info-outline" size="120rpx" color="#cccccc" />
             <!-- @ts-ignore -->
             <text class="empty-text">暂无成员信息</text>
-          </view>
-        </view>
-
-        <!-- 考勤统计标签页 -->
-        <!-- @ts-ignore -->
-        <view v-else-if="activeTab === 'stats'" class="stats-content">
-          <!-- 统计数据 -->
-          <!-- @ts-ignore -->
-          <view v-if="attendanceStats" class="stats-container">
-            <!-- 导出Excel按钮 -->
-            <!-- @ts-ignore -->
-            <view class="export-btn" @click="handleExportData">
-              <wd-icon name="download" size="28rpx" color="#4caf50" />
-              <text>导出Excel</text>
-            </view>
-
-            <!-- @ts-ignore -->
-            <view class="stats-card">
-              <!-- @ts-ignore -->
-              <view class="stats-title">整体出勤情况</view>
-              <!-- @ts-ignore -->
-              <view class="stats-row">
-                <!-- @ts-ignore -->
-                <view class="stat-item">
-                  <!-- @ts-ignore -->
-                  <view class="stat-value">{{ attendanceStats.statistics?.averageAttendance || 0 }}%</view>
-                  <!-- @ts-ignore -->
-                  <view class="stat-label">平均出勤率</view>
-                </view>
-                <!-- @ts-ignore -->
-                <view class="stat-item">
-                  <!-- @ts-ignore -->
-                  <view class="stat-value">{{ attendanceStats.statistics?.totalCheckins || 0 }}</view>
-                  <!-- @ts-ignore -->
-                  <view class="stat-label">签到任务数</view>
-                </view>
-                <!-- @ts-ignore -->
-                <view class="stat-item">
-                  <!-- @ts-ignore -->
-                  <view class="stat-value">{{ attendanceStats.courseInfo?.totalStudents || 0 }}</view>
-                  <!-- @ts-ignore -->
-                  <view class="stat-label">学生总数</view>
-                </view>
-              </view>
-            </view>
-
-            <!-- 所有成员出勤率 -->
-            <!-- @ts-ignore -->
-            <view class="stats-card">
-              <!-- @ts-ignore -->
-              <view class="stats-title">出勤率排名</view>
-              <!-- @ts-ignore -->
-              <view v-if="attendanceStats.attendanceByStudent && attendanceStats.attendanceByStudent.length > 0"
-                class="attendance-list">
-                <!-- @ts-ignore -->
-                <view v-for="(student, index) in getSortedStudents()" :key="student.userId" class="attendance-item"
-                  :class="getAttendanceRateClass(student.attendanceRate)">
-                  <!-- @ts-ignore -->
-                  <view class="rank">{{ index + 1 }}</view>
-                  <!-- @ts-ignore -->
-                  <view class="student-info">
-                    <!-- @ts-ignore -->
-                    <view class="student-name">{{ student.userName }}</view>
-                    <!-- @ts-ignore -->
-                    <view class="student-username">{{ student.username }}</view>
-                  </view>
-                  <!-- @ts-ignore -->
-                  <view class="attendance-details">
-                    <!-- @ts-ignore -->
-                    <view class="attendance-rate" :class="getAttendanceRateClass(student.attendanceRate)">{{
-                      student.attendanceRate }}%</view>
-                    <!-- @ts-ignore -->
-                    <view class="attendance-numbers">
-                      <text class="normal">{{ student.checkedIn }}</text>/
-                      <text class="missed">{{ student.missed }}</text>
-                    </view>
-                  </view>
-                </view>
-              </view>
-              <!-- @ts-ignore -->
-              <view v-else class="empty-list">
-                <!-- @ts-ignore -->
-                <text>暂无学生出勤数据</text>
-              </view>
-            </view>
-          </view>
-
-          <!-- 无统计数据 -->
-          <!-- @ts-ignore -->
-          <view v-else class="empty-container">
-            <wd-icon name="info-outline" size="120rpx" color="#cccccc" />
-            <!-- @ts-ignore -->
-            <text class="empty-text">暂无考勤统计数据</text>
-            <!-- @ts-ignore -->
-            <wd-button type="primary" size="small" custom-style="margin-top: 30rpx;" @click="handleExportData">
-              导出Excel
-            </wd-button>
           </view>
         </view>
       </view>
@@ -1226,7 +1623,7 @@ function confirmDeleteCourse() {
         <view class="delete-subtitle">此操作不可恢复！</view>
         <view class="delete-actions">
           <wd-button type="info" @click="showDeleteConfirm = false" custom-style="margin-right: 20rpx;">取消</wd-button>
-          <wd-button type="danger" @click="confirmDeleteCourse">确定删除</wd-button>
+          <wd-button type="error" @click="confirmDeleteCourse">确定删除</wd-button>
         </view>
       </view>
     </wd-popup>
@@ -1246,7 +1643,7 @@ function confirmDeleteCourse() {
           </view>
           <view class="operation-item delete-operation" v-if="isTeacher">
             <wd-icon name="delete" size="40rpx" color="#f44336" style="color: #f44336 !important;" />
-            <wd-button type="danger" size="small" custom-style="margin-left: 16rpx;" :loading="isDeletingCourse"
+            <wd-button type="error" size="small" custom-style="margin-left: 16rpx;" :loading="isDeletingCourse"
               @click="handleDeleteCourse">
               <wd-icon name="delete" size="28rpx" color="#ffffff" />
               <text style="margin-left: 8rpx;">{{ isDeletingCourse ? '删除中...' : '删除课程' }}</text>
@@ -1717,6 +2114,24 @@ function confirmDeleteCourse() {
   position: relative;
   z-index: 1;
   margin-left: 8rpx;
+  gap: 8rpx;
+}
+
+/* 添加导出按钮样式 */
+.checkin-actions .wd-button {
+  min-width: auto;
+  width: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10rpx;
+  border-radius: 8rpx;
+}
+
+/* 确保图标颜色统一 */
+.checkin-actions .wd-button--primary .wd-icon {
+  color: #ffffff !important;
+  fill: #ffffff !important;
 }
 
 .checkin-title {
@@ -2163,6 +2578,17 @@ function confirmDeleteCourse() {
   margin-left: 8rpx;
 }
 
+/* 引导样式按钮 */
+.export-btn.guide {
+  background: linear-gradient(135deg, rgba(33, 150, 243, 0.08) 0%, rgba(100, 181, 246, 0.08) 100%);
+  color: #2196f3;
+  box-shadow: 0 4rpx 8rpx rgba(33, 150, 243, 0.05);
+}
+
+.export-btn.guide:active {
+  box-shadow: 0 2rpx 4rpx rgba(33, 150, 243, 0.03);
+}
+
 .empty-container {
   display: flex;
   flex-direction: column;
@@ -2370,5 +2796,47 @@ function confirmDeleteCourse() {
   background: linear-gradient(135deg, rgba(237, 247, 237, 0.9) 0%, rgba(232, 245, 233, 0.9) 100%);
   border-left-color: #4caf50;
   box-shadow: 0 4rpx 12rpx rgba(76, 175, 80, 0.08);
+}
+
+.tabs {
+  display: flex;
+  justify-content: space-around;
+  padding: 10rpx 0;
+  border-bottom: 1rpx solid #ddd;
+  margin-bottom: 20rpx;
+}
+
+.tab-item {
+  flex: 1;
+  text-align: center;
+  padding: 10rpx 0;
+  color: #333;
+  border-bottom: 2rpx solid transparent;
+  transition: all 0.3s ease;
+}
+
+.tab-item.active {
+  color: #6a11cb;
+  border-bottom-color: #6a11cb;
+}
+
+.tab-item text {
+  font-size: 28rpx;
+  font-weight: bold;
+}
+
+.checkin-actions .wd-button--primary {
+  background-color: #4caf50 !important;
+  border-color: #4caf50 !important;
+}
+
+.checkin-actions .wd-button--error {
+  background-color: #ff4d4f !important;
+  border-color: #ff4d4f !important;
+}
+
+.checkin-actions .wd-button:active {
+  opacity: 0.8;
+  transform: scale(0.95);
 }
 </style>

@@ -186,24 +186,7 @@ export function submitCheckin(params: CheckinSubmitParams) {
  * @param params 分页参数
  */
 export function getStudentCheckinStatus(courseId: string, params: PageQueryParams) {
-  return post<{
-    totalItems: number
-    records: string[]
-    totalPages: number
-    currentPage: number
-    courseInfo: {
-      id: string
-      name: string
-      description: string
-      creatorId: string
-      status: string
-    }
-    userInfo: {
-      id: string
-      username: string
-      fullName: string
-    }
-  }>(`/api/courses/attendance/record/status?courseId=${courseId}`, params)
+  return post(`/api/courses/attendance/record/status?courseId=${courseId}`, params)
 }
 
 /**
@@ -212,41 +195,7 @@ export function getStudentCheckinStatus(courseId: string, params: PageQueryParam
  * @param params 分页参数
  */
 export function getCheckinRecordList(checkinId: string, params: PageQueryParams) {
-  return post<{
-    totalItems: number
-    records: {
-      userId: string
-      username: string
-      fullName: string
-      status: string
-      checkInTime: string
-      device: string
-      location: string | null
-    }[]
-    totalPages: number
-    currentPage: number
-  }>(`/api/courses/attendance/record/list?checkinId=${checkinId}`, params)
-}
-
-/**
- * 获取签到统计数据（教师）
- * @param checkinId 签到任务ID
- * @param params 分页参数
- */
-export function getCheckinStatistics(checkinId: string, params: PageQueryParams) {
-  return post<{
-    checkinId: string
-    absentStudents: {
-      userId: string
-      username: string
-      fullName: string
-    }[]
-    attendanceRate: number
-    totalStudents: number
-    presentCount: number
-    absentCount: number
-    lateCount: number
-  }>(`/api/courses/attendance/statistics?checkinId=${checkinId}`, params)
+  return post(`/api/courses/attendance/record/list?checkinId=${checkinId}`, params)
 }
 
 /**

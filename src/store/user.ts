@@ -4,7 +4,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { login, getUserInfo } from '@/api/user'
-import type { LoginParams, UserInfo, AuthResponse } from '@/api/user'
+import type { LoginParams, UserInfo } from '@/api/user'
 import { setToken, removeToken } from '@/utils/request'
 
 // 安全获取uni对象
