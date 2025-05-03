@@ -84,6 +84,14 @@ onMounted(async () => {
   }
 })
 
+watch(() => loading.value, () => {
+  if(loading.value) {
+    setTimeout(() => {
+      loadQRCode()
+    }, 5000)
+  }
+})
+
 // 返回上一页
 function goBack() {
   uni.navigateBack()
