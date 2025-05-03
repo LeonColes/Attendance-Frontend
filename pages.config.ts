@@ -74,7 +74,10 @@ export default defineUniPages({
     },
     {
       "path": "pages/login/index",
-      "type": "page"
+      "type": "page",
+      "style": {
+        "navigationStyle": "custom"
+      }
     },
     {
       "path": "pages/my/index",
@@ -87,7 +90,10 @@ export default defineUniPages({
     },
     {
       "path": "pages/register/index",
-      "type": "page"
+      "type": "page",
+      "style": {
+        "navigationBarTitleText": "注册"
+      }
     },
     {
       "path": "pages/scanner/index",

@@ -67,7 +67,9 @@
     {
       "path": "pages/login/index",
       "type": "page",
-      "style": {}
+      "style": {
+        "navigationStyle": "custom"
+      }
     },
     {
       "path": "pages/my/index",
@@ -81,7 +83,9 @@
     {
       "path": "pages/register/index",
       "type": "page",
-      "style": {}
+      "style": {
+        "navigationBarTitleText": "注册"
+      }
     },
     {
       "path": "pages/scanner/index",
