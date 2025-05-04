@@ -39,6 +39,13 @@ const activeCourses = ref<any[]>([])
 const allCourses = ref<any[]>([])
 const otherCourses = ref<any[]>([])
 
+// 分页加载相关
+const courses = ref<any[]>([])
+const loading = ref(false)
+const refreshing = ref(false)
+const hasMoreCourses = ref(true)
+const currentPage = ref(0)
+
 // 计算属性：用户身份
 const isTeacher = computed(() => userStore.userInfo?.role === 'TEACHER')
 const isStudent = computed(() => userStore.userInfo?.role === 'STUDENT')
@@ -105,6 +112,7 @@ async function loadCourseData() {
   if (!isLoggedIn) return
 
   try {
+    loading.value = true
     coursesLoading.value = true
 
     // 调用真实API获取课程列表
@@ -117,29 +125,41 @@ async function loadCourseData() {
 
     if (response && typeof response === 'object' && 'code' in response && response.code === 200) {
       // 使用类型断言处理响应数据
-      const apiResponse = response as { code: number; data: any }
+      const apiResponse = response as { code: number; data: any; message: string }
       const data = apiResponse.data || {}
-      const courses = data.courses || []
-      console.log('获取到课程数据:', courses)
+      
+      // 确保courses是数组
+      courses.value = Array.isArray(data.courses) ? data.courses : []
+      console.log('获取到课程数据:', courses.value)
 
       // 根据课程状态分类
-      activeCourses.value = courses.filter((course) => course.status === 'ACTIVE')
-      allCourses.value = courses // 所有课程
+      activeCourses.value = courses.value.filter((course) => course.status === 'ACTIVE')
+      allCourses.value = courses.value // 所有课程
 
       // 更新计数
       activeCourseCount.value = activeCourses.value.length
       allCourseCount.value = allCourses.value.length
+      
+      // 更新分页状态
+      hasMoreCourses.value = data.totalItems > courses.value.length
+      currentPage.value = data.currentPage || 0
     } else {
-      showToast('获取课程列表失败')
+      console.error('获取课程数据失败:', response)
+      getSafeUni().showToast({
+        title: '获取课程数据失败',
+        icon: 'none'
+      })
     }
   } catch (error) {
-    console.error('加载课程数据失败:', error)
-    showToast('加载课程失败，请重试')
+    console.error('加载课程数据错误:', error)
+    getSafeUni().showToast({
+      title: '网络错误，请重试',
+      icon: 'none'
+    })
   } finally {
+    loading.value = false
     coursesLoading.value = false
-    setTimeout(() => {
-      allCoursesLoading.value = false
-    }, 500)
+    refreshing.value = false
   }
 }
 
@@ -156,8 +176,25 @@ function switchTab(tab: 'active' | 'all') {
   activeTab.value = tab
 }
 
-// 刷新课程数据
-function refreshCourses() {
+// 加载更多课程
+function loadMoreCourses() {
+  if (!hasMoreCourses.value || loading.value) return
+  
+  currentPage.value++
+  // 这里添加加载更多课程的逻辑
+  showToast('加载更多课程')
+}
+
+// 下拉刷新
+function onRefresh() {
+  refreshing.value = true
+  loadCourseData().finally(() => {
+    refreshing.value = false
+  })
+}
+
+// 刷新数据
+function refreshData() {
   loadCourseData()
 }
 
@@ -169,14 +206,14 @@ function createCourse() {
 }
 
 // 加入课程（学生）
-function joinCourse() {
+function goToJoin() {
   getSafeUni().navigateTo({
     url: '/pages/join-course/index'
   })
 }
 
 // 查看课程详情
-function viewCourseDetail(course) {
+function goToCourseDetail(course) {
   // 获取课程的签到任务
   getCheckinList(course.id, {
     page: 0,
@@ -247,6 +284,71 @@ function viewCourseDetail(course) {
       url: `/pages/course-detail/index?courseInfo=${courseInfo}`
     })
   })
+}
+
+// 审批课程
+function approveCourse(course) {
+  // 实现课程审批逻辑
+  showToast('审批课程' + course.id)
+}
+
+// 拒绝课程
+function rejectCourse(course) {
+  // 实现拒绝课程逻辑
+  showToast('拒绝课程' + course.id)
+}
+
+// 格式化日期
+function formatDay(schedule) {
+  if (!schedule) return '未设置'
+  
+  // 如果有startDate字段，尝试格式化显示日期
+  if (typeof schedule === 'object' && schedule.startDate) {
+    try {
+      const date = new Date(schedule.startDate)
+      return date.getFullYear() + '年' + (date.getMonth() + 1) + '月' + date.getDate() + '日'
+    } catch (e) {
+      console.error('日期格式化失败:', e)
+    }
+  }
+  
+  // 处理字符串格式的日期
+  if (typeof schedule === 'string' && schedule.includes('-')) {
+    try {
+      const dateParts = schedule.split('-')
+      if (dateParts.length >= 3) {
+        return `${dateParts[0]}年${dateParts[1]}月${dateParts[2].substring(0, 2)}日`
+      }
+    } catch (e) {
+      console.error('日期字符串格式化失败:', e)
+    }
+  }
+  
+  return '每周一三五' // 默认显示
+}
+
+// 格式化时间
+function formatTime(schedule) {
+  if (!schedule) return '未设置'
+  
+  // 处理有上课时间信息的情况
+  if (typeof schedule === 'object' && schedule.startTime && schedule.endTime) {
+    return `${schedule.startTime}-${schedule.endTime}`
+  }
+  
+  // 处理字符串格式的时间
+  if (typeof schedule === 'string' && schedule.includes(':')) {
+    try {
+      const timeParts = schedule.split(' ')
+      if (timeParts.length >= 2) {
+        return timeParts[1]
+      }
+    } catch (e) {
+      console.error('时间字符串格式化失败:', e)
+    }
+  }
+  
+  return '10:00-11:40' // 默认显示
 }
 
 // 打开扫码页面 - 专门用于学生签到
@@ -333,237 +435,164 @@ async function processCheckInQRCode(qrContent) {
   // 延迟后刷新当前页面
   setTimeout(() => {
     // 刷新当前页面数据
-    refreshCourses()
+    refreshData()
   }, 1000)
 }
 
 </script>
 
 <template>
-  <!-- @ts-ignore -->
-  <view class="container" :class="{'dark-container': themeStore.isDarkMode}">
-    <!-- 页面头部 -->
-    <!-- @ts-ignore -->
+  <view class="container" :class="{'wot-theme-dark': themeStore.isDarkMode}">
     <view class="header">
-      <text class="header-title">我的课程</text>
-      <!-- @ts-ignore -->
+      <view class="header-title">我的课程</view>
       <view class="header-action">
-        <!-- 教师端：创建课程 -->
-        <wd-button v-if="isTeacher" type="primary" size="small" custom-style="margin-left: 20rpx;" icon="add"
-          @click="createCourse">
-          创建课程
-        </wd-button>
-
-        <!-- 学生端：加入课程 -->
-        <wd-button v-if="isStudent" type="primary" size="small" custom-style="margin-left: 20rpx;" icon="add"
-          @click="joinCourse">
+        <view 
+          class="search-button" 
+          v-if="isTeacher" 
+          @click="createCourse"
+        >
+          <wd-icon name="plus" size="40rpx" />
+        </view>
+        <view 
+          class="search-button" 
+          v-if="isStudent" 
+          @click="openScanner"
+        >
+          <wd-icon name="scan" size="40rpx" />
+        </view>
+        <view 
+          class="search-button" 
+          v-if="isStudent" 
+          @click="goToJoin"
+        >
+          <wd-icon name="plus-circle" size="40rpx" />
+        </view>
+        <view class="search-button" @click="refreshData">
+          <wd-icon name="refresh" size="40rpx" />
+        </view>
+      </view>
+    </view>
+    
+    <view class="tab-container">
+      <view 
+        class="tab-item" 
+        :class="{ active: activeTab === 'active' }" 
+        @click="switchTab('active')"
+      >
+        进行中
+      </view>
+      <view 
+        class="tab-item" 
+        :class="{ active: activeTab === 'all' }" 
+        @click="switchTab('all')"
+      >
+        全部
+      </view>
+    </view>
+    
+    <!-- 内容区 -->
+    <scroll-view 
+      class="content-container" 
+      scroll-y 
+      @scrolltolower="loadMoreCourses"
+      refresher-enabled
+      :refresher-triggered="refreshing"
+      @refresherrefresh="onRefresh"
+    >
+      <!-- 加载中 -->
+      <view class="loading-container" v-if="loading && !courses.length">
+        <wd-loading color="#ff6b00" />
+        <text class="loading-text">加载中...</text>
+      </view>
+      
+      <!-- 无数据 -->
+      <view class="empty-container" v-else-if="!loading && !courses.length">
+        <wd-icon name="setting-o" size="120rpx" color="#CCCCCC" />
+        <text class="empty-text">暂无{{ isTeacher ? '教授' : '参与'}}的课程</text>
+        <wd-button 
+          v-if="isStudent" 
+          type="primary" 
+          size="small" 
+          @click="goToJoin"
+        >
           加入课程
         </wd-button>
       </view>
-    </view>
-
-    <!-- 标签页 -->
-    <!-- @ts-ignore -->
-    <view class="tab-container">
-      <!-- @ts-ignore -->
-      <view class="tab-item" :class="{ active: activeTab === 'active' }" @click="switchTab('active')">
-        <!-- @ts-ignore -->
-        <text class="tab-text">进行中</text>
-        <!-- @ts-ignore -->
-        <text class="tab-count">{{ activeCourseCount }}</text>
+      
+      <!-- 课程列表 -->
+      <view class="course-list" v-else>
+        <view 
+          class="course-card"
+          v-for="(course, index) in activeTab === 'active' ? activeCourses : allCourses" 
+          :key="course.id" 
+          @click="goToCourseDetail(course)"
+        >
+          <view 
+            class="course-card-bg" 
+            :style="{ 
+              opacity: themeStore.isDarkMode ? 0.85 : 0.95 
+            }"
+          ></view>
+          <view class="course-card-content">
+            <view class="course-name">{{ course.name }}</view>
+            <view class="course-detail">
+              <view class="course-detail-item">
+                <wd-icon name="calendar" size="32rpx" color="#ffffff" />
+                <text>{{ course.startDate ? formatDay(course.startDate) : '未设置' }}</text>
+              </view>
+              <view class="course-detail-item">
+                <wd-icon name="time" size="32rpx" color="#ffffff" />
+                <text>{{ course.endDate ? formatDay(course.endDate) : '未设置' }}</text>
+              </view>
+            </view>
+            <view class="course-description" v-if="course.description">
+              <wd-icon name="info" size="32rpx" color="#ffffff" />
+              <text>{{ course.description }}</text>
+            </view>
+            <view class="course-teacher" v-if="isStudent && course.creatorFullName">
+              <wd-icon name="user" size="32rpx" color="#ffffff" />
+              <text>{{ course.creatorFullName || '未知教师' }}</text>
+            </view>
+            <view class="course-members" v-if="isTeacher && course.memberCount">
+              <wd-icon name="user-group" size="32rpx" color="#ffffff" />
+              <text>{{ course.memberCount || 0 }}人</text>
+            </view>
+            <view class="course-code" v-if="course.code">
+              <wd-icon name="key" size="32rpx" color="#ffffff" />
+              <text>课程码: {{ course.code }}</text>
+            </view>
+          </view>
+        </view>
+        
+        <!-- 加载更多 -->
+        <view class="load-more" v-if="hasMoreCourses && !loading">
+          <wd-button 
+            size="small" 
+            type="info" 
+            @click="loadMoreCourses"
+          >
+            加载更多
+          </wd-button>
+        </view>
+        
+        <view class="loading-more" v-if="loading && courses.length">
+          <wd-loading color="#ff6b00" />
+          <text>加载中...</text>
+        </view>
+        
+        <view class="no-more" v-if="!hasMoreCourses && courses.length && !loading">
+          <text>—— 已经到底了 ——</text>
+        </view>
       </view>
-
-      <!-- @ts-ignore -->
-      <view class="tab-item" :class="{ active: activeTab === 'all' }" @click="switchTab('all')">
-        <!-- @ts-ignore -->
-        <text class="tab-text">全部</text>
-        <!-- @ts-ignore -->
-        <text class="tab-count">{{ allCourseCount }}</text>
-      </view>
-    </view>
-
-    <!-- 加载状态 -->
-    <!-- @ts-ignore -->
-    <view v-if="coursesLoading || allCoursesLoading" class="loading-container">
-      <wd-loading color="#6a11cb" size="80rpx" />
-      <text>加载中...</text>
-    </view>
-
-    <!-- 课程内容区域 -->
-    <!-- @ts-ignore -->
-    <view v-else class="content-area">
-      <!-- 进行中的课程 -->
-      <template v-if="activeTab === 'active'">
-        <!-- @ts-ignore -->
-        <view v-if="activeCourses.length > 0" class="course-list">
-          <!-- @ts-ignore -->
-          <view v-for="course in activeCourses" :key="course.id" class="course-card" @click="viewCourseDetail(course)">
-            <!-- @ts-ignore -->
-            <view class="course-card-cover">
-              <image :src="'https://picsum.photos/500/300?random=' + course.id.slice(0, 8)" mode="aspectFill" />
-              <!-- @ts-ignore -->
-              <view class="course-status active">进行中</view>
-            </view>
-
-            <!-- @ts-ignore -->
-            <view class="course-card-content">
-              <!-- @ts-ignore -->
-              <view class="course-name">{{ course.name }}</view>
-
-              <!-- 教师视图 -->
-              <!-- @ts-ignore -->
-              <view v-if="isTeacher" class="course-meta">
-                <!-- @ts-ignore -->
-                <view class="meta-item">
-                  <wd-icon name="people" size="28rpx" color="#6a11cb" />
-                  <!-- @ts-ignore -->
-                  <text>{{ course.memberCount || 0 }}人</text>
-                </view>
-              </view>
-
-              <!-- 学生视图 -->
-              <!-- @ts-ignore -->
-              <view v-else-if="isStudent" class="course-meta">
-                <!-- @ts-ignore -->
-                <view class="meta-item">
-                  <wd-icon name="user" size="28rpx" color="#6a11cb" />
-                  <!-- @ts-ignore -->
-                  <text>{{ course.creatorFullName || course.creatorUsername || '未知教师' }}</text>
-                </view>
-              </view>
-
-              <!-- @ts-ignore -->
-              <view class="course-time">
-                <wd-icon name="calendar" size="28rpx" color="#999" />
-                <!-- @ts-ignore -->
-                <text>{{ formatDate(course.startDate) }} ~ {{ formatDate(course.endDate) }}</text>
-              </view>
-
-              <!-- 点击查看详情提示 -->
-              <!-- @ts-ignore -->
-              <view class="view-details">
-                <wd-icon name="arrow-right" size="28rpx" color="#6a11cb" />
-                <text>查看详情</text>
-              </view>
-            </view>
-          </view>
-        </view>
-
-        <!-- 无进行中课程 -->
-        <!-- @ts-ignore -->
-        <view v-else class="empty-container">
-          <wd-icon name="info-outline" size="120rpx" color="#cccccc" />
-          <!-- @ts-ignore -->
-          <text class="empty-text">暂无进行中的课程</text>
-
-          <!-- 引导按钮 -->
-          <!-- @ts-ignore -->
-          <view class="action-button-container">
-            <wd-button v-if="isTeacher" type="primary" size="medium" custom-style="margin-top: 40rpx;"
-              @click="createCourse">
-              创建课程
-            </wd-button>
-            <wd-button v-else-if="isStudent" type="primary" size="medium" custom-style="margin-top: 40rpx;"
-              @click="joinCourse">
-              加入课程
-            </wd-button>
-          </view>
-        </view>
-      </template>
-
-      <!-- 全部课程 -->
-      <template v-else-if="activeTab === 'all'">
-        <!-- @ts-ignore -->
-        <view v-if="allCourses.length > 0" class="course-list">
-          <!-- @ts-ignore -->
-          <view v-for="course in allCourses" :key="course.id" class="course-card" @click="viewCourseDetail(course)">
-            <!-- @ts-ignore -->
-            <view class="course-card-cover">
-              <image :src="'https://picsum.photos/500/300?random=' + course.id.slice(0, 8)" mode="aspectFill" />
-              <!-- 根据课程状态显示不同标签 -->
-              <!-- @ts-ignore -->
-              <view class="course-status" :class="{
-                'active': course.status === 'ACTIVE',
-                'completed': course.status === 'COMPLETED',
-                'created': course.status === 'CREATED',
-                'ended': course.status === 'ENDED',
-                'canceled': course.status === 'CANCELED'
-              }">
-                {{ course.status === 'ACTIVE' ? '进行中' :
-                  course.status === 'COMPLETED' ? '已结课' :
-                    course.status === 'CREATED' ? '未开始' :
-                      course.status === 'ENDED' ? '已结束' :
-                        course.status === 'CANCELED' ? '已取消' : '未知状态' }}
-              </view>
-            </view>
-
-            <!-- @ts-ignore -->
-            <view class="course-card-content">
-              <!-- @ts-ignore -->
-              <view class="course-name">{{ course.name }}</view>
-
-              <!-- 教师视图 -->
-              <!-- @ts-ignore -->
-              <view v-if="isTeacher" class="course-meta">
-                <!-- @ts-ignore -->
-                <view class="meta-item">
-                  <wd-icon name="people" size="28rpx" color="#6a11cb" />
-                  <!-- @ts-ignore -->
-                  <text>{{ course.memberCount || 0 }}人</text>
-                </view>
-              </view>
-
-              <!-- 学生视图 -->
-              <!-- @ts-ignore -->
-              <view v-else-if="isStudent" class="course-meta">
-                <!-- @ts-ignore -->
-                <view class="meta-item">
-                  <wd-icon name="user" size="28rpx" color="#6a11cb" />
-                  <!-- @ts-ignore -->
-                  <text>{{ course.creatorFullName || course.creatorUsername || '未知教师' }}</text>
-                </view>
-              </view>
-
-              <!-- @ts-ignore -->
-              <view class="course-time">
-                <wd-icon name="calendar" size="28rpx" color="#999" />
-                <!-- @ts-ignore -->
-                <text>{{ formatDate(course.startDate) }} ~ {{ formatDate(course.endDate) }}</text>
-              </view>
-
-              <!-- 点击查看详情提示 -->
-              <!-- @ts-ignore -->
-              <view class="view-details">
-                <wd-icon name="arrow-right" size="28rpx" color="#6a11cb" />
-                <text>查看详情</text>
-              </view>
-            </view>
-          </view>
-        </view>
-
-        <!-- 无全部课程 -->
-        <!-- @ts-ignore -->
-        <view v-else class="empty-container">
-          <wd-icon name="info-outline" size="120rpx" color="#cccccc" />
-          <!-- @ts-ignore -->
-          <text class="empty-text">暂无课程</text>
-        </view>
-      </template>
-    </view>
-
-    <!-- 只对学生显示扫码按钮 -->
-    <!-- @ts-ignore -->
-    <view v-if="isStudent" class="scan-btn" @click="openScanner">
-      <wd-icon name="scan" size="48rpx" color="white" />
-    </view>
+    </scroll-view>
   </view>
 </template>
 
 <style lang="scss">
 .container {
   min-height: 100vh;
-  background-color: var(--background-color-primary);
-  color: var(--text-color-primary);
+  background-color: var(--background-color-primary, #f5f5f5);
+  color: var(--text-color-primary, #303133);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -571,8 +600,25 @@ async function processCheckInQRCode(qrContent) {
   transition: all 0.3s ease;
 }
 
-.dark-container {
-  background-color: var(--background-color-primary);
+.wot-theme-dark {
+  .header-title {
+    color: #ffffff !important;
+  }
+  
+  .tab-item {
+    color: #a3a6ad !important;
+    
+    &.active {
+      color: #ffffff !important;
+      &::after {
+        background-color: #ff8800 !important;
+      }
+    }
+  }
+  
+  .empty-text, .loading-text, .no-more text {
+    color: #a3a6ad !important;
+  }
 }
 
 .header {
@@ -587,12 +633,27 @@ async function processCheckInQRCode(qrContent) {
   &-title {
     font-size: 40rpx;
     font-weight: bold;
-    color: #333;
+    color: var(--text-color-primary, #303133);
   }
 
   &-action {
     display: flex;
     align-items: center;
+  }
+}
+
+.search-button {
+  width: 70rpx;
+  height: 70rpx;
+  background-color: rgba(255, 107, 0, 0.1);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-left: 20rpx;
+  
+  &:active {
+    background-color: rgba(255, 107, 0, 0.2);
   }
 }
 
@@ -603,228 +664,225 @@ async function processCheckInQRCode(qrContent) {
   align-items: center;
   padding: 20rpx 30rpx;
   box-sizing: border-box;
+}
+
+.tab-item {
   position: relative;
-
-  .tab-item {
-    display: flex;
-    align-items: center;
-    margin-right: 40rpx;
-    padding-bottom: 16rpx;
-    border-bottom: 6rpx solid transparent;
-
-    &.active {
-      border-bottom-color: #6a11cb;
-
-      .tab-text,
-      .tab-count {
-        color: #6a11cb;
-        font-weight: bold;
-      }
-    }
-
-    .tab-text {
-      font-size: 30rpx;
-      color: #666;
-    }
-
-    .tab-count {
-      font-size: 26rpx;
-      color: #666;
-      margin-left: 10rpx;
-      background: rgba(106, 17, 203, 0.1);
-      padding: 2rpx 10rpx;
-      border-radius: 30rpx;
+  padding: 16rpx 30rpx;
+  font-size: 30rpx;
+  color: var(--text-color-secondary, #606266);
+  transition: all 0.3s ease;
+  
+  &.active {
+    color: var(--primary-color, #ff6b00);
+    font-weight: bold;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 30rpx;
+      right: 30rpx;
+      height: 6rpx;
+      background-color: var(--primary-color, #ff6b00);
+      border-radius: 3rpx;
     }
   }
 }
 
-.content-area {
-  width: 100%;
-  max-width: 700rpx;
-  padding: 0 30rpx;
-  box-sizing: border-box;
+.content-container {
   flex: 1;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 20rpx 30rpx;
+}
+
+.loading-container, .empty-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 100rpx 0;
+}
+
+.loading-text, .empty-text {
+  margin-top: 30rpx;
+  font-size: 28rpx;
+  color: var(--text-color-tertiary, #909399);
+}
+
+.empty-container wd-button {
+  margin-top: 30rpx;
 }
 
 .course-list {
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 30rpx;
-  margin-bottom: 100rpx;
-}
-
-.loading-container {
-  flex: 1;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 100rpx 0;
-  gap: 20rpx;
-
-  text {
-    font-size: 28rpx;
-    color: #999;
-  }
 }
 
 .course-card {
+  position: relative;
   width: 100%;
-  background-color: #fff;
   border-radius: 20rpx;
+  margin-bottom: 30rpx;
   overflow: hidden;
-  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-
+  box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  
   &:active {
     transform: scale(0.98);
-    box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.1);
-  }
-
-  &-cover {
-    width: 100%;
-    height: 200rpx;
-    position: relative;
-
-    image {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    .course-status {
-      position: absolute;
-      right: 20rpx;
-      top: 20rpx;
-      padding: 6rpx 16rpx;
-      border-radius: 30rpx;
-      font-size: 24rpx;
-      color: #fff;
-      background-color: rgba(0, 0, 0, 0.5);
-
-      &.active {
-        background-color: rgba(52, 152, 219, 0.8);
-      }
-
-      &.completed {
-        background-color: rgba(46, 204, 113, 0.8);
-      }
-
-      &.created {
-        background-color: rgba(155, 89, 182, 0.8);
-      }
-
-      &.ended {
-        background-color: rgba(52, 73, 94, 0.8);
-      }
-
-      &.canceled {
-        background-color: rgba(231, 76, 60, 0.8);
-      }
-    }
-  }
-
-  &-content {
-    padding: 20rpx 30rpx 30rpx;
-
-    .course-name {
-      font-size: 32rpx;
-      font-weight: bold;
-      color: #333;
-      margin-bottom: 16rpx;
-    }
-
-    .course-meta {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 20rpx;
-      margin-bottom: 16rpx;
-
-      .meta-item {
-        display: flex;
-        align-items: center;
-        font-size: 26rpx;
-        color: #666;
-
-        text {
-          margin-left: 8rpx;
-        }
-      }
-    }
-
-    .course-time {
-      display: flex;
-      align-items: center;
-      font-size: 26rpx;
-      color: #999;
-      margin-bottom: 16rpx;
-
-      text {
-        margin-left: 8rpx;
-      }
-    }
-
-    .view-details {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      font-size: 26rpx;
-      color: #6a11cb;
-
-      text {
-        margin-left: 8rpx;
-      }
-    }
+    box-shadow: 0 6rpx 20rpx rgba(0, 0, 0, 0.15);
   }
 }
 
-.empty-container {
+.wot-theme-dark .course-card {
+  box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.25);
+}
+
+.course-card-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 100rpx 0;
-
-  .empty-text {
-    font-size: 30rpx;
-    color: #999;
-    margin: 30rpx 0;
-  }
-
-  .action-button-container {
-    display: flex;
-    gap: 20rpx;
-  }
+  height: 100%;
+  z-index: 1;
+  transition: all 0.4s ease;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.95;
+  background-image: linear-gradient(135deg, #6366F1 0%, #3B82F6 100%);
 }
 
-.scan-btn {
-  position: fixed;
-  right: 40rpx;
-  bottom: 80rpx;
-  width: 100rpx;
-  height: 100rpx;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-  box-shadow: 0 8rpx 16rpx rgba(106, 17, 203, 0.3);
+.wot-theme-dark .course-card-bg {
+  opacity: 0.85;
+  background-image: linear-gradient(135deg, #4338CA 0%, #2563EB 100%);
+}
+
+.course-card-content {
+  position: relative;
+  z-index: 2;
+  padding: 30rpx;
+  color: #ffffff;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.4) 100%);
+  height: 100%;
+}
+
+.wot-theme-dark .course-card-content {
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.5) 100%);
+}
+
+.course-name {
+  font-size: 38rpx;
+  font-weight: bold;
+  margin-bottom: 24rpx;
+  text-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.course-detail {
+  display: flex;
+  margin-bottom: 20rpx;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.course-detail-item {
   display: flex;
   align-items: center;
-  justify-content: center;
-  z-index: 10;
-
-  &:active {
-    transform: scale(0.95);
-    box-shadow: 0 4rpx 8rpx rgba(106, 17, 203, 0.3);
+  background-color: rgba(255, 255, 255, 0.15);
+  padding: 8rpx 16rpx;
+  border-radius: 30rpx;
+  backdrop-filter: blur(5rpx);
+  
+  text {
+    margin-left: 8rpx;
+    font-size: 24rpx;
+    font-weight: 500;
   }
 }
 
-.more-courses {
-  width: 100%;
+.course-teacher, .course-members, .course-description, .course-code {
+  display: flex;
+  align-items: center;
+  margin-top: 8rpx;
+  
+  text {
+    margin-left: 10rpx;
+    font-size: 26rpx;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 400rpx;
+  }
+}
+
+.course-description {
+  margin-top: 14rpx;
+  margin-bottom: 14rpx;
+  padding: 10rpx 16rpx;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 12rpx;
+  backdrop-filter: blur(5rpx);
+  
+  text {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.4;
+  }
+}
+
+.course-code {
+  margin-top: 14rpx;
+  background-color: rgba(255, 255, 255, 0.15);
+  padding: 6rpx 16rpx;
+  border-radius: 30rpx;
+  display: inline-flex;
+  backdrop-filter: blur(5rpx);
+  border: 1rpx solid rgba(255, 255, 255, 0.2);
+  
+  text {
+    font-weight: 500;
+  }
+}
+
+.course-status {
+  position: relative;
+  z-index: 2;
+  padding: 20rpx 30rpx;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(5rpx);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.wot-theme-dark .course-status {
+  background-color: rgba(30, 30, 30, 0.3);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.load-more, .loading-more, .no-more {
   display: flex;
   justify-content: center;
-  padding: 30rpx 0 60rpx;
+  align-items: center;
+  padding: 30rpx 0;
+}
+
+.loading-more {
+  text {
+    margin-left: 16rpx;
+    font-size: 26rpx;
+    color: var(--text-color-tertiary, #909399);
+  }
+}
+
+.no-more {
+  font-size: 26rpx;
+  color: var(--text-color-tertiary, #909399);
 }
 </style>
 

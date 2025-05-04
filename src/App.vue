@@ -10,11 +10,31 @@
 <script lang="ts" setup>
 import { onLaunch, onShow, onHide } from '@dcloudio/uni-app'
 import { useThemeStore } from '@/store/theme'
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { setupPageChangeListener } from '@/utils/themeUtils'
 
 const themeStore = useThemeStore()
 const isAppReady = ref(false)
+
+// 计算WOT主题模式
+const wotTheme = computed(() => themeStore.isDarkMode ? 'dark' : 'light')
+
+// 计算WOT主题变量
+const themeVars = computed(() => {
+  // 橙色系主题
+  return {
+    colorTheme: '#ff6b00', // 主题色
+    colorSuccess: '#67c23a', // 成功色
+    colorWarning: '#e6a23c', // 警告色
+    colorDanger: '#f56c6c', // 危险色
+    buttonPrimaryBgColor: '#ff6b00', // 主按钮背景色
+    buttonDangerBgColor: '#f56c6c', // 危险按钮背景色
+    iconDefaultSize: '32px', // 默认图标大小
+    switchOnColor: '#ff6b00', // 开关打开颜色
+    switchOnDisabledColor: '#ffbd80', // 开关打开禁用颜色
+    // 其他WOT Design Uni支持的变量可以在这里添加
+  }
+})
 
 // 安全获取uni对象
 function getSafeUni() {
@@ -81,9 +101,11 @@ onHide(() => {
 </script>
 
 <template>
-  <view :class="{'dark-theme': themeStore.isDarkMode}">
-    <router-view />
-  </view>
+  <wd-config-provider :theme="wotTheme" :theme-vars="themeStore.themeVars">
+    <view :class="{'dark-theme': themeStore.isDarkMode}">
+      <router-view />
+    </view>
+  </wd-config-provider>
 </template>
 
 <style lang="scss">
@@ -98,29 +120,6 @@ page {
   color: var(--text-color-primary);
   background-color: var(--background-color-secondary);
   transition: background-color 0.3s, color 0.3s;
-}
-
-/* 暗黑模式全局样式 */
-.dark-theme {
-  --text-color-primary: #e5eaf3;
-  --text-color-secondary: #a3a6ad;
-  --text-color-tertiary: #808286;
-  --background-color-primary: #121212;
-  --background-color-secondary: #1e1e1e;
-  --background-color-tertiary: #2c2c2c;
-  --border-color: #3e3e3e;
-  --divider-color: #4e4e4e;
-  --card-background: rgba(30, 30, 30, 0.9);
-  --card-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.2);
-  --card-border: 1px solid rgba(255, 255, 255, 0.05);
-  --gradient-background: linear-gradient(135deg, #1e1e1e 0%, #121212 100%);
-  --hover-color: #2c2c2e;
-}
-
-/* 暗黑模式类 - 添加在小程序的page根元素上 */
-page.dark {
-  background-color: var(--background-color-secondary);
-  color: var(--text-color-primary);
 }
 
 /* 修复默认头像路径 - 微信小程序环境中直接设置占位背景色，不使用背景图 */
@@ -149,5 +148,11 @@ view, text, navigator, button, image {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
+}
+
+/* WOT暗黑模式支持类 */
+.wot-theme-dark {
+  background-color: #121212 !important;
+  color: #e5eaf3 !important;
 }
 </style>

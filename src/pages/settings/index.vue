@@ -82,11 +82,11 @@ function goToAbout() {
 </script>
 
 <template>
-  <view class="container" :class="{'dark-container': themeStore.isDarkMode}">
+  <view class="container" :class="{'wot-theme-dark': themeStore.isDarkMode}">
     <!-- 个人信息卡片 -->
     <view class="card user-card">
       <view class="user-info">
-        <image class="avatar" :src="userStore.userInfo?.avatarUrl || '/static/images/default-avatar.png'" mode="aspectFill" />
+        <image class="avatar" :src="userStore.userInfo?.avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
         <view class="info">
           <text class="name">{{ userStore.fullName || '未登录' }}</text>
           <text class="role">{{ roleName }}</text>
@@ -105,21 +105,21 @@ function goToAbout() {
       <!-- 主题跟随系统 -->
       <view class="setting-item" v-if="themeStore.supportsDarkMode">
         <view class="setting-label">跟随系统主题</view>
-        <switch 
-          :checked="themeStore.followSystemTheme" 
-          @change="themeStore.toggleFollowSystem"
-          color="#ff6b00"
+        <wd-switch 
+          :modelValue="themeStore.followSystemTheme" 
+          @update:modelValue="themeStore.toggleFollowSystem"
+          activeColor="#ff6b00"
         />
       </view>
       
       <!-- 手动选择主题 -->
       <view class="setting-item" :class="{ 'disabled': themeStore.followSystemTheme }">
         <view class="setting-label">深色模式</view>
-        <switch 
+        <wd-switch 
           :disabled="themeStore.followSystemTheme"
-          :checked="themeStore.isDarkMode" 
-          @change="themeStore.toggleTheme"
-          color="#ff6b00"
+          :modelValue="themeStore.isDarkMode" 
+          @update:modelValue="themeStore.toggleTheme"
+          activeColor="#ff6b00"
         />
       </view>
       
@@ -139,15 +139,16 @@ function goToAbout() {
         <view class="setting-label">关于我们</view>
         <view class="setting-value">
           <text>v1.0.0</text>
-          <wd-icon name="arrow-right" size="32rpx" class="arrow-icon" color="#ff6b00" />
+          <wd-icon name="arrow-right" size="32rpx" class="arrow-icon" />
         </view>
       </view>
     </view>
     
     <!-- 退出登录按钮 -->
-    <view class="logout-button" @click="logout">
-      <wd-icon name="exit" size="36rpx" color="#f56c6c" />
-      <text>退出登录</text>
+    <view class="logout-button-wrapper">
+      <wd-button type="error" size="large" class="logout-button" icon="exit" @click="logout">
+        退出登录
+      </wd-button>
     </view>
     
     <!-- 版本信息 -->
@@ -161,12 +162,8 @@ function goToAbout() {
 .container {
   padding: 30rpx;
   min-height: 100vh;
-  background: var(--gradient-background);
+  background-color: var(--background-color-primary);
   transition: all 0.3s ease;
-}
-
-.dark-container {
-  background: var(--gradient-background);
 }
 
 .card {
@@ -206,7 +203,7 @@ function goToAbout() {
       height: 130rpx;
       border-radius: 50%;
       margin-right: 30rpx;
-      border: 4rpx solid #fff;
+      border: 4rpx solid var(--background-color-primary);
       box-shadow: 0 5rpx 15rpx rgba(0, 0, 0, 0.1);
     }
     
@@ -222,7 +219,7 @@ function goToAbout() {
       .role {
         font-size: 26rpx;
         color: var(--text-color-secondary);
-        background-color: rgba(255, 107, 0, 0.1);
+        background-color: var(--primary-color-bg);
         padding: 6rpx 16rpx;
         border-radius: 30rpx;
         display: inline-block;
@@ -296,28 +293,16 @@ function goToAbout() {
 }
 
 /* 退出按钮 */
-.logout-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 30rpx;
-  text-align: center;
-  font-size: 32rpx;
-  color: var(--danger-color);
-  font-weight: bold;
-  border: 1px solid rgba(245, 108, 108, 0.3);
+.logout-button-wrapper {
   margin-top: 40rpx;
-  background-color: var(--card-background);
-  border-radius: 28rpx;
-  box-shadow: var(--card-shadow);
-  
-  wd-icon {
-    margin-right: 12rpx;
-  }
-  
-  &:active {
-    background-color: rgba(245, 108, 108, 0.05);
-  }
+  margin-bottom: 30rpx;
+  text-align: center;
+  width: 100%;
+}
+
+.logout-button {
+  display: inline-block;
+  min-width: 80%;
 }
 
 /* 版本信息 */
@@ -325,11 +310,22 @@ function goToAbout() {
   text-align: center;
   padding: 30rpx 0;
   width: 100%;
-  margin-top: auto;
   
   text {
     font-size: 24rpx;
     color: var(--text-color-tertiary);
+  }
+}
+
+/* 暗黑模式强制样式 */
+.wot-theme-dark {
+  // 这里的样式将会在wot的暗黑模式下生效
+  background-color: #121212 !important;
+  
+  .card {
+    background-color: #1e1e1e !important;
+    box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
   }
 }
 </style>

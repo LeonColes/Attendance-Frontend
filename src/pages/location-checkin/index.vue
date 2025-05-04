@@ -8,7 +8,7 @@
  * 记得注释
 -->
 <template>
-  <view class="container">
+  <view class="container" :class="{'wot-theme-dark': themeStore.isDarkMode}">
     <!-- 全屏地图 -->
     <view class="map-fullscreen">
       <map
@@ -101,6 +101,7 @@
 <script lang="ts" setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useUserStore } from '@/store/user'
+import { useThemeStore } from '@/store/theme'
 import { submitCheckin, CheckInType } from '@/api/attendance'
 
 // 腾讯地图API配置
@@ -108,6 +109,7 @@ const QQ_MAP_KEY = 'G7VBZ-BF63Q-EEZ52-2XSLD-YYVA7-VJFB4' // 请替换为实际�
 const QQ_MAP_SECRET_KEY = 'Yb88cxWRzZ96IjO0Q3XYllP6C6oj40xc' // 请替换为实际的secretKey
 
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 const loading = ref(false)
 const checkinId = ref('')
 const courseId = ref('')
@@ -704,10 +706,32 @@ onMounted(() => {
 <style lang="scss">
 .container {
   min-height: 100vh;
-  width: 100%;
+  background-color: var(--background-color-primary, #f5f5f5);
+  color: var(--text-color-primary, #303133);
   position: relative;
-  display: flex;
-  flex-direction: column;
+  transition: all 0.3s ease;
+}
+
+.wot-theme-dark {
+  .container {
+    background-color: var(--background-color-primary, #121212);
+    color: var(--text-color-primary, #e5eaf3);
+  }
+  
+  .location-card {
+    background-color: var(--card-bg-color, #1e1e1e);
+    color: var(--text-color-primary, #e5eaf3);
+    border-color: var(--border-color, #3e3e3e);
+  }
+  
+  .status-bar {
+    background-color: rgba(30, 30, 30, 0.9);
+  }
+  
+  .map-control-item {
+    background-color: rgba(30, 30, 30, 0.9);
+    box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.3);
+  }
 }
 
 .map-fullscreen {

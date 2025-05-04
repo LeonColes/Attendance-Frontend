@@ -2,8 +2,9 @@
  * 主题状态管理
  */
 import { defineStore } from 'pinia'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, reactive } from 'vue'
 import { applyThemeToPage, watchSystemThemeChange } from '@/utils/themeUtils'
+import type { ConfigProviderThemeVars } from 'wot-design-uni'
 
 // 安全获取uni对象
 function getSafeUni() {
@@ -27,6 +28,22 @@ const hasDarkModeSupport = () => {
   return false
 }
 
+// 默认浅色主题变量
+const defaultLightThemeVars: Partial<ConfigProviderThemeVars> = {
+  colorTheme: '#4f46e5', // 主题色 - 靛蓝色
+  colorSuccess: '#10b981', // 成功色 - 翡翠绿
+  colorWarning: '#f59e0b', // 警告色 - 琥珀色
+  colorDanger: '#ef4444', // 危险色 - 鲜红色
+  buttonPrimaryColor: '#ffffff', // 主按钮文字颜色
+  buttonPrimaryBgColor: '#4f46e5', // 主按钮背景色
+}
+
+// 默认深色主题变量 - 继承浅色主题的基础上进行覆盖
+const defaultDarkThemeVars: Partial<ConfigProviderThemeVars> = {
+  ...defaultLightThemeVars,
+  colorTheme: '#6366f1', // 深色模式下稍亮一些的主题色
+}
+
 export const useThemeStore = defineStore('theme', () => {
   // 当前主题模式，默认为light
   const themeMode = ref<'light' | 'dark'>('light')
@@ -39,6 +56,11 @@ export const useThemeStore = defineStore('theme', () => {
   
   // 是否跟随系统主题
   const followSystemTheme = ref(false)
+  
+  // 当前主题变量
+  const themeVars = computed<Partial<ConfigProviderThemeVars>>(() => 
+    isDarkMode.value ? defaultDarkThemeVars : defaultLightThemeVars
+  )
   
   // 当主题改变时，应用主题到页面
   watch(themeMode, (newTheme) => {
@@ -163,6 +185,7 @@ export const useThemeStore = defineStore('theme', () => {
     isDarkMode,
     supportsDarkMode,
     followSystemTheme,
+    themeVars,
     loadThemeSettings,
     toggleTheme,
     setTheme,

@@ -8,11 +8,13 @@
  * 记得注释
 -->
 <script lang="ts" setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { getCheckinQRCode as getCheckinQRCodeApi } from '@/api/attendance'
 import { useUserStore } from '@/store/user'
+import { useThemeStore } from '@/store/theme'
 
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 const loading = ref(false)
 const checkinId = ref('')
 const errorMessage = ref('')
@@ -99,7 +101,7 @@ function goBack() {
 </script>
 
 <template>
-  <view class="container">
+  <view class="container" :class="{'wot-theme-dark': themeStore.isDarkMode}">
     <!-- 加载中 -->
     <view v-if="loading" class="loading-container">
       <wd-loading size="48rpx" />
@@ -159,6 +161,11 @@ function goBack() {
 .container {
   min-height: 100vh;
   background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+  transition: background 0.3s ease;
+}
+
+.wot-theme-dark .container {
+  background: linear-gradient(135deg, #2b1e40 0%, #0f2c56 100%);
 }
 
 .content-wrapper {
@@ -171,6 +178,7 @@ function goBack() {
   border-radius: 24rpx;
   padding: 40rpx 30rpx;
   box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
   
   .card-header {
     margin-bottom: 40rpx;
@@ -188,6 +196,19 @@ function goBack() {
       font-size: 28rpx;
       color: #666;
     }
+  }
+}
+
+.wot-theme-dark .qrcode-card {
+  background-color: rgba(30, 30, 30, 0.95);
+  box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.3);
+  
+  .card-title {
+    color: #e5eaf3 !important;
+  }
+  
+  .card-subtitle {
+    color: #a3a6ad !important;
   }
 }
 

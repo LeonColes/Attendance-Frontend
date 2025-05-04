@@ -13,12 +13,12 @@
   --background-color-tertiary: #f5f5f5;
   --border-color: #e4e7ed;
   --divider-color: #dcdfe6;
-  --active-color: #0165FF;
-  --hover-color: #f2f6fc;
+  --active-color: #4f46e5;
+  --hover-color: #f5f7ff;
   
   // 卡片
   --card-background: rgba(255, 255, 255, 0.9);
-  --card-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.08);
+  --card-shadow: 0 10rpx 30rpx rgba(79, 70, 229, 0.08);
   --card-border: none;
   
   // 渐变背景
@@ -26,16 +26,16 @@
   --gradient-overlay: rgba(255, 255, 255, 0.1);
   
   // 按钮
-  --button-primary-background: linear-gradient(270deg, #0165FF 0%, #0176FF 100%);
+  --button-primary-background: linear-gradient(270deg, #4f46e5 0%, #6366f1 100%);
   --button-primary-color: #ffffff;
-  --button-danger-background: #f56c6c;
+  --button-danger-background: #ef4444;
   --button-danger-color: #ffffff;
   
   // 状态颜色
-  --success-color: #67c23a;
-  --warning-color: #e6a23c;
-  --danger-color: #f56c6c;
-  --info-color: #909399;
+  --success-color: #10b981;
+  --warning-color: #f59e0b;
+  --danger-color: #ef4444;
+  --info-color: #6b7280;
 }
 
 // 深色主题变量
@@ -49,7 +49,7 @@ page.dark, [data-theme='dark'] {
   --background-color-tertiary: #2c2c2c;
   --border-color: #3e3e3e;
   --divider-color: #4e4e4e;
-  --active-color: #0165FF;
+  --active-color: #6366f1;
   --hover-color: #2c2c2e;
   
   // 卡片
@@ -62,16 +62,16 @@ page.dark, [data-theme='dark'] {
   --gradient-overlay: rgba(0, 0, 0, 0.2);
   
   // 按钮
-  --button-primary-background: linear-gradient(270deg, #0165FF 0%, #0176FF 100%);
+  --button-primary-background: linear-gradient(270deg, #6366f1 0%, #818cf8 100%);
   --button-primary-color: #ffffff;
-  --button-danger-background: #f56c6c;
+  --button-danger-background: #f87171;
   --button-danger-color: #ffffff;
   
   // 状态颜色
-  --success-color: #85ce61;
-  --warning-color: #ebb563;
-  --danger-color: #f78989;
-  --info-color: #a6a9ad;
+  --success-color: #34d399;
+  --warning-color: #fbbf24;
+  --danger-color: #f87171;
+  --info-color: #9ca3af;
 }
 
 // 通用组件样式

@@ -10,6 +10,7 @@
 <script lang="ts" setup>
 import { ref, computed, reactive, onMounted, watch, onBeforeUnmount } from 'vue'
 import { useUserStore } from '@/store/user'
+import { useThemeStore } from '@/store/theme'
 import { CheckInType, getCheckinList, deleteCheckin, getCheckinRecordList } from '@/api/attendance'
 import { getCourseMemberList, getCourseQRCode, deleteCourse, removeCourseMember, getCourseDetail } from '@/api/courses'
 import type { PageQueryParams } from '@/api/attendance'
@@ -29,6 +30,7 @@ declare global {
 }
 
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 const loading = ref(false)
 const courseId = ref('')
 const courseDetail = ref<any>({})
@@ -755,7 +757,7 @@ function handleRemoveMember(member) {
     success: async (res) => {
       if (res.confirm) {
         try {
-          await removeCourseMember(courseId.value, member.userId, res.content)
+          await removeCourseMember(courseId.value, member.id, res.content)
           getSafeUni().showToast({
             title: '成员已移除',
             icon: 'success'
@@ -1765,8 +1767,7 @@ async function startAddressResolution(records) {
 </script>
 
 <template>
-  <!-- @ts-ignore -->
-  <view class="container">
+  <view class="container" :class="{'wot-theme-dark': themeStore.isDarkMode}">
     <!-- 加载中 -->
     <!-- @ts-ignore -->
     <view v-if="loading" class="loading-container">
@@ -2103,12 +2104,37 @@ async function startAddressResolution(records) {
 <style lang="scss" scoped>
 .container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f6f9fc 0%, #edf1f7 100%);
+  background-color: var(--background-color-primary, #f5f5f5);
+  color: var(--text-color-primary, #303133);
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 30rpx 0;
+  transition: all 0.3s ease;
+}
+
+.wot-theme-dark {
+  .container {
+    background-color: var(--background-color-primary, #121212);
+    color: var(--text-color-primary, #e5eaf3);
+  }
+  
+  .card {
+    background-color: var(--card-bg-color, #1e1e1e);
+    color: var(--text-color-primary, #e5eaf3);
+    border-color: var(--border-color, #3e3e3e);
+  }
+  
+  .tab-container {
+    background-color: var(--card-bg-color, #1e1e1e);
+    
+    .tab-item {
+      color: var(--text-color-secondary, #a3a6ad);
+      
+      &.active {
+        color: #ff6b00;
+      }
+    }
+  }
 }
 
 /* 导航栏样式 */
