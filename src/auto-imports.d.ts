@@ -6,6 +6,7 @@
 export {}
 declare global {
   const EffectScope: typeof import('vue')['EffectScope']
+  const applyThemeToPage: typeof import('./utils/themeUtils')['applyThemeToPage']
   const asyncComputed: typeof import('@vueuse/core')['asyncComputed']
   const autoResetRef: typeof import('@vueuse/core')['autoResetRef']
   const callWxApiSafely: typeof import('./utils/wxUtils')['callWxApiSafely']
@@ -48,6 +49,7 @@ declare global {
   const getDefaultEndTime: typeof import('./utils/dateTime')['getDefaultEndTime']
   const getDefaultStartTime: typeof import('./utils/dateTime')['getDefaultStartTime']
   const getSafeUni: typeof import('./utils/wxUtils')['getSafeUni']
+  const getThemeCSSVariables: typeof import('./utils/themeUtils')['getThemeCSSVariables']
   const getTimeDiff: typeof import('./utils/dateTime')['getTimeDiff']
   const getToken: typeof import('./utils/request')['getToken']
   const h: typeof import('vue')['h']
@@ -130,6 +132,7 @@ declare global {
   const resolveUnref: typeof import('@vueuse/core')['resolveUnref']
   const safeParseDate: typeof import('./utils/dateTime')['safeParseDate']
   const setToken: typeof import('./utils/request')['setToken']
+  const setupPageChangeListener: typeof import('./utils/themeUtils')['setupPageChangeListener']
   const shallowReactive: typeof import('vue')['shallowReactive']
   const shallowReadonly: typeof import('vue')['shallowReadonly']
   const shallowRef: typeof import('vue')['shallowRef']
@@ -327,6 +330,7 @@ declare global {
   const watchPausable: typeof import('@vueuse/core')['watchPausable']
   const watchPostEffect: typeof import('vue')['watchPostEffect']
   const watchSyncEffect: typeof import('vue')['watchSyncEffect']
+  const watchSystemThemeChange: typeof import('./utils/themeUtils')['watchSystemThemeChange']
   const watchThrottled: typeof import('@vueuse/core')['watchThrottled']
   const watchTriggerable: typeof import('@vueuse/core')['watchTriggerable']
   const watchWithFilter: typeof import('@vueuse/core')['watchWithFilter']
@@ -344,6 +348,7 @@ declare module 'vue' {
   interface GlobalComponents {}
   interface ComponentCustomProperties {
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
+    readonly applyThemeToPage: UnwrapRef<typeof import('./utils/themeUtils')['applyThemeToPage']>
     readonly asyncComputed: UnwrapRef<typeof import('@vueuse/core')['asyncComputed']>
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
     readonly callWxApiSafely: UnwrapRef<typeof import('./utils/wxUtils')['callWxApiSafely']>
@@ -386,6 +391,7 @@ declare module 'vue' {
     readonly getDefaultEndTime: UnwrapRef<typeof import('./utils/dateTime')['getDefaultEndTime']>
     readonly getDefaultStartTime: UnwrapRef<typeof import('./utils/dateTime')['getDefaultStartTime']>
     readonly getSafeUni: UnwrapRef<typeof import('./utils/wxUtils')['getSafeUni']>
+    readonly getThemeCSSVariables: UnwrapRef<typeof import('./utils/themeUtils')['getThemeCSSVariables']>
     readonly getTimeDiff: UnwrapRef<typeof import('./utils/dateTime')['getTimeDiff']>
     readonly getToken: UnwrapRef<typeof import('./utils/request')['getToken']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
@@ -468,6 +474,7 @@ declare module 'vue' {
     readonly resolveUnref: UnwrapRef<typeof import('@vueuse/core')['resolveUnref']>
     readonly safeParseDate: UnwrapRef<typeof import('./utils/dateTime')['safeParseDate']>
     readonly setToken: UnwrapRef<typeof import('./utils/request')['setToken']>
+    readonly setupPageChangeListener: UnwrapRef<typeof import('./utils/themeUtils')['setupPageChangeListener']>
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
@@ -664,6 +671,7 @@ declare module 'vue' {
     readonly watchPausable: UnwrapRef<typeof import('@vueuse/core')['watchPausable']>
     readonly watchPostEffect: UnwrapRef<typeof import('vue')['watchPostEffect']>
     readonly watchSyncEffect: UnwrapRef<typeof import('vue')['watchSyncEffect']>
+    readonly watchSystemThemeChange: UnwrapRef<typeof import('./utils/themeUtils')['watchSystemThemeChange']>
     readonly watchThrottled: UnwrapRef<typeof import('@vueuse/core')['watchThrottled']>
     readonly watchTriggerable: UnwrapRef<typeof import('@vueuse/core')['watchTriggerable']>
     readonly watchWithFilter: UnwrapRef<typeof import('@vueuse/core')['watchWithFilter']>

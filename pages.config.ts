@@ -71,15 +71,6 @@ export default defineUniPages({
       }
     },
     {
-      "path": "pages/my/index",
-      "type": "page",
-      "layout": "tabbar",
-      "name": "my",
-      "style": {
-        "navigationBarTitleText": "个人中心"
-      }
-    },
-    {
       "path": "pages/register/index",
       "type": "page",
       "style": {
@@ -101,10 +92,17 @@ export default defineUniPages({
     backgroundColor: '#ffffff',
     list: [{
       pagePath: 'pages/index',
-      text: '首页',
+      text: '课程',
+      iconPath: 'static/tabbar/course.png',
+      selectedIconPath: 'static/tabbar/course-active.png',
     }, {
-      pagePath: 'pages/my/index',
-      text: '我的',
+      pagePath: 'pages/settings/index',
+      text: '设置',
+      iconPath: 'static/tabbar/settings.png',
+      selectedIconPath: 'static/tabbar/settings-active.png'
     }],
   },
+  "subPackages": [],
+  "darkmode": true,
+  "themeLocation": "theme.json"
 })

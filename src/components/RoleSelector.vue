@@ -79,7 +79,7 @@ function selectRole(role: string) {
     background-color: rgba(255, 255, 255, 1);
     box-shadow: 0 12rpx 30rpx rgba(0, 0, 0, 0.1);
     transform: translateY(-4rpx);
-    border: 2rpx solid #2575fc;
+    border: 2rpx solid #ff6b00;
   }
 }
 
@@ -89,7 +89,7 @@ function selectRole(role: string) {
   align-items: center;
   width: 120rpx;
   height: 120rpx;
-  background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+  background: linear-gradient(135deg, #ff8800 0%, #ff6b00 100%);
   border-radius: 50%;
   margin-bottom: 20rpx;
 }
@@ -117,7 +117,7 @@ function selectRole(role: string) {
   right: 20rpx;
   width: 60rpx;
   height: 60rpx;
-  background-color: #2575fc;
+  background-color: #ff6b00;
   border-radius: 50%;
   display: flex;
   justify-content: center;

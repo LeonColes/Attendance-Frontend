@@ -9,7 +9,9 @@
 -->
 <script lang="ts" setup>
 import { ref, onMounted } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/store/user'
+import { useThemeStore } from '@/store/theme'
 import { joinCourse } from '@/api/courses'
 
 // 安全获取uni对象
@@ -18,6 +20,7 @@ function getSafeUni() {
 }
 
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 const loading = ref(false)
 const courseCode = ref('')
 const formData = ref({
@@ -32,6 +35,11 @@ onMounted(() => {
     formData.value.courseCode = query.code
     courseCode.value = query.code
   }
+})
+
+// 每次页面显示时应用当前主题
+onShow(() => {
+  themeStore.updateSystemUITheme()
 })
 
 // 表单验证规则
@@ -188,13 +196,13 @@ function goBack() {
 
 <template>
   <!-- @ts-ignore -->
-  <view class="container">
+  <view class="container" :class="{'dark-container': themeStore.isDarkMode}">
     <!-- 导航栏 -->
     <!-- @ts-ignore -->
-    <view class="navbar">
+    <view class="navbar" :class="{'dark-navbar': themeStore.isDarkMode}">
       <!-- @ts-ignore -->
       <view class="back-icon" @click="goBack">
-        <wd-icon name="arrow-left" size="36rpx" color="#6a11cb" />
+        <wd-icon name="arrow-left" size="36rpx" :color="themeStore.isDarkMode ? '#ffffff' : '#6a11cb'" />
       </view>
       <!-- @ts-ignore -->
       <view class="navbar-title">加入课程</view>
@@ -204,7 +212,7 @@ function goBack() {
     
     <!-- 表单区域 -->
     <!-- @ts-ignore -->
-    <view class="form-container">
+    <view class="form-container" :class="{'dark-form': themeStore.isDarkMode}">
       <!-- 头部图片 -->
       <!-- @ts-ignore -->
       <view class="header-image">
@@ -225,7 +233,7 @@ function goBack() {
         <!-- 课程码输入 -->
         <wd-form-item prop="courseCode">
           <!-- @ts-ignore -->
-          <view class="input-container">
+          <view class="input-container" :class="{'dark-input': themeStore.isDarkMode}">
             <wd-input
               v-model="formData.courseCode"
               placeholder="请输入课程邀请码"
@@ -249,12 +257,12 @@ function goBack() {
           </view>
         </wd-button>
         
-        <!-- 提交按钮 -->
+        <!-- 加入按钮 -->
         <wd-button
           block
           type="primary"
           :loading="loading"
-          custom-style="margin-top: 40rpx;"
+          custom-style="margin-top: 20rpx;"
           @click="handleJoin"
         >
           加入课程
@@ -268,19 +276,19 @@ function goBack() {
         <text class="tips-title">如何获取课程邀请码?</text>
         <!-- @ts-ignore -->
         <view class="tips-item">
-          <wd-icon name="checked" size="32rpx" color="#6a11cb" />
+          <wd-icon name="checked" size="32rpx" color="#ff6b00" />
           <!-- @ts-ignore -->
           <text>向课程老师获取邀请码</text>
         </view>
         <!-- @ts-ignore -->
         <view class="tips-item">
-          <wd-icon name="checked" size="32rpx" color="#6a11cb" />
+          <wd-icon name="checked" size="32rpx" color="#ff6b00" />
           <!-- @ts-ignore -->
           <text>扫描课程二维码</text>
         </view>
         <!-- @ts-ignore -->
         <view class="tips-item">
-          <wd-icon name="checked" size="32rpx" color="#6a11cb" />
+          <wd-icon name="checked" size="32rpx" color="#ff6b00" />
           <!-- @ts-ignore -->
           <text>从班级群获取邀请链接</text>
         </view>
@@ -292,91 +300,122 @@ function goBack() {
 <style lang="scss">
 .container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-  padding-bottom: 80rpx;
+  background-color: var(--background-color-primary);
+  position: relative;
+  transition: all 0.3s ease;
 }
 
-/* 导航栏 */
+.dark-container {
+  background-color: var(--background-color-primary);
+}
+
+/* 自定义导航栏 */
 .navbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 60rpx 30rpx 20rpx;
+  height: 90rpx;
+  padding: 0 30rpx;
+  background-color: var(--background-color-primary);
+  border-bottom: 1px solid var(--border-color);
+  position: relative;
+  
+  .navbar-title {
+    font-size: 36rpx;
+    font-weight: bold;
+    color: var(--text-color-primary);
+  }
+  
+  .back-icon {
+    width: 60rpx;
+    height: 60rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .placeholder {
+    width: 60rpx;
+  }
 }
 
-.back-icon {
-  width: 80rpx;
-  height: 80rpx;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
+.dark-navbar {
+  background-color: var(--background-color-primary);
+  border-bottom: 1px solid var(--border-color);
+  
+  .navbar-title {
+    color: var(--text-color-primary);
+  }
 }
 
-.navbar-title {
-  color: #fff;
-  font-size: 36rpx;
-  font-weight: bold;
-}
-
-.placeholder {
-  width: 80rpx;
-}
-
-/* 表单区域 */
+/* 表单容器 */
 .form-container {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 40rpx 40rpx 0 0;
-  padding: 40rpx 40rpx 80rpx;
-  margin: 20rpx 0 0;
-  min-height: 80vh;
+  padding: 40rpx 30rpx;
+  background-color: var(--background-color-primary);
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
+  margin: 20rpx;
+  transition: all 0.3s ease;
 }
 
+.dark-form {
+  background-color: var(--background-color-secondary);
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.2);
+}
+
+/* 头部图片 */
 .header-image {
-  display: flex;
-  justify-content: center;
+  text-align: center;
   margin-bottom: 40rpx;
   
   image {
-    width: 400rpx;
+    width: 300rpx;
     height: 300rpx;
   }
 }
 
+/* 表单标题 */
 .form-title {
   text-align: center;
-  margin-bottom: 60rpx;
+  margin-bottom: 40rpx;
   
   .title {
-    display: block;
     font-size: 36rpx;
     font-weight: bold;
-    color: #333;
-    margin-bottom: 10rpx;
+    color: var(--text-color-primary);
+    display: block;
+    margin-bottom: 12rpx;
   }
   
   .subtitle {
-    display: block;
-    font-size: 26rpx;
-    color: #666;
+    font-size: 28rpx;
+    color: var(--text-color-secondary);
   }
 }
 
+/* 输入框容器 */
 .input-container {
-  position: relative;
-  margin-bottom: 30rpx;
+  background-color: var(--background-color-tertiary);
+  border-radius: 12rpx;
+  overflow: hidden;
+  margin-bottom: 20rpx;
+  transition: all 0.3s ease;
 }
 
+.dark-input {
+  background-color: var(--background-color-tertiary);
+}
+
+/* 扫码按钮内容 */
 .scan-button-content {
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+/* 占位符样式 */
 .placeholder {
-  font-size: 28rpx;
-  color: #999;
+  color: var(--text-color-tertiary);
 }
 
 /* 提示区域 */

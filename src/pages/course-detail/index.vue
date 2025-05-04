@@ -2359,8 +2359,8 @@ async function startAddressResolution(records) {
 }
 
 .tab-item.active {
-  background: linear-gradient(135deg, rgba(106, 17, 203, 0.1) 0%, rgba(37, 117, 252, 0.1) 100%);
-  box-shadow: 0 4rpx 8rpx rgba(106, 17, 203, 0.1);
+  background: linear-gradient(135deg, rgba(255, 107, 0, 0.1) 0%, rgba(255, 136, 0, 0.1) 100%);
+  box-shadow: 0 4rpx 8rpx rgba(255, 107, 0, 0.1);
 }
 
 .tab-item text {
@@ -2370,7 +2370,7 @@ async function startAddressResolution(records) {
 }
 
 .tab-item.active text {
-  color: #6a11cb;
+  color: #ff6b00;
   font-weight: bold;
 }
 
@@ -2979,20 +2979,20 @@ async function startAddressResolution(records) {
   justify-content: center;
   padding: 10rpx 20rpx;
   border-radius: 50rpx;
-  background: linear-gradient(135deg, rgba(106, 17, 203, 0.08) 0%, rgba(37, 117, 252, 0.08) 100%);
-  color: #6a11cb;
+  background: linear-gradient(135deg, rgba(255, 107, 0, 0.08) 0%, rgba(255, 136, 0, 0.08) 100%);
+  color: #ff6b00;
   font-size: 28rpx;
   margin-bottom: 20rpx;
   align-self: center;
   width: fit-content;
   cursor: pointer;
-  box-shadow: 0 4rpx 8rpx rgba(106, 17, 203, 0.05);
+  box-shadow: 0 4rpx 8rpx rgba(255, 107, 0, 0.05);
   transition: all 0.3s ease;
 }
 
 .refresh-btn:active {
   transform: scale(0.95);
-  box-shadow: 0 2rpx 4rpx rgba(106, 17, 203, 0.03);
+  box-shadow: 0 2rpx 4rpx rgba(255, 107, 0, 0.03);
 }
 
 /* 添加导出按钮样式 */
@@ -3331,7 +3331,7 @@ async function startAddressResolution(records) {
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #6a11cb 0%, #2575fc 100%);
+  background: linear-gradient(90deg, #ff8800 0%, #ff6b00 100%);
   transition: width 0.3s ease;
 }
 

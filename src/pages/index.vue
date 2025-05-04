@@ -14,6 +14,7 @@ import { getCourseList } from '@/api/courses'
 import { getCheckinList, submitCheckin, CheckInType } from '@/api/attendance'
 import { onShow, onLoad } from '@dcloudio/uni-app'
 import { formatDate } from '@/utils/dateTime'
+import { useThemeStore } from '@/store/theme'
 
 // 安全获取uni对象
 function getSafeUni() {
@@ -28,6 +29,7 @@ declare global {
 }
 
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 const activeTab = ref<'active' | 'all'>('active')
 const activeCourseCount = ref(0)
 const allCourseCount = ref(0)
@@ -54,6 +56,7 @@ onShow(() => {
       loadCourseData()
     }
   })
+  themeStore.updateSystemUITheme()
 })
 
 // 检查登录状态
@@ -338,7 +341,7 @@ async function processCheckInQRCode(qrContent) {
 
 <template>
   <!-- @ts-ignore -->
-  <view class="container">
+  <view class="container" :class="{'dark-container': themeStore.isDarkMode}">
     <!-- 页面头部 -->
     <!-- @ts-ignore -->
     <view class="header">
@@ -559,11 +562,17 @@ async function processCheckInQRCode(qrContent) {
 <style lang="scss">
 .container {
   min-height: 100vh;
-  background-color: #f5f7fa;
+  background-color: var(--background-color-primary);
+  color: var(--text-color-primary);
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
+  transition: all 0.3s ease;
+}
+
+.dark-container {
+  background-color: var(--background-color-primary);
 }
 
 .header {

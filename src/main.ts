@@ -4,6 +4,7 @@ import App from './App.vue'
 import 'uno.css'
 import router from './router'
 import { initializeWxEnvironment, isWechatMiniProgram, createSafeWorker } from '@/utils/wxUtils'
+import { watchSystemThemeChange } from '@/utils/themeUtils'
 
 // 设置全局时区为Asia/Shanghai
 try {
@@ -48,6 +49,35 @@ if (isWechatMiniProgram()) {
   if (typeof Worker !== 'undefined') {
     // @ts-ignore
     window.Worker = createSafeWorker
+  }
+  
+  // 监听系统主题变化
+  try {
+    const savedTheme = uni.getStorageSync('app_theme')
+    if (savedTheme && typeof savedTheme === 'string') {
+      // 如果保存的是简单字符串格式
+      if (savedTheme === 'dark' || savedTheme === 'light') {
+        watchSystemThemeChange((theme) => {
+          // 主题相关处理会在store中进行
+          console.log('系统主题变更为:', theme)
+        })
+      } else {
+        // 如果是JSON字符串格式
+        try {
+          const settings = JSON.parse(savedTheme)
+          if (settings.followSystem) {
+            watchSystemThemeChange((theme) => {
+              // 主题相关处理会在store中进行
+              console.log('系统主题变更为:', theme)
+            })
+          }
+        } catch (e) {
+          console.error('解析主题设置失败', e)
+        }
+      }
+    }
+  } catch (e) {
+    console.error('获取主题设置失败', e)
   }
 }
 

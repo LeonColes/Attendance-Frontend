@@ -1,0 +1,125 @@
+/**
+ * 主题样式变量
+ */
+
+// 亮色主题变量
+:root {
+  // 颜色
+  --text-color-primary: #303133;
+  --text-color-secondary: #606266;
+  --text-color-tertiary: #909399;
+  --background-color-primary: #ffffff;
+  --background-color-secondary: #f9f9f9;
+  --background-color-tertiary: #f5f5f5;
+  --border-color: #e4e7ed;
+  --divider-color: #dcdfe6;
+  --active-color: #0165FF;
+  --hover-color: #f2f6fc;
+  
+  // 卡片
+  --card-background: rgba(255, 255, 255, 0.9);
+  --card-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.08);
+  --card-border: none;
+  
+  // 渐变背景
+  --gradient-background: linear-gradient(135deg, #f9f9f9 0%, #f5f5f5 100%);
+  --gradient-overlay: rgba(255, 255, 255, 0.1);
+  
+  // 按钮
+  --button-primary-background: linear-gradient(270deg, #0165FF 0%, #0176FF 100%);
+  --button-primary-color: #ffffff;
+  --button-danger-background: #f56c6c;
+  --button-danger-color: #ffffff;
+  
+  // 状态颜色
+  --success-color: #67c23a;
+  --warning-color: #e6a23c;
+  --danger-color: #f56c6c;
+  --info-color: #909399;
+}
+
+// 深色主题变量
+page.dark, [data-theme='dark'] {
+  // 颜色
+  --text-color-primary: #e5eaf3;
+  --text-color-secondary: #a3a6ad;
+  --text-color-tertiary: #808286;
+  --background-color-primary: #121212;
+  --background-color-secondary: #1e1e1e;
+  --background-color-tertiary: #2c2c2c;
+  --border-color: #3e3e3e;
+  --divider-color: #4e4e4e;
+  --active-color: #0165FF;
+  --hover-color: #2c2c2e;
+  
+  // 卡片
+  --card-background: rgba(30, 30, 30, 0.9);
+  --card-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.2);
+  --card-border: 1px solid rgba(255, 255, 255, 0.05);
+  
+  // 渐变背景
+  --gradient-background: linear-gradient(135deg, #1e1e1e 0%, #121212 100%);
+  --gradient-overlay: rgba(0, 0, 0, 0.2);
+  
+  // 按钮
+  --button-primary-background: linear-gradient(270deg, #0165FF 0%, #0176FF 100%);
+  --button-primary-color: #ffffff;
+  --button-danger-background: #f56c6c;
+  --button-danger-color: #ffffff;
+  
+  // 状态颜色
+  --success-color: #85ce61;
+  --warning-color: #ebb563;
+  --danger-color: #f78989;
+  --info-color: #a6a9ad;
+}
+
+// 通用组件样式
+
+// 容器
+.container {
+  min-height: 100vh;
+  background: var(--background-color-primary);
+  color: var(--text-color-primary);
+  transition: all 0.4s ease;
+}
+
+// 卡片
+.card {
+  background-color: var(--card-background);
+  box-shadow: var(--card-shadow);
+  border: var(--card-border);
+  border-radius: 16rpx;
+  transition: all 0.3s ease;
+}
+
+// 按钮
+.btn-primary {
+  background: var(--button-primary-background);
+  color: var(--button-primary-color);
+  border-radius: 8rpx;
+}
+
+.btn-danger {
+  background-color: var(--button-danger-background);
+  color: var(--button-danger-color);
+}
+
+// 表单元素
+.form-control {
+  background-color: var(--background-color-tertiary);
+  color: var(--text-color-primary);
+  border: 1px solid var(--border-color);
+}
+
+// 列表项
+.list-item {
+  border-bottom: 1px solid var(--border-color);
+}
+
+// 分割线
+.divider {
+  height: 1px;
+  background-color: var(--divider-color);
+  margin: 10rpx 0;
+} 

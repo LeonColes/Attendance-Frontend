@@ -12,14 +12,14 @@ interface NavigateToOptions {
        "/pages/join-course/index" |
        "/pages/location-checkin/index" |
        "/pages/login/index" |
-       "/pages/my/index" |
        "/pages/register/index" |
-       "/pages/scanner/index";
+       "/pages/scanner/index" |
+       "/pages/settings/index";
 }
 interface RedirectToOptions extends NavigateToOptions {}
 
 interface SwitchTabOptions {
-  url: "/pages/index" | "/pages/my/index"
+  url: "/pages/index" | "/pages/settings/index"
 }
 
 type ReLaunchOptions = NavigateToOptions | SwitchTabOptions;

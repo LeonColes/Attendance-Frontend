@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200px" height="200px" viewBox="0 0 200 200" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>默认头像</title>
+    <defs>
+        <linearGradient x1="0%" y1="0%" x2="100%" y2="100%" id="avatarGradient">
+            <stop stop-color="#FF8800" offset="0%"></stop>
+            <stop stop-color="#FF6B00" offset="100%"></stop>
+        </linearGradient>
+    </defs>
+    <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <circle fill="url(#avatarGradient)" cx="100" cy="100" r="100"></circle>
+        <path d="M100,140 C77.90861,140 60,122.09139 60,100 C60,77.90861 77.90861,60 100,60 C122.09139,60 140,77.90861 140,100 C140,122.09139 122.09139,140 100,140 Z" fill="#FFFFFF" fill-opacity="0.2"></path>
+        <circle fill="#FFFFFF" fill-opacity="0.7" cx="100" cy="85" r="25"></circle>
+        <path d="M100,180 C130,180 155,165 170,140 C155,115 130,100 100,100 C70,100 45,115 30,140 C45,165 70,180 100,180 Z" fill="#FFFFFF" fill-opacity="0.4"></path>
+    </g>
+</svg> 
