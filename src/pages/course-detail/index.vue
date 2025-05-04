@@ -1801,7 +1801,7 @@ async function startAddressResolution(records) {
           
           <!-- 人数信息 -->
           <view class="info-item">
-            <wd-icon name="user-group" size="32rpx" color="#ff6b00" />
+            <wd-icon name="user-talk" size="32rpx" color="#ff6b00" />
             <text class="info-label">人数</text>
             <text class="info-value">{{ courseDetail.memberCount || 0 }}人</text>
           </view>
@@ -1815,7 +1815,7 @@ async function startAddressResolution(records) {
           
           <!-- 描述信息 -->
           <view class="info-item full-width">
-            <wd-icon name="description" size="32rpx" color="#ff6b00" />
+            <wd-icon name="lenovo" size="32rpx" color="#ff6b00" />
             <text class="info-label">描述</text>
             <text class="info-value description">{{ courseDetail.description || '暂无课程描述' }}</text>
           </view>
@@ -1832,7 +1832,7 @@ async function startAddressResolution(records) {
           <!-- 添加邀请学生按钮 -->
           <wd-button type="info" size="small" custom-style="height: 70rpx; margin-left: 20rpx; background-color: #ff6b00; border-color: #ff6b00;"
             @click="openQRCodeModal">
-            <wd-icon name="qrcode" size="28rpx" color="#ffffff" />
+            <wd-icon name="usergroup-add" size="28rpx" color="#ffffff" />
             <text style="margin-left: 8rpx;">邀请学生</text>
           </wd-button>
 
@@ -1853,7 +1853,7 @@ async function startAddressResolution(records) {
           <text>签到任务</text>
         </view>
         <view class="tab-item" :class="{ active: activeTab === 'members' }" @click="switchTab('members')">
-          <wd-icon name="user-group" size="32rpx" :color="activeTab === 'members' ? '#ff6b00' : '#666'" />
+          <wd-icon name="usergroup" size="32rpx" :color="activeTab === 'members' ? '#ff6b00' : '#666'" />
           <text>成员列表</text>
         </view>
       </view>
@@ -1970,7 +1970,7 @@ async function startAddressResolution(records) {
                 <wd-button type="error" size="small"
                   custom-style="padding: 8rpx 16rpx; min-width: auto; background-color: #ff4d4f;"
                   @click="handleRemoveMember(member)">
-                  <wd-icon name="delete" size="32rpx" color="#ffffff"
+                  <wd-icon name="user-clean" size="32rpx" color="#ffffff"
                     style="color: #ffffff !important; fill: #ffffff !important;" />
                 </wd-button>
               </view>
