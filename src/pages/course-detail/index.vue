@@ -1771,7 +1771,7 @@ async function startAddressResolution(records) {
     <!-- 加载中 -->
     <!-- @ts-ignore -->
     <view v-if="loading" class="loading-container">
-      <wd-loading color="#6a11cb" size="80rpx" />
+      <wd-loading color="#ff6b00" size="80rpx" />
       <text>加载课程信息中...</text>
     </view>
 
@@ -1780,103 +1780,86 @@ async function startAddressResolution(records) {
     <view v-else class="content-container">
       <!-- 课程头部信息 -->
       <!-- @ts-ignore -->
-      <view class="course-header">
-        <!-- 基本信息展示 -->
-        <!-- @ts-ignore -->
-        <view class="basic-info-card">
-          <!-- 课程标题和状态 -->
-          <!-- @ts-ignore -->
-          <view class="course-title-row">
-            <text class="course-title">{{ courseDetail.name }}</text>
-            <!-- @ts-ignore -->
-            <view class="course-status-badge" :class="courseDetail.status?.toLowerCase()">
-              {{ courseDetail.status === 'ACTIVE' ? '进行中' :
-                courseDetail.status === 'COMPLETED' ? '已结课' : '未知状态' }}
-            </view>
-          </view>
-
-          <!-- 课程详细信息 -->
-          <!-- @ts-ignore -->
-          <view class="info-grid">
-            <!-- @ts-ignore -->
-            <view class="info-item">
-              <wd-icon name="user" size="32rpx" color="#6a11cb" />
-              <!-- @ts-ignore -->
-              <view class="info-label">教师</view>
-              <!-- @ts-ignore -->
-              <view class="info-value">{{ courseDetail.creatorFullName || courseDetail.creatorUsername || '未知教师' }}
-              </view>
-            </view>
-
-            <!-- @ts-ignore -->
-            <view class="info-item">
-              <wd-icon name="people" size="32rpx" color="#6a11cb" />
-              <!-- @ts-ignore -->
-              <view class="info-label">人数</view>
-              <!-- @ts-ignore -->
-              <view class="info-value">{{ courseDetail.memberCount || 0 }}人</view>
-            </view>
-
-            <!-- @ts-ignore -->
-            <view class="info-item full-width">
-              <wd-icon name="calendar" size="32rpx" color="#6a11cb" />
-              <!-- @ts-ignore -->
-              <view class="info-label">起止日期</view>
-              <!-- @ts-ignore -->
-              <view class="info-value date-value">{{ courseDetail.startDate }} ~ {{ courseDetail.endDate }}</view>
-            </view>
-
-            <!-- @ts-ignore -->
-            <view class="info-item full-width">
-              <wd-icon name="description" size="32rpx" color="#6a11cb" />
-              <!-- @ts-ignore -->
-              <view class="info-label">描述</view>
-              <!-- @ts-ignore -->
-              <view class="info-value description">{{ courseDetail.description || '暂无课程描述' }}</view>
-            </view>
-          </view>
-
-          <!-- 教师功能按钮 -->
-          <!-- @ts-ignore -->
-          <view v-if="isTeacher" class="action-row">
-            <wd-button type="primary" size="small" custom-style="height: 70rpx; margin-top: 20rpx;"
-              @click="navigateToCreateCheckin">
-              <wd-icon name="add" size="28rpx" color="#ffffff" />
-              <text style="margin-left: 8rpx;">创建签到任务</text>
-            </wd-button>
-
-            <!-- 添加邀请学生按钮 -->
-            <wd-button type="info" size="small" custom-style="height: 70rpx; margin-top: 20rpx; margin-left: 20rpx;"
-              @click="openQRCodeModal">
-              <wd-icon name="qrcode" size="28rpx" color="#ffffff" />
-              <text style="margin-left: 8rpx;">邀请学生</text>
-            </wd-button>
-
-            <!-- 添加删除课程按钮 -->
-            <wd-button type="error" size="small" custom-style="height: 70rpx; margin-top: 20rpx; margin-left: 20rpx;"
-              :loading="isDeletingCourse" :disabled="isDeletingCourse" @click="handleDeleteCourse">
-              <wd-icon v-if="!isDeletingCourse" name="delete" size="28rpx" color="#ffffff"
-                style="color: #ffffff !important; fill: #ffffff !important;" />
-              <text style="margin-left: 8rpx;">{{ isDeletingCourse ? '删除中...' : '删除课程' }}</text>
-            </wd-button>
+      <view class="card course-card">
+        <!-- 课程标题和状态 -->
+        <view class="section-title">
+          {{ courseDetail.name || '课程详情' }}
+          <view class="course-status-badge" :class="courseDetail.status?.toLowerCase()">
+            {{ courseDetail.status === 'ACTIVE' ? '进行中' :
+              courseDetail.status === 'COMPLETED' ? '已结课' : '未知状态' }}
           </view>
         </view>
-      </view>
 
+        <!-- 课程基本信息 -->
+        <view class="course-info">
+          <!-- 教师信息 -->
+          <view class="info-item">
+            <wd-icon name="user" size="32rpx" color="#ff6b00" />
+            <text class="info-label">教师</text>
+            <text class="info-value">{{ courseDetail.creatorFullName || courseDetail.creatorUsername || '未知教师' }}</text>
+          </view>
+          
+          <!-- 人数信息 -->
+          <view class="info-item">
+            <wd-icon name="user-group" size="32rpx" color="#ff6b00" />
+            <text class="info-label">人数</text>
+            <text class="info-value">{{ courseDetail.memberCount || 0 }}人</text>
+          </view>
+          
+          <!-- 起止日期 -->
+          <view class="info-item full-width">
+            <wd-icon name="calendar" size="32rpx" color="#ff6b00" />
+            <text class="info-label">起止日期</text>
+            <text class="info-value">{{ courseDetail.startDate }} ~ {{ courseDetail.endDate }}</text>
+          </view>
+          
+          <!-- 描述信息 -->
+          <view class="info-item full-width">
+            <wd-icon name="description" size="32rpx" color="#ff6b00" />
+            <text class="info-label">描述</text>
+            <text class="info-value description">{{ courseDetail.description || '暂无课程描述' }}</text>
+          </view>
+        </view>
+
+        <!-- 教师功能按钮 -->
+        <view v-if="isTeacher" class="action-row">
+          <wd-button type="primary" size="small" custom-style="height: 70rpx; background-color: #ff6b00; border-color: #ff6b00;"
+            @click="navigateToCreateCheckin">
+            <wd-icon name="add" size="28rpx" color="#ffffff" />
+            <text style="margin-left: 8rpx;">创建签到任务</text>
+          </wd-button>
+
+          <!-- 添加邀请学生按钮 -->
+          <wd-button type="info" size="small" custom-style="height: 70rpx; margin-left: 20rpx; background-color: #ff6b00; border-color: #ff6b00;"
+            @click="openQRCodeModal">
+            <wd-icon name="qrcode" size="28rpx" color="#ffffff" />
+            <text style="margin-left: 8rpx;">邀请学生</text>
+          </wd-button>
+
+          <!-- 添加删除课程按钮 -->
+          <wd-button type="error" size="small" custom-style="height: 70rpx; margin-left: 20rpx;"
+            :loading="isDeletingCourse" :disabled="isDeletingCourse" @click="handleDeleteCourse">
+            <wd-icon v-if="!isDeletingCourse" name="delete" size="28rpx" color="#ffffff"
+              style="color: #ffffff !important; fill: #ffffff !important;" />
+            <text style="margin-left: 8rpx;">{{ isDeletingCourse ? '删除中...' : '删除课程' }}</text>
+          </wd-button>
+        </view>
+      </view>
+      
       <!-- 标签栏 -->
       <view class="tabs">
         <view class="tab-item" :class="{ active: activeTab === 'checkins' }" @click="switchTab('checkins')">
-          <wd-icon name="time" size="32rpx" />
+          <wd-icon name="time" size="32rpx" :color="activeTab === 'checkins' ? '#ff6b00' : '#666'" />
           <text>签到任务</text>
         </view>
         <view class="tab-item" :class="{ active: activeTab === 'members' }" @click="switchTab('members')">
-          <wd-icon name="user-group" size="32rpx" />
+          <wd-icon name="user-group" size="32rpx" :color="activeTab === 'members' ? '#ff6b00' : '#666'" />
           <text>成员列表</text>
         </view>
       </view>
 
       <!-- 内容区域 -->
-      <view class="tab-content">
+      <view class="card tab-content-card">
         <!-- 签到任务列表 -->
         <view v-if="activeTab === 'checkins'" class="checkins-content">
           <!-- 签到任务列表 -->
@@ -1954,7 +1937,13 @@ async function startAddressResolution(records) {
           <!-- @ts-ignore -->
           <view v-if="membersList.length > 0" class="member-list">
             <!-- @ts-ignore -->
-            <view v-for="member in membersList" :key="member.id" class="member-item">
+            <view v-for="(member, index) in membersList" :key="member.id" 
+              class="member-item" 
+              :class="{ 
+                'role-teacher': member.role === 'TEACHER', 
+                'role-student': member.role !== 'TEACHER' 
+              }" 
+              :style="{ '--i': index }">
               <!-- @ts-ignore -->
               <view class="member-avatar">
                 <image :src="member.avatarUrl || 'https://picsum.photos/100/100?random=' + member.id.slice(0, 8)"
@@ -1969,7 +1958,9 @@ async function startAddressResolution(records) {
                 <!-- @ts-ignore -->
                 <view class="member-role"
                   :class="{ 'role-teacher': member.role === 'TEACHER', 'role-student': member.role !== 'TEACHER' }">
-                  {{ member.role === 'TEACHER' ? '教师' : '学生' }}
+                  <wd-icon :name="member.role === 'TEACHER' ? 'user-circle' : 'user'" size="24rpx" 
+                    :color="member.role === 'TEACHER' ? '#ff6b00' : '#4caf50'" />
+                  <text>{{ member.role === 'TEACHER' ? '教师' : '学生' }}</text>
                 </view>
               </view>
 
@@ -1996,7 +1987,7 @@ async function startAddressResolution(records) {
         </view>
       </view>
     </view>
-
+    
     <!-- 添加二维码弹窗 -->
     <wd-popup v-model="showQRCode" round position="center" custom-style="width: 80%; max-width: 600rpx;">
       <view class="qrcode-container">
@@ -2110,6 +2101,7 @@ async function startAddressResolution(records) {
   display: flex;
   flex-direction: column;
   transition: all 0.3s ease;
+  padding: 30rpx;
 }
 
 .wot-theme-dark {
@@ -2124,88 +2116,177 @@ async function startAddressResolution(records) {
     border-color: var(--border-color, #3e3e3e);
   }
   
-  .tab-container {
-    background-color: var(--card-bg-color, #1e1e1e);
+  .tab-item {
+    color: var(--text-color-secondary, #a3a6ad);
     
-    .tab-item {
-      color: var(--text-color-secondary, #a3a6ad);
-      
-      &.active {
-        color: #ff6b00;
-      }
+    &.active {
+      color: #ff6b00 !important;
+    }
+  }
+  
+  .course-status-badge {
+    &.active {
+      background: linear-gradient(135deg, rgba(255, 107, 0, 0.2) 0%, rgba(255, 136, 0, 0.2) 100%);
+      color: #ff6b00;
     }
   }
 }
 
-/* 导航栏样式 */
-.nav-bar {
+.card {
+  margin-bottom: 30rpx;
+  background-color: var(--card-background, #ffffff);
+  border-radius: 24rpx;
+  padding: 20rpx;
+  box-shadow: var(--card-shadow, 0 8rpx 20rpx rgba(0, 0, 0, 0.05));
   width: 100%;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-  position: sticky;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
-  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
+  backdrop-filter: blur(10rpx);
+  transition: all 0.3s ease;
 }
 
-.nav-bar-content {
-  max-width: 800rpx;
-  height: 90rpx;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 30rpx;
-}
-
-.nav-back-btn {
-  width: 70rpx;
-  height: 70rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: all 0.2s ease;
-}
-
-.nav-back-btn:active {
-  background-color: rgba(0, 0, 0, 0.05);
-  transform: scale(0.95);
-}
-
-.nav-title {
-  flex: 1;
-  font-size: 34rpx;
+.section-title {
+  font-size: 32rpx;
   font-weight: bold;
-  color: #333;
-  margin: 0 20rpx;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.nav-right {
-  width: 70rpx;
+  padding: 20rpx;
+  color: var(--text-color-primary, #303133);
+  border-bottom: 1px solid var(--border-color, #e4e7ed);
+  margin-bottom: 10rpx;
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.nav-action-btn {
-  width: 70rpx;
-  height: 70rpx;
+.course-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+  padding: 20rpx;
+}
+
+.info-item {
   display: flex;
   align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: all 0.2s ease;
+  width: calc(50% - 10rpx);
+  padding: 16rpx;
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: 12rpx;
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.03);
 }
 
-.nav-action-btn:active {
-  background-color: rgba(0, 0, 0, 0.05);
-  transform: scale(0.95);
+.info-item.full-width {
+  width: 100%;
+}
+
+.info-label {
+  font-size: 26rpx;
+  color: #666;
+  margin: 0 15rpx;
+  min-width: 80rpx;
+}
+
+.info-value {
+  font-size: 26rpx;
+  color: #333;
+  flex: 1;
+  word-break: break-word;
+}
+
+.info-value.description {
+  white-space: pre-wrap;
+  line-height: 1.5;
+  font-size: 26rpx;
+  color: #666;
+  margin-top: 6rpx;
+  max-height: 160rpx;
+  overflow-y: auto;
+  padding: 10rpx;
+  background-color: rgba(245, 247, 250, 0.6);
+  border-radius: 8rpx;
+}
+
+.course-status-badge {
+  padding: 6rpx 16rpx;
+  border-radius: 50rpx;
+  font-weight: 500;
+  font-size: 24rpx;
+  box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
+}
+
+.course-status-badge.active {
+  background: linear-gradient(135deg, rgba(255, 107, 0, 0.1) 0%, rgba(255, 136, 0, 0.1) 100%);
+  color: #ff6b00;
+}
+
+.course-status-badge.completed {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(129, 199, 132, 0.1) 100%);
+  color: #4caf50;
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-top: 24rpx;
+  justify-content: flex-start;
+  padding: 0 20rpx 20rpx;
+}
+
+.tabs {
+  display: flex;
+  justify-content: space-around;
+  padding: 10rpx 20rpx;
+  margin-bottom: 20rpx;
+  background-color: #ffffff;
+  border-radius: 24rpx;
+  box-shadow: 0 8rpx 20rpx rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.tab-item {
+  flex: 1;
+  text-align: center;
+  padding: 20rpx 0;
+  color: #333;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  
+  &:active {
+    opacity: 0.8;
+  }
+  
+  .wd-icon {
+    margin-bottom: 8rpx;
+  }
+  
+  &.active {
+    color: #ff6b00;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 30%;
+      width: 40%;
+      height: 4rpx;
+      background-color: #ff6b00;
+      border-radius: 2rpx;
+    }
+  }
+}
+
+.tab-item text {
+  font-size: 28rpx;
+  margin-top: 8rpx;
+  font-weight: 500;
+}
+
+.tab-content-card {
+  padding: 30rpx;
+  min-height: 400rpx;
 }
 
 .loading-container {
@@ -2226,178 +2307,329 @@ async function startAddressResolution(records) {
 
 .content-container {
   width: 100%;
-  max-width: 750rpx;
   flex: 1;
-  padding: 20rpx 30rpx;
   box-sizing: border-box;
 }
 
-.course-header {
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
-  padding: 30rpx;
-  border-radius: 24rpx;
-  margin-bottom: 24rpx;
-  box-shadow: 0 8rpx 20rpx rgba(106, 17, 203, 0.08);
-  border: 1rpx solid rgba(106, 17, 203, 0.05);
-  overflow: hidden;
-  position: relative;
-}
-
-.basic-info-card {
+/* 签到列表样式优化 */
+.checkin-list {
   display: flex;
   flex-direction: column;
   gap: 20rpx;
-  position: relative;
-  z-index: 1;
+  will-change: transform;
 }
 
-/* 课程标题样式 */
-.course-title-row {
+.checkin-item {
+  position: relative;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(249, 250, 254, 0.9) 100%);
+  border-radius: 20rpx;
+  padding: 22rpx 18rpx 22rpx 20rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20rpx;
+  animation: fadeIn 0.3s ease forwards;
+  animation-delay: calc(var(--i) * 0.05s);
+  opacity: 0;
+  border-left: 6rpx solid transparent;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
 }
 
-.course-title {
-  font-size: 40rpx;
+.checkin-item:active {
+  transform: translateY(2rpx) scale(0.995);
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.03);
+}
+
+.checkin-content {
+  flex: 1;
+  margin-right: 16rpx;
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.checkin-title {
+  font-size: 32rpx;
   font-weight: bold;
   color: #333;
-  letter-spacing: 1rpx;
-  text-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.05);
-  flex: 1;
+  margin-bottom: 14rpx;
 }
 
-.course-status-badge {
+.checkin-info-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin: 12rpx 0;
+}
+
+.checkin-time {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  background-color: rgba(0, 0, 0, 0.03);
+  padding: 6rpx 10rpx;
+  border-radius: 16rpx;
+  max-width: 100%;
+  flex: 1;
+  min-width: 0;
+}
+
+.checkin-time text {
+  font-size: 24rpx;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.checkin-type-badge {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 8rpx 12rpx;
+  border-radius: 24rpx;
+  font-weight: 500;
+}
+
+.checkin-type-badge text {
+  font-size: 24rpx;
+  white-space: nowrap;
+}
+
+.checkin-status {
+  position: absolute;
+  top: 16rpx;
+  right: 16rpx;
   padding: 6rpx 16rpx;
   border-radius: 50rpx;
+  font-size: 22rpx;
   font-weight: 500;
-  font-size: 24rpx;
+  z-index: 2;
   box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
 }
 
-.course-status-badge.active {
-  background: linear-gradient(135deg, rgba(106, 17, 203, 0.1) 0%, rgba(37, 117, 252, 0.1) 100%);
-  color: #6a11cb;
-}
-
-.course-status-badge.completed {
-  background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(129, 199, 132, 0.1) 100%);
-  color: #4caf50;
-}
-
-/* 课程信息网格布局 */
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20rpx;
-  margin-top: 10rpx;
-}
-
-.info-item {
+.checkin-actions {
   display: flex;
-  align-items: flex-start;
-  width: 100%;
-  padding: 12rpx;
-  background-color: rgba(255, 255, 255, 0.7);
-  border-radius: 12rpx;
-  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.03);
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  margin-left: 8rpx;
+  gap: 8rpx;
 }
 
-.info-item.full-width {
-  grid-column: 1 / -1;
-}
-
-.info-label {
-  font-size: 26rpx;
-  color: #666;
-  margin: 0 15rpx;
-  min-width: 80rpx;
+/* 添加导出按钮样式 */
+.checkin-actions .wd-button {
+  min-width: auto;
   width: auto;
-}
-
-.info-value {
-  font-size: 26rpx;
-  color: #333;
-  flex: 1;
-  word-break: break-word;
-}
-
-.info-value.date-value {
-  font-size: 24rpx;
-  width: 100%;
-  flex: 1;
-  white-space: normal;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: #333;
-  display: block;
-  word-break: break-all;
-  line-height: 1.4;
-}
-
-.info-value.description {
-  white-space: pre-wrap;
-  line-height: 1.5;
-  font-size: 26rpx;
-  color: #666;
-  margin-top: 6rpx;
-  max-height: 160rpx;
-  overflow-y: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 10rpx;
-  background-color: rgba(245, 247, 250, 0.6);
   border-radius: 8rpx;
 }
 
-/* 操作按钮区域 */
-.action-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16rpx;
-  margin-top: 24rpx;
-  justify-content: flex-start;
+/* 确保图标颜色统一 */
+.checkin-actions .wd-button--primary .wd-icon {
+  color: #ffffff !important;
+  fill: #ffffff !important;
 }
 
-/* 标签页容器样式 */
-.tab-container {
+.checkin-actions .wd-button--primary {
+  background-color: #4caf50 !important;
+  border-color: #4caf50 !important;
+}
+
+.checkin-actions .wd-button--error {
+  background-color: #ff4d4f !important;
+  border-color: #ff4d4f !important;
+}
+
+.checkin-actions .wd-button:active {
+  opacity: 0.8;
+  transform: scale(0.95);
+}
+
+/* 根据状态添加卡片背景和样式变化 */
+.checkin-item.status-not-started {
+  background: linear-gradient(135deg, rgba(250, 250, 250, 0.9) 0%, rgba(245, 245, 250, 0.9) 100%);
+  border-left-color: #757575;
+}
+
+.checkin-item.status-in-progress {
+  background: linear-gradient(135deg, rgba(255, 243, 224, 0.9) 0%, rgba(255, 236, 217, 0.9) 100%);
+  border-left-color: #ff6b00;
+  box-shadow: 0 6rpx 16rpx rgba(255, 107, 0, 0.1);
+}
+
+.checkin-item.status-ended {
+  background: linear-gradient(135deg, rgba(237, 247, 237, 0.9) 0%, rgba(232, 245, 233, 0.9) 100%);
+  border-left-color: #4caf50;
+  box-shadow: 0 4rpx 12rpx rgba(76, 175, 80, 0.08);
+}
+
+.checkin-item.qr_code {
+  border-left-color: #ff6b00;
+}
+
+.checkin-item.location {
+  border-left-color: #4caf50;
+}
+
+.checkin-item.checkin-type-qr_code .checkin-type-badge {
+  background-color: rgba(255, 107, 0, 0.1);
+  color: #ff6b00;
+}
+
+.checkin-item.checkin-type-location .checkin-type-badge {
+  background-color: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10rpx);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.empty-container {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
-  border-radius: 24rpx;
-  overflow: hidden;
-  margin-bottom: 24rpx;
-  box-shadow: 0 8rpx 20rpx rgba(106, 17, 203, 0.08);
-  border: 1rpx solid rgba(106, 17, 203, 0.05);
-  padding: 5rpx;
-  top: 90rpx;
-  z-index: 90;
-  backdrop-filter: blur(5px);
+  justify-content: center;
+  padding: 80rpx 0;
+  min-height: 300rpx;
 }
 
-.tab-item {
-  flex: 1;
+.empty-text {
+  font-size: 28rpx;
+  color: #999;
+  margin-top: 20rpx;
+  margin-bottom: 16rpx;
+}
+
+.empty-list {
   text-align: center;
-  padding: 20rpx 0;
-  position: relative;
-  margin: 5rpx;
-  border-radius: 20rpx;
-  transition: all 0.3s ease;
+  padding: 60rpx 0;
+  color: #999;
+  background: rgba(250, 250, 250, 0.5);
+  border-radius: 16rpx;
 }
 
-.tab-item.active {
-  background: linear-gradient(135deg, rgba(255, 107, 0, 0.1) 0%, rgba(255, 136, 0, 0.1) 100%);
-  box-shadow: 0 4rpx 8rpx rgba(255, 107, 0, 0.1);
+/* 二维码弹窗样式优化 */
+.qrcode-container {
+  padding: 40rpx;
 }
 
-.tab-item text {
+.qrcode-header {
+  text-align: center;
+  margin-bottom: 30rpx;
+}
+
+.qrcode-title {
+  display: block;
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10rpx;
+}
+
+.qrcode-subtitle {
+  font-size: 26rpx;
+  color: #666;
+}
+
+.qrcode-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 40rpx;
+}
+
+.qrcode-image {
+  width: 400rpx;
+  height: 400rpx;
+  margin-bottom: 20rpx;
+  border: 2rpx solid #f0f0f0;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.1);
+  border-radius: 12rpx;
+  background-color: #fff;
+}
+
+.qrcode-loading,
+.qrcode-error {
+  width: 400rpx;
+  height: 400rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: #f9f9f9;
+  border-radius: 12rpx;
+  border: 2rpx solid #f0f0f0;
+}
+
+.qrcode-loading text,
+.qrcode-error text {
+  margin-top: 20rpx;
+  color: #666;
+  font-size: 28rpx;
+}
+
+.course-qrinfo {
+  text-align: center;
+  margin-top: 20rpx;
+  background: linear-gradient(135deg, rgba(255, 107, 0, 0.08) 0%, rgba(255, 136, 0, 0.08) 100%);
+  padding: 16rpx 30rpx;
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 12rpx rgba(255, 107, 0, 0.08);
+}
+
+.course-name {
+  display: block;
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8rpx;
+}
+
+.course-code {
   font-size: 28rpx;
   color: #666;
-  transition: all 0.3s ease;
 }
 
-.tab-item.active text {
+.qrcode-actions {
+  margin-top: 20rpx;
+}
+
+.retry-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 16rpx;
+  padding: 10rpx 24rpx;
+  border-radius: 50rpx;
+  background-color: rgba(255, 107, 0, 0.1);
   color: #ff6b00;
-  font-weight: bold;
+  font-size: 24rpx;
+  box-shadow: 0 4rpx 8rpx rgba(255, 107, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.retry-button:active {
+  transform: scale(0.95);
+  box-shadow: 0 2rpx 4rpx rgba(255, 107, 0, 0.05);
 }
 
 /* 删除确认弹窗 */
@@ -2490,826 +2722,7 @@ async function startAddressResolution(records) {
   margin-left: 16rpx;
 }
 
-/* 标签页内容区域 */
-.tab-content {
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
-  border-radius: 24rpx;
-  padding: 30rpx;
-  box-shadow: 0 8rpx 20rpx rgba(106, 17, 203, 0.08);
-  border: 1rpx solid rgba(106, 17, 203, 0.05);
-  min-height: 400rpx;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  z-index: 1;
-}
-
-.checkins-content {
-  display: flex;
-  flex-direction: column;
-  gap: 20rpx;
-  padding-bottom: 20rpx;
-  animation: fadeIn 0.5s ease-out;
-  min-height: 300rpx;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10rpx);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* 签到列表样式优化 */
-.checkin-list {
-  display: flex;
-  flex-direction: column;
-  gap: 20rpx;
-  will-change: transform;
-}
-
-.checkin-item {
-  position: relative;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(249, 250, 254, 0.9) 100%);
-  border-radius: 20rpx;
-  padding: 22rpx 18rpx 22rpx 20rpx;
-  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  animation: fadeIn 0.3s ease forwards;
-  animation-delay: calc(var(--i) * 0.05s);
-  opacity: 0;
-  border-left: 6rpx solid transparent;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  overflow: hidden;
-}
-
-.checkin-item:active {
-  transform: translateY(2rpx) scale(0.995);
-  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.03);
-}
-
-.checkin-item::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0));
-  pointer-events: none;
-  z-index: 0;
-  border-radius: 24rpx;
-}
-
-.checkin-content {
-  flex: 1;
-  margin-right: 16rpx;
-  position: relative;
-  z-index: 1;
-  min-width: 0;
-  /* 确保内容在有限宽度内可以缩小 */
-  overflow: hidden;
-}
-
-.checkin-actions {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  z-index: 1;
-  margin-left: 8rpx;
-  gap: 8rpx;
-}
-
-/* 添加导出按钮样式 */
-.checkin-actions .wd-button {
-  min-width: auto;
-  width: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10rpx;
-  border-radius: 8rpx;
-}
-
-/* 确保图标颜色统一 */
-.checkin-actions .wd-button--primary .wd-icon {
-  color: #ffffff !important;
-  fill: #ffffff !important;
-}
-
-.checkin-title {
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 14rpx;
-}
-
-.checkin-info-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12rpx;
-  margin: 12rpx 0;
-}
-
-.checkin-time {
-  display: flex;
-  align-items: center;
-  gap: 6rpx;
-  background-color: rgba(0, 0, 0, 0.03);
-  padding: 6rpx 10rpx;
-  border-radius: 16rpx;
-  max-width: 100%;
-  flex: 1;
-  min-width: 0;
-}
-
-.checkin-time text {
-  font-size: 24rpx;
-  color: #666;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
-  min-width: 0;
-}
-
-.checkin-type-badge {
-  display: flex;
-  align-items: center;
-  gap: 8rpx;
-  padding: 8rpx 12rpx;
-  border-radius: 24rpx;
-  font-weight: 500;
-}
-
-.checkin-type-badge text {
-  font-size: 24rpx;
-  white-space: nowrap;
-}
-
-.checkin-title {
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 8rpx;
-  padding-right: 80rpx;
-  /* 为状态腾出空间 */
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.checkin-status {
-  position: absolute;
-  top: 16rpx;
-  right: 16rpx;
-  padding: 6rpx 16rpx;
-  border-radius: 50rpx;
-  font-size: 22rpx;
-  font-weight: 500;
-  z-index: 2;
-  box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
-}
-
-.checkin-item.qr_code {
-  border-left-color: #2196f3;
-}
-
-.checkin-item.location {
-  border-left-color: #4caf50;
-}
-
-.checkin-item.checkin-type-qr_code .checkin-type-badge {
-  background-color: rgba(33, 150, 243, 0.1);
-  color: #2196f3;
-}
-
-.checkin-item.checkin-type-location .checkin-type-badge {
-  background-color: rgba(76, 175, 80, 0.1);
-  color: #4caf50;
-}
-
-.checkin-status.not-started {
-  background-color: rgba(117, 117, 117, 0.1);
-  color: #757575;
-  border: 1px solid rgba(117, 117, 117, 0.2);
-}
-
-.checkin-status.in-progress {
-  background-color: rgba(33, 150, 243, 0.1);
-  color: #2196f3;
-  border: 1px solid rgba(33, 150, 243, 0.2);
-  font-weight: bold;
-}
-
-.checkin-status.ended {
-  background-color: rgba(76, 175, 80, 0.1);
-  color: #4caf50;
-  border: 1px solid rgba(76, 175, 80, 0.2);
-}
-
-/* 成员列表样式优化 */
-.members-content {
-  animation: fadeIn 0.5s ease-out;
-  min-height: 300rpx;
-}
-
-.member-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16rpx;
-}
-
-.member-item {
-  position: relative;
-  background-color: rgba(255, 255, 255, 0.9);
-  border-radius: 24rpx;
-  padding: 20rpx;
-  margin-bottom: 10rpx;
-  box-shadow: 0 4rpx 15rpx rgba(0, 0, 0, 0.05);
-  display: flex;
-  align-items: center;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.member-item:active {
-  transform: translateY(2rpx) scale(0.995);
-  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.03);
-}
-
-.member-avatar {
-  width: 88rpx;
-  height: 88rpx;
-  border-radius: 50%;
-  overflow: hidden;
-  margin-right: 20rpx;
-  box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.1);
-  border: 3rpx solid rgba(255, 255, 255, 0.8);
-  flex-shrink: 0;
-}
-
-.member-avatar image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.member-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.member-name {
-  font-size: 30rpx;
-  color: #333;
-  font-weight: bold;
-  margin-bottom: 4rpx;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
-}
-
-.member-username {
-  font-size: 22rpx;
-  color: #999;
-  margin-bottom: 6rpx;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
-}
-
-.member-role {
-  font-size: 22rpx;
-  padding: 2rpx 12rpx;
-  border-radius: 30rpx;
-  display: inline-block;
-}
-
-.member-role.role-teacher {
-  background: rgba(106, 17, 203, 0.08);
-  color: #6a11cb;
-}
-
-.member-role.role-student {
-  background: rgba(33, 150, 243, 0.08);
-  color: #2196f3;
-}
-
-.member-actions {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* 统计数据样式优化 */
-.stats-content {
-  animation: fadeIn 0.5s ease-out;
-  min-height: 300rpx;
-}
-
-.stats-container {
-  display: flex;
-  flex-direction: column;
-  gap: 30rpx;
-}
-
-.stats-card {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(250, 250, 254, 0.9) 100%);
-  padding: 24rpx;
-  border-radius: 20rpx;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
-  border: 1rpx solid rgba(106, 17, 203, 0.05);
-}
-
-.stats-title {
-  font-size: 30rpx;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 20rpx;
-  padding-bottom: 10rpx;
-  border-bottom: 2rpx solid rgba(106, 17, 203, 0.1);
-  position: relative;
-}
-
-.stats-title::after {
-  content: '';
-  position: absolute;
-  bottom: -2rpx;
-  left: 0;
-  width: 60rpx;
-  height: 2rpx;
-  background: linear-gradient(90deg, #6a11cb, #2575fc);
-}
-
-.stats-row {
-  display: flex;
-  justify-content: space-around;
-  flex-wrap: wrap;
-  gap: 10rpx;
-}
-
-.stat-item {
-  flex: 1;
-  min-width: 150rpx;
-  text-align: center;
-  padding: 16rpx;
-  border-radius: 16rpx;
-  background-color: rgba(255, 255, 255, 0.5);
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.03);
-  transition: all 0.3s ease;
-}
-
-.stat-item:hover,
-.stat-item:active {
-  background-color: rgba(106, 17, 203, 0.05);
-  box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.07);
-  transform: translateY(-2rpx);
-}
-
-.stat-value {
-  font-size: 40rpx;
-  font-weight: bold;
-  background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: 6rpx;
-}
-
-.stat-label {
-  font-size: 24rpx;
-  color: #666;
-}
-
-.attendance-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12rpx;
-}
-
-.attendance-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16rpx;
-  border-radius: 12rpx;
-  background-color: rgba(255, 255, 255, 0.5);
-  transition: all 0.2s ease;
-}
-
-.attendance-item:active {
-  transform: translateY(2rpx);
-  background-color: rgba(250, 250, 250, 0.8);
-}
-
-.rank {
-  font-size: 28rpx;
-  color: #666;
-  margin-right: 16rpx;
-  font-weight: bold;
-  min-width: 30rpx;
-  text-align: center;
-}
-
-.student-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.student-name {
-  font-size: 28rpx;
-  color: #333;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.student-username {
-  font-size: 22rpx;
-  color: #999;
-  margin-top: 2rpx;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.attendance-details {
-  display: flex;
-  align-items: center;
-  gap: 10rpx;
-}
-
-.attendance-numbers {
-  display: flex;
-  align-items: center;
-  gap: 2rpx;
-  font-size: 24rpx;
-  color: #999;
-}
-
-.normal {
-  color: #4caf50;
-}
-
-.missed {
-  color: #f44336;
-}
-
-.attendance-rate {
-  font-size: 28rpx;
-  font-weight: bold;
-  padding: 4rpx 12rpx;
-  border-radius: 30rpx;
-  min-width: 70rpx;
-  text-align: center;
-}
-
-.attendance-rate.excellent {
-  background-color: rgba(76, 175, 80, 0.1);
-  color: #4caf50;
-}
-
-.attendance-rate.warning {
-  background-color: rgba(244, 67, 54, 0.1);
-  color: #f44336;
-}
-
-.attendance-rate.normal {
-  background-color: rgba(33, 150, 243, 0.1);
-  color: #2196f3;
-}
-
-.excellent {
-  background-color: rgba(76, 175, 80, 0.02);
-  border-left: 3px solid rgba(76, 175, 80, 0.5);
-}
-
-.warning {
-  background-color: rgba(255, 152, 0, 0.02);
-  border-left: 3px solid rgba(255, 152, 0, 0.5);
-}
-
-.refresh-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10rpx 20rpx;
-  border-radius: 50rpx;
-  background: linear-gradient(135deg, rgba(255, 107, 0, 0.08) 0%, rgba(255, 136, 0, 0.08) 100%);
-  color: #ff6b00;
-  font-size: 28rpx;
-  margin-bottom: 20rpx;
-  align-self: center;
-  width: fit-content;
-  cursor: pointer;
-  box-shadow: 0 4rpx 8rpx rgba(255, 107, 0, 0.05);
-  transition: all 0.3s ease;
-}
-
-.refresh-btn:active {
-  transform: scale(0.95);
-  box-shadow: 0 2rpx 4rpx rgba(255, 107, 0, 0.03);
-}
-
-/* 添加导出按钮样式 */
-.export-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10rpx 20rpx;
-  border-radius: 50rpx;
-  background: linear-gradient(135deg, rgba(76, 175, 80, 0.08) 0%, rgba(129, 199, 132, 0.08) 100%);
-  color: #4caf50;
-  font-size: 28rpx;
-  margin-bottom: 20rpx;
-  align-self: center;
-  width: fit-content;
-  cursor: pointer;
-  box-shadow: 0 4rpx 8rpx rgba(76, 175, 80, 0.05);
-  transition: all 0.3s ease;
-}
-
-.export-btn:active {
-  transform: scale(0.95);
-  box-shadow: 0 2rpx 4rpx rgba(76, 175, 80, 0.03);
-}
-
-.export-btn text {
-  margin-left: 8rpx;
-}
-
-/* 引导样式按钮 */
-.export-btn.guide {
-  background: linear-gradient(135deg, rgba(33, 150, 243, 0.08) 0%, rgba(100, 181, 246, 0.08) 100%);
-  color: #2196f3;
-  box-shadow: 0 4rpx 8rpx rgba(33, 150, 243, 0.05);
-}
-
-.export-btn.guide:active {
-  box-shadow: 0 2rpx 4rpx rgba(33, 150, 243, 0.03);
-}
-
-.empty-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 80rpx 0;
-  min-height: 300rpx;
-  background: linear-gradient(135deg, rgba(250, 250, 250, 0.5) 0%, rgba(245, 245, 245, 0.5) 100%);
-  border-radius: 20rpx;
-  margin: 20rpx 0;
-}
-
-.empty-text {
-  font-size: 28rpx;
-  color: #999;
-  margin-top: 20rpx;
-  margin-bottom: 16rpx;
-}
-
-.empty-list {
-  text-align: center;
-  padding: 60rpx 0;
-  color: #999;
-  background: rgba(250, 250, 250, 0.5);
-  border-radius: 16rpx;
-}
-
-/* 二维码弹窗样式优化 */
-.qrcode-container {
-  padding: 40rpx;
-}
-
-.qrcode-header {
-  text-align: center;
-  margin-bottom: 30rpx;
-}
-
-.qrcode-title {
-  display: block;
-  font-size: 36rpx;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 10rpx;
-}
-
-.qrcode-subtitle {
-  font-size: 26rpx;
-  color: #666;
-}
-
-.qrcode-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 40rpx;
-}
-
-.qrcode-image {
-  width: 400rpx;
-  height: 400rpx;
-  margin-bottom: 20rpx;
-  border: 2rpx solid #f0f0f0;
-  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.1);
-  border-radius: 12rpx;
-  background-color: #fff;
-}
-
-.qrcode-loading,
-.qrcode-error {
-  width: 400rpx;
-  height: 400rpx;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background-color: #f9f9f9;
-  border-radius: 12rpx;
-  border: 2rpx solid #f0f0f0;
-}
-
-.qrcode-loading text,
-.qrcode-error text {
-  margin-top: 20rpx;
-  color: #666;
-  font-size: 28rpx;
-}
-
-.course-qrinfo {
-  text-align: center;
-  margin-top: 20rpx;
-  background: linear-gradient(135deg, rgba(106, 17, 203, 0.08) 0%, rgba(37, 117, 252, 0.08) 100%);
-  padding: 16rpx 30rpx;
-  border-radius: 16rpx;
-  box-shadow: 0 4rpx 12rpx rgba(106, 17, 203, 0.08);
-}
-
-.course-name {
-  display: block;
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 8rpx;
-}
-
-.course-code {
-  font-size: 28rpx;
-  color: #666;
-}
-
-.qrcode-actions {
-  margin-top: 20rpx;
-}
-
-.retry-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 16rpx;
-  padding: 10rpx 24rpx;
-  border-radius: 50rpx;
-  background-color: rgba(1, 101, 255, 0.1);
-  color: #0165FF;
-  font-size: 24rpx;
-  box-shadow: 0 4rpx 8rpx rgba(1, 101, 255, 0.1);
-  transition: all 0.2s ease;
-}
-
-.retry-button:active {
-  transform: scale(0.95);
-  box-shadow: 0 2rpx 4rpx rgba(1, 101, 255, 0.05);
-}
-
-// 添加微信小程序专用样式
-.qrcode-wx-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-}
-
-.qrcode-tip {
-  margin-top: 10rpx;
-  font-size: 24rpx;
-  color: #666;
-  text-align: center;
-  background-color: rgba(0, 0, 0, 0.03);
-  padding: 4rpx 16rpx;
-  border-radius: 30rpx;
-}
-
-.debug-info {
-  text-align: center;
-  margin-top: 10rpx;
-  font-size: 24rpx;
-  color: #999;
-}
-
-/* 确保删除按钮的图标颜色总是红色 */
-.checkin-actions .wd-icon,
-.member-actions .wd-icon {
-  color: #ffffff !important;
-}
-
-.operation-item.delete-operation .wd-icon {
-  color: #f44336 !important;
-}
-
-/* 添加强化的图标颜色样式规则 */
-.wd-button--danger .wd-icon,
-.checkin-actions .wd-icon,
-.member-actions .wd-icon {
-  color: #ffffff !important;
-  fill: #ffffff !important;
-}
-
-/* 处理全局图标样式 */
-:deep(.wd-button--danger) .wd-icon {
-  color: #ffffff !important;
-  fill: #ffffff !important;
-}
-
-/* 强制覆盖所有删除按钮的图标颜色 */
-[class*="wd-button"][type="danger"] .wd-icon {
-  color: #ffffff !important;
-  fill: #ffffff !important;
-}
-
-.operation-item.delete-operation {
-  color: #f44336;
-}
-
-/* 根据状态添加卡片背景和样式变化 */
-.checkin-item.status-not-started {
-  background: linear-gradient(135deg, rgba(250, 250, 250, 0.9) 0%, rgba(245, 245, 250, 0.9) 100%);
-  border-left-color: #757575;
-}
-
-.checkin-item.status-in-progress {
-  background: linear-gradient(135deg, rgba(235, 246, 255, 0.9) 0%, rgba(227, 242, 253, 0.9) 100%);
-  border-left-color: #2196f3;
-  box-shadow: 0 6rpx 16rpx rgba(33, 150, 243, 0.1);
-}
-
-.checkin-item.status-ended {
-  background: linear-gradient(135deg, rgba(237, 247, 237, 0.9) 0%, rgba(232, 245, 233, 0.9) 100%);
-  border-left-color: #4caf50;
-  box-shadow: 0 4rpx 12rpx rgba(76, 175, 80, 0.08);
-}
-
-.tabs {
-  display: flex;
-  justify-content: space-around;
-  padding: 10rpx 0;
-  border-bottom: 1rpx solid #ddd;
-  margin-bottom: 20rpx;
-}
-
-.tab-item {
-  flex: 1;
-  text-align: center;
-  padding: 10rpx 0;
-  color: #333;
-  border-bottom: 2rpx solid transparent;
-  transition: all 0.3s ease;
-}
-
-.tab-item.active {
-  color: #6a11cb;
-  border-bottom-color: #6a11cb;
-}
-
-.tab-item text {
-  font-size: 28rpx;
-  font-weight: bold;
-}
-
-.checkin-actions .wd-button--primary {
-  background-color: #4caf50 !important;
-  border-color: #4caf50 !important;
-}
-
-.checkin-actions .wd-button--error {
-  background-color: #ff4d4f !important;
-  border-color: #ff4d4f !important;
-}
-
-.checkin-actions .wd-button:active {
-  opacity: 0.8;
-  transform: scale(0.95);
-}
-
+/* 地址解析弹窗 */
 .address-resolution-modal {
   position: fixed;
   top: 0;
@@ -3357,7 +2770,7 @@ async function startAddressResolution(records) {
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #ff8800 0%, #ff6b00 100%);
+  background: linear-gradient(90deg, #ff6b00 0%, #ff8800 100%);
   transition: width 0.3s ease;
 }
 
@@ -3367,7 +2780,216 @@ async function startAddressResolution(records) {
   color: #666;
 }
 
+/* 微信小程序专用样式 */
+.qrcode-wx-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.qrcode-tip {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: #666;
+  text-align: center;
+  background-color: rgba(0, 0, 0, 0.03);
+  padding: 4rpx 16rpx;
+  border-radius: 30rpx;
+}
+
+.debug-info {
+  text-align: center;
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: #999;
+}
+
+/* 确保删除按钮的图标颜色总是正确的 */
+.checkin-actions .wd-icon,
+.member-actions .wd-icon {
+  color: #ffffff !important;
+}
+
+.operation-item.delete-operation .wd-icon {
+  color: #f44336 !important;
+}
+
+/* 添加强化的图标颜色样式规则 */
+.wd-button--danger .wd-icon,
+.checkin-actions .wd-icon,
+.member-actions .wd-icon {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+/* 处理全局图标样式 */
+:deep(.wd-button--danger) .wd-icon {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+/* 强制覆盖所有删除按钮的图标颜色 */
+[class*="wd-button"][type="danger"] .wd-icon {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
 .loading-icon {
   margin-top: 20rpx;
+}
+
+/* 成员列表样式 */
+.member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+  will-change: transform;
+}
+
+.member-item {
+  position: relative;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(249, 250, 254, 0.9) 100%);
+  border-radius: 20rpx;
+  padding: 22rpx 18rpx 22rpx 20rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  animation: fadeIn 0.3s ease forwards;
+  animation-delay: calc(var(--i) * 0.05s);
+  opacity: 0;
+  border-left: 6rpx solid #e0e0e0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+}
+
+.member-item:active {
+  transform: translateY(2rpx) scale(0.995);
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.03);
+}
+
+.member-item.role-teacher {
+  border-left-color: #ff6b00;
+  box-shadow: 0 4rpx 12rpx rgba(255, 107, 0, 0.08);
+}
+
+.member-item.role-student {
+  border-left-color: #4caf50;
+  box-shadow: 0 4rpx 12rpx rgba(76, 175, 80, 0.08);
+}
+
+.member-avatar {
+  width: 90rpx;
+  height: 90rpx;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-right: 20rpx;
+  border: 2rpx solid rgba(0, 0, 0, 0.05);
+  flex-shrink: 0;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+  
+  image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.member-info {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.member-name {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.member-username {
+  font-size: 26rpx;
+  color: #666;
+  margin-bottom: 8rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.member-role {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  font-size: 24rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 12rpx;
+  width: fit-content;
+  background-color: rgba(0, 0, 0, 0.03);
+  
+  text {
+    margin-left: 4rpx;
+  }
+  
+  &.role-teacher {
+    background-color: rgba(255, 107, 0, 0.1);
+    color: #ff6b00;
+  }
+  
+  &.role-student {
+    background-color: rgba(76, 175, 80, 0.1);
+    color: #4caf50;
+  }
+}
+
+.member-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  margin-left: 8rpx;
+}
+
+/* 暗黑模式下成员卡片样式 */
+.wot-theme-dark {
+  .member-item {
+    background: linear-gradient(135deg, rgba(40, 40, 40, 0.9) 0%, rgba(30, 30, 30, 0.9) 100%);
+    box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.2);
+    border-left-color: #555;
+    
+    &.role-teacher {
+      border-left-color: #ff6b00;
+      box-shadow: 0 4rpx 12rpx rgba(255, 107, 0, 0.15);
+    }
+    
+    &.role-student {
+      border-left-color: #4caf50;
+      box-shadow: 0 4rpx 12rpx rgba(76, 175, 80, 0.15);
+    }
+  }
+  
+  .member-name {
+    color: #e5eaf3;
+  }
+  
+  .member-username {
+    color: #a3a6ad;
+  }
+  
+  .member-role {
+    background-color: rgba(255, 255, 255, 0.05);
+    
+    &.role-teacher {
+      background-color: rgba(255, 107, 0, 0.15);
+    }
+    
+    &.role-student {
+      background-color: rgba(76, 175, 80, 0.15);
+    }
+  }
 }
 </style>

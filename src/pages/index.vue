@@ -451,7 +451,7 @@ async function processCheckInQRCode(qrContent) {
           v-if="isTeacher" 
           @click="createCourse"
         >
-          <wd-icon name="plus" size="40rpx" />
+          <wd-icon name="add1" size="40rpx" />
         </view>
         <view 
           class="search-button" 
@@ -557,10 +557,6 @@ async function processCheckInQRCode(qrContent) {
               <wd-icon name="user-group" size="32rpx" color="#ffffff" />
               <text>{{ course.memberCount || 0 }}人</text>
             </view>
-            <view class="course-code" v-if="course.code">
-              <wd-icon name="key" size="32rpx" color="#ffffff" />
-              <text>课程码: {{ course.code }}</text>
-            </view>
           </view>
         </view>
         
@@ -648,12 +644,17 @@ async function processCheckInQRCode(qrContent) {
   background-color: rgba(255, 107, 0, 0.1);
   border-radius: 50%;
   display: flex;
-  justify-content: center;
   align-items: center;
-  margin-left: 20rpx;
+  justify-content: center;
+  margin-left: 16rpx;
+  transition: all 0.2s ease;
   
   &:active {
     background-color: rgba(255, 107, 0, 0.2);
+  }
+  
+  .wd-icon {
+    color: #ff6b00;
   }
 }
 
