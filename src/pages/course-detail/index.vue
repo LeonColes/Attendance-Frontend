@@ -11,11 +11,15 @@
 import { ref, computed, reactive, onMounted, watch, onBeforeUnmount } from 'vue'
 import { useUserStore } from '@/store/user'
 import { CheckInType, getCheckinList, deleteCheckin, getCheckinRecordList } from '@/api/attendance'
-import { getCourseMemberList, getCourseQRCode, deleteCourse, removeCourseMember } from '@/api/courses'
+import { getCourseMemberList, getCourseQRCode, deleteCourse, removeCourseMember, getCourseDetail } from '@/api/courses'
 import type { PageQueryParams } from '@/api/attendance'
 import { onShow } from '@dcloudio/uni-app'
 import { formatDateTime, formatDate } from '@/utils/dateTime'
 import * as XLSX from 'xlsx'
+
+// 腾讯地图API配置 - 与位置签到页面使用相同的Key
+const QQ_MAP_KEY = 'G7VBZ-BF63Q-EEZ52-2XSLD-YYVA7-VJFB4' // 请替换为实际的key
+const QQ_MAP_SECRET_KEY = 'Yb88cxWRzZ96IjO0Q3XYllP6C6oj40xc' // 请替换为实际的secretKey
 
 // 为window.uni声明类型，解决TypeScript错误
 declare global {
@@ -51,6 +55,12 @@ const isStudent = computed(() => userStore.userInfo?.role === 'STUDENT')
 
 // 添加删除状态
 const isDeletingCourse = ref(false)
+
+// 添加地址解析进度状态
+const showAddressResolution = ref(false)
+const addressResolutionProgress = ref(0)
+const addressResolutionCount = ref(0)
+const addressResolutionTotal = ref(0)
 
 // 监听activeTab和isStudent，确保学生不能访问考勤统计
 watch([isStudent, activeTab], ([isStudentValue, activeTabValue]) => {
@@ -840,7 +850,53 @@ async function exportAttendanceToExcel(checkinTask) {
       })
       return
     }
+
+    // 显示地址解析进度弹窗
+    const addressModal = {
+      show: ref(true),
+      progress: ref(0),
+      total: ref(0),
+      isComplete: ref(false)
+    }
     
+    // 打开地址解析进度弹窗
+    getSafeUni().showModal({
+      title: '地址解析',
+      content: '是否解析GPS坐标为详细地址？这将使导出时间延长。',
+      success: async (res) => {
+        if (res.confirm) {
+          // 用户确认解析地址
+          try {
+            // 使用自定义UI组件显示进度
+            const recordsWithAddress = await startAddressResolution(records)
+            
+            // 继续导出Excel流程，使用解析后的记录
+            continueExportProcess(recordsWithAddress, checkinInfo, statistics, checkinTask)
+          } catch (e) {
+            console.error('地址解析过程中发生错误:', e)
+            // 使用原始记录继续导出
+            continueExportProcess(records, checkinInfo, statistics, checkinTask)
+          }
+        } else {
+          // 用户取消，使用原始记录继续导出
+          continueExportProcess(records, checkinInfo, statistics, checkinTask)
+        }
+      }
+    })
+  } catch (error) {
+    console.error('导出Excel失败:', error)
+    getSafeUni().hideLoading()
+    getSafeUni().showToast({
+      title: '导出失败: ' + ((error as Error)?.message || '未知错误'),
+      icon: 'none',
+      duration: 3000
+    })
+  }
+}
+
+// 继续Excel导出流程
+async function continueExportProcess(records, checkinInfo, statistics, checkinTask) {
+  try {
     // 准备Excel数据
     console.log('开始生成Excel文件')
     getSafeUni().showLoading({
@@ -900,7 +956,7 @@ async function exportAttendanceToExcel(checkinTask) {
     // 创建详细记录工作表
     const detailWs = XLSX.utils.aoa_to_sheet(detailData)
     
-    // 设置列宽
+    // 设置列宽 - 增加位置列宽度，以容纳更多地址信息
     detailWs['!cols'] = [
       { wch: 15 }, // ID
       { wch: 10 }, // 姓名
@@ -908,7 +964,7 @@ async function exportAttendanceToExcel(checkinTask) {
       { wch: 10 }, // 签到状态
       { wch: 20 }, // 签到时间
       { wch: 25 }, // 设备信息
-      { wch: 25 }  // 位置
+      { wch: 45 }  // 位置 - 增加宽度
     ]
     
     // 创建工作簿
@@ -1327,13 +1383,385 @@ onLoad((options) => {
   if (options && options.id) {
     courseId.value = options.id
     // 加载课程详情
-    getCourseDetail()
+    getCourseDetail(courseId.value)
     // 加载签到任务列表
     loadCheckinList()
     // 加载成员列表
     loadCourseMembers()
   }
 })
+
+// 根据坐标获取地址信息
+async function getAddressByCoordinates(latitude: number, longitude: number): Promise<string> {
+  try {
+    console.log(`开始解析坐标: ${latitude},${longitude}`)
+    
+    // 构建参数
+    const params: Record<string, string> = {
+      key: QQ_MAP_KEY,
+      location: `${latitude},${longitude}`,
+      output: 'json'
+    }
+    
+    // 计算签名
+    const sig = calculateMapSignature(params, QQ_MAP_SECRET_KEY)
+    
+    // 构建请求URL
+    let requestUrl = 'https://apis.map.qq.com/ws/geocoder/v1?'
+    for (const key of Object.keys(params)) {
+      requestUrl += `${key}=${encodeURIComponent(params[key])}&`
+    }
+    requestUrl += `sig=${sig}`
+    
+    // 发送请求
+    return new Promise((resolve, reject) => {
+      uni.request({
+        url: requestUrl,
+        success: (res: any) => {
+          if (res.statusCode === 200 && res.data && res.data.status === 0 && res.data.result) {
+            const address = res.data.result.address || '未知地址'
+            console.log(`解析成功: ${address}`)
+            resolve(address)
+          } else {
+            console.error('地址解析失败:', res.data)
+            // 返回原始坐标
+            resolve(`${latitude},${longitude}(解析失败)`)
+          }
+        },
+        fail: (err) => {
+          console.error('地址请求失败:', err)
+          // 返回原始坐标
+          resolve(`${latitude},${longitude}(请求失败)`)
+        }
+      })
+    })
+  } catch (e) {
+    console.error('地址解析异常:', e)
+    // 返回原始坐标
+    return `${latitude},${longitude}(解析异常)`
+  }
+}
+
+// 批量解析多个坐标
+async function batchResolveAddresses(records: any[], updateProgress?: (progress: number, total: number) => void): Promise<any[]> {
+  const total = records.length
+  const result = [...records]
+  let resolvedCount = 0
+  
+  // 存储需要解析的记录索引和坐标
+  const coordinatesToResolve: { index: number, lat: number, lng: number }[] = []
+  
+  // 找出所有包含坐标的记录
+  for (let i = 0; i < records.length; i++) {
+    const record = records[i]
+    const location = record.location || ''
+    
+    // 检查是否包含坐标信息 (格式如: "30.123,114.456,其他信息")
+    const match = location.match(/^([\d.]+),([\d.]+)/)
+    if (match) {
+      const [, lat, lng] = match
+      coordinatesToResolve.push({
+        index: i,
+        lat: parseFloat(lat),
+        lng: parseFloat(lng)
+      })
+    }
+  }
+  
+  console.log(`找到${coordinatesToResolve.length}条需要解析的坐标`)
+  
+  // 如果没有需要解析的坐标，直接返回
+  if (coordinatesToResolve.length === 0) {
+    return result
+  }
+  
+  // 批量解析坐标
+  for (const item of coordinatesToResolve) {
+    try {
+      // 解析地址
+      const address = await getAddressByCoordinates(item.lat, item.lng)
+      
+      // 更新记录中的位置信息，保留原始坐标
+      const originalLocation = result[item.index].location
+      result[item.index].location = `${address} [${originalLocation}]`
+      
+      // 更新进度
+      resolvedCount++
+      if (updateProgress) {
+        updateProgress(resolvedCount, coordinatesToResolve.length)
+      }
+      
+      // 添加适当延迟，避免API请求过于频繁
+      await new Promise(resolve => setTimeout(resolve, 200))
+    } catch (e) {
+      console.error(`解析第${item.index}条记录坐标失败:`, e)
+    }
+  }
+  
+  return result
+}
+
+// 计算腾讯地图API签名
+function calculateMapSignature(params: Record<string, string>, secretKey: string): string {
+  // 1. 对请求参数按键名升序排序
+  const sortedKeys = Object.keys(params).sort()
+  
+  // 2. 构建请求字符串 - 不进行URL编码
+  let queryString = ''
+  for (const key of sortedKeys) {
+    queryString += `${key}=${params[key]}&`
+  }
+  queryString = queryString.slice(0, -1) // 移除末尾的&
+
+  // 3. 拼接路径、参数和密钥
+  const signStr = `/ws/geocoder/v1?${queryString}${secretKey}`
+  
+  // 4. 计算MD5并转换为小写
+  return md5(signStr).toLowerCase()
+}
+
+// MD5函数实现
+function md5(str: string): string {
+  function rotateLeft(lValue: number, iShiftBits: number): number {
+    return (lValue << iShiftBits) | (lValue >>> (32 - iShiftBits));
+  }
+
+  function addUnsigned(lX: number, lY: number): number {
+    const lX8 = lX & 0x80000000;
+    const lY8 = lY & 0x80000000;
+    const lX4 = lX & 0x40000000;
+    const lY4 = lY & 0x40000000;
+    const lResult = (lX & 0x3FFFFFFF) + (lY & 0x3FFFFFFF);
+    
+    if (lX4 & lY4) {
+      return lResult ^ 0x80000000 ^ lX8 ^ lY8;
+    }
+    
+    if (lX4 | lY4) {
+      if (lResult & 0x40000000) {
+        return lResult ^ 0xC0000000 ^ lX8 ^ lY8;
+      } else {
+        return lResult ^ 0x40000000 ^ lX8 ^ lY8;
+      }
+    } else {
+      return lResult ^ lX8 ^ lY8;
+    }
+  }
+
+  function F(x: number, y: number, z: number): number {
+    return (x & y) | ((~x) & z);
+  }
+
+  function G(x: number, y: number, z: number): number {
+    return (x & z) | (y & (~z));
+  }
+
+  function H(x: number, y: number, z: number): number {
+    return x ^ y ^ z;
+  }
+
+  function I(x: number, y: number, z: number): number {
+    return y ^ (x | (~z));
+  }
+
+  function FF(a: number, b: number, c: number, d: number, x: number, s: number, ac: number): number {
+    a = addUnsigned(a, addUnsigned(addUnsigned(F(b, c, d), x), ac));
+    return addUnsigned(rotateLeft(a, s), b);
+  }
+
+  function GG(a: number, b: number, c: number, d: number, x: number, s: number, ac: number): number {
+    a = addUnsigned(a, addUnsigned(addUnsigned(G(b, c, d), x), ac));
+    return addUnsigned(rotateLeft(a, s), b);
+  }
+
+  function HH(a: number, b: number, c: number, d: number, x: number, s: number, ac: number): number {
+    a = addUnsigned(a, addUnsigned(addUnsigned(H(b, c, d), x), ac));
+    return addUnsigned(rotateLeft(a, s), b);
+  }
+
+  function II(a: number, b: number, c: number, d: number, x: number, s: number, ac: number): number {
+    a = addUnsigned(a, addUnsigned(addUnsigned(I(b, c, d), x), ac));
+    return addUnsigned(rotateLeft(a, s), b);
+  }
+
+  function convertToWordArray(str: string): number[] {
+    let lWordCount;
+    const lMessageLength = str.length;
+    const lNumberOfWords_temp1 = lMessageLength + 8;
+    const lNumberOfWords_temp2 = (lNumberOfWords_temp1 - (lNumberOfWords_temp1 % 64)) / 64;
+    const lNumberOfWords = (lNumberOfWords_temp2 + 1) * 16;
+    const lWordArray = Array(lNumberOfWords - 1);
+    let lBytePosition = 0;
+    let lByteCount = 0;
+    
+    while (lByteCount < lMessageLength) {
+      lWordCount = (lByteCount - (lByteCount % 4)) / 4;
+      lBytePosition = (lByteCount % 4) * 8;
+      lWordArray[lWordCount] = (lWordArray[lWordCount] || 0) | (str.charCodeAt(lByteCount) << lBytePosition);
+      lByteCount++;
+    }
+    
+    lWordCount = (lByteCount - (lByteCount % 4)) / 4;
+    lBytePosition = (lByteCount % 4) * 8;
+    lWordArray[lWordCount] = (lWordArray[lWordCount] || 0) | (0x80 << lBytePosition);
+    lWordArray[lNumberOfWords - 2] = lMessageLength << 3;
+    lWordArray[lNumberOfWords - 1] = lMessageLength >>> 29;
+    
+    return lWordArray;
+  }
+
+  function wordToHex(lValue: number): string {
+    let WordToHexValue = '';
+    let WordToHexValue_temp = '';
+    let lByte;
+    
+    for (let lCount = 0; lCount <= 3; lCount++) {
+      lByte = (lValue >>> (lCount * 8)) & 255;
+      WordToHexValue_temp = '0' + lByte.toString(16);
+      WordToHexValue = WordToHexValue + WordToHexValue_temp.substr(WordToHexValue_temp.length - 2, 2);
+    }
+    
+    return WordToHexValue;
+  }
+
+  let x = convertToWordArray(str);
+  let a = 0x67452301;
+  let b = 0xEFCDAB89;
+  let c = 0x98BADCFE;
+  let d = 0x10325476;
+  let S11 = 7;
+  let S12 = 12;
+  let S13 = 17;
+  let S14 = 22;
+  let S21 = 5;
+  let S22 = 9;
+  let S23 = 14;
+  let S24 = 20;
+  let S31 = 4;
+  let S32 = 11;
+  let S33 = 16;
+  let S34 = 23;
+  let S41 = 6;
+  let S42 = 10;
+  let S43 = 15;
+  let S44 = 21;
+  let k = 0;
+  
+  while (k < x.length) {
+    let AA = a;
+    let BB = b;
+    let CC = c;
+    let DD = d;
+    
+    a = FF(a, b, c, d, x[k + 0], S11, 0xD76AA478);
+    d = FF(d, a, b, c, x[k + 1], S12, 0xE8C7B756);
+    c = FF(c, d, a, b, x[k + 2], S13, 0x242070DB);
+    b = FF(b, c, d, a, x[k + 3], S14, 0xC1BDCEEE);
+    a = FF(a, b, c, d, x[k + 4], S11, 0xF57C0FAF);
+    d = FF(d, a, b, c, x[k + 5], S12, 0x4787C62A);
+    c = FF(c, d, a, b, x[k + 6], S13, 0xA8304613);
+    b = FF(b, c, d, a, x[k + 7], S14, 0xFD469501);
+    a = FF(a, b, c, d, x[k + 8], S11, 0x698098D8);
+    d = FF(d, a, b, c, x[k + 9], S12, 0x8B44F7AF);
+    c = FF(c, d, a, b, x[k + 10], S13, 0xFFFF5BB1);
+    b = FF(b, c, d, a, x[k + 11], S14, 0x895CD7BE);
+    a = FF(a, b, c, d, x[k + 12], S11, 0x6B901122);
+    d = FF(d, a, b, c, x[k + 13], S12, 0xFD987193);
+    c = FF(c, d, a, b, x[k + 14], S13, 0xA679438E);
+    b = FF(b, c, d, a, x[k + 15], S14, 0x49B40821);
+
+    a = GG(a, b, c, d, x[k + 1], S21, 0xF61E2562);
+    d = GG(d, a, b, c, x[k + 6], S22, 0xC040B340);
+    c = GG(c, d, a, b, x[k + 11], S23, 0x265E5A51);
+    b = GG(b, c, d, a, x[k + 0], S24, 0xE9B6C7AA);
+    a = GG(a, b, c, d, x[k + 5], S21, 0xD62F105D);
+    d = GG(d, a, b, c, x[k + 10], S22, 0x2441453);
+    c = GG(c, d, a, b, x[k + 15], S23, 0xD8A1E681);
+    b = GG(b, c, d, a, x[k + 4], S24, 0xE7D3FBC8);
+    a = GG(a, b, c, d, x[k + 9], S21, 0x21E1CDE6);
+    d = GG(d, a, b, c, x[k + 14], S22, 0xC33707D6);
+    c = GG(c, d, a, b, x[k + 3], S23, 0xF4D50D87);
+    b = GG(b, c, d, a, x[k + 8], S24, 0x455A14ED);
+    a = GG(a, b, c, d, x[k + 13], S21, 0xA9E3E905);
+    d = GG(d, a, b, c, x[k + 2], S22, 0xFCEFA3F8);
+    c = GG(c, d, a, b, x[k + 7], S23, 0x676F02D9);
+    b = GG(b, c, d, a, x[k + 12], S24, 0x8D2A4C8A);
+
+    a = HH(a, b, c, d, x[k + 5], S31, 0xFFFA3942);
+    d = HH(d, a, b, c, x[k + 8], S32, 0x8771F681);
+    c = HH(c, d, a, b, x[k + 11], S33, 0x6D9D6122);
+    b = HH(b, c, d, a, x[k + 14], S34, 0xFDE5380C);
+    a = HH(a, b, c, d, x[k + 1], S31, 0xA4BEEA44);
+    d = HH(d, a, b, c, x[k + 4], S32, 0x4BDECFA9);
+    c = HH(c, d, a, b, x[k + 7], S33, 0xF6BB4B60);
+    b = HH(b, c, d, a, x[k + 10], S34, 0xBEBFBC70);
+    a = HH(a, b, c, d, x[k + 13], S31, 0x289B7EC6);
+    d = HH(d, a, b, c, x[k + 0], S32, 0xEAA127FA);
+    c = HH(c, d, a, b, x[k + 3], S33, 0xD4EF3085);
+    b = HH(b, c, d, a, x[k + 6], S34, 0x4881D05);
+    a = HH(a, b, c, d, x[k + 9], S31, 0xD9D4D039);
+    d = HH(d, a, b, c, x[k + 12], S32, 0xE6DB99E5);
+    c = HH(c, d, a, b, x[k + 15], S33, 0x1FA27CF8);
+    b = HH(b, c, d, a, x[k + 2], S34, 0xC4AC5665);
+
+    a = II(a, b, c, d, x[k + 0], S41, 0xF4292244);
+    d = II(d, a, b, c, x[k + 7], S42, 0x432AFF97);
+    c = II(c, d, a, b, x[k + 14], S43, 0xAB9423A7);
+    b = II(b, c, d, a, x[k + 5], S44, 0xFC93A039);
+    a = II(a, b, c, d, x[k + 12], S41, 0x655B59C3);
+    d = II(d, a, b, c, x[k + 3], S42, 0x8F0CCC92);
+    c = II(c, d, a, b, x[k + 10], S43, 0xFFEFF47D);
+    b = II(b, c, d, a, x[k + 1], S44, 0x85845DD1);
+    a = II(a, b, c, d, x[k + 8], S41, 0x6FA87E4F);
+    d = II(d, a, b, c, x[k + 15], S42, 0xFE2CE6E0);
+    c = II(c, d, a, b, x[k + 6], S43, 0xA3014314);
+    b = II(b, c, d, a, x[k + 13], S44, 0x4E0811A1);
+    a = II(a, b, c, d, x[k + 4], S41, 0xF7537E82);
+    d = II(d, a, b, c, x[k + 11], S42, 0xBD3AF235);
+    c = II(c, d, a, b, x[k + 2], S43, 0x2AD7D2BB);
+    b = II(b, c, d, a, x[k + 9], S44, 0xEB86D391);
+    
+    a = addUnsigned(a, AA);
+    b = addUnsigned(b, BB);
+    c = addUnsigned(c, CC);
+    d = addUnsigned(d, DD);
+    
+    k += 16;
+  }
+  
+  const result = wordToHex(a) + wordToHex(b) + wordToHex(c) + wordToHex(d);
+  return result.toLowerCase();
+}
+
+// 修改updateProgress函数，使用UI组件显示进度
+function updateAddressResolutionProgress(current, total) {
+  addressResolutionCount.value = current
+  addressResolutionTotal.value = total
+  addressResolutionProgress.value = Math.round((current / total) * 100)
+}
+
+// 修改batchResolveAddresses调用
+async function startAddressResolution(records) {
+  try {
+    // 显示进度UI
+    showAddressResolution.value = true
+    addressResolutionCount.value = 0
+    addressResolutionTotal.value = 0
+    addressResolutionProgress.value = 0
+    
+    // 批量解析地址
+    const recordsWithAddress = await batchResolveAddresses(records, updateAddressResolutionProgress)
+    
+    // 隐藏进度UI
+    showAddressResolution.value = false
+    
+    return recordsWithAddress
+  } catch (e) {
+    console.error('地址解析过程中发生错误:', e)
+    showAddressResolution.value = false
+    return records // 出错时返回原始记录
+  }
+}
 </script>
 
 <template>
@@ -1653,6 +2081,22 @@ onLoad((options) => {
         <wd-button type="primary" @click="showOperations = false" block custom-style="margin-top: 30rpx;">取消</wd-button>
       </view>
     </wd-popup>
+
+    <!-- 地址解析进度弹窗 -->
+    <view class="address-resolution-modal" v-if="showAddressResolution">
+      <view class="modal-content">
+        <view class="modal-title">正在解析地址</view>
+        <view class="progress-container">
+          <view class="progress-bar">
+            <view class="progress-fill" :style="{ width: `${addressResolutionProgress}%` }"></view>
+          </view>
+          <view class="progress-text">{{ addressResolutionCount }}/{{ addressResolutionTotal }}</view>
+        </view>
+        <view class="loading-icon">
+          <wd-loading color="#6a11cb" size="80rpx" />
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -2838,5 +3282,66 @@ onLoad((options) => {
 .checkin-actions .wd-button:active {
   opacity: 0.8;
   transform: scale(0.95);
+}
+
+.address-resolution-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.modal-content {
+  background-color: #fff;
+  border-radius: 20rpx;
+  padding: 40rpx;
+  width: 80%;
+  max-width: 600rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.modal-title {
+  font-size: 36rpx;
+  font-weight: bold;
+  margin-bottom: 30rpx;
+  color: #333;
+}
+
+.progress-container {
+  width: 100%;
+  margin-bottom: 30rpx;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 20rpx;
+  background-color: #f0f0f0;
+  border-radius: 10rpx;
+  overflow: hidden;
+  margin-bottom: 10rpx;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6a11cb 0%, #2575fc 100%);
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  text-align: center;
+  font-size: 28rpx;
+  color: #666;
+}
+
+.loading-icon {
+  margin-top: 20rpx;
 }
 </style>

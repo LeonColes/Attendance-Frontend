@@ -59,7 +59,9 @@ export default defineUniPages({
     {
       "path": "pages/location-checkin/index",
       "type": "page",
-      "navigationBarTitleText": "位置签到"
+      "style": {
+        "navigationBarTitleText": "位置签到"
+      }
     },
     {
       "path": "pages/login/index",
