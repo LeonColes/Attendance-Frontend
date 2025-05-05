@@ -160,7 +160,6 @@ function goBack() {
 <style lang="scss">
 .container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
   transition: background 0.3s ease;
   display: flex;
   flex-direction: column;

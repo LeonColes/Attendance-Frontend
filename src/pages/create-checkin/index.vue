@@ -43,7 +43,34 @@ const formData = reactive({
   }
 })
 
-// 计算完整的开始和结束时间字符串
+// 计算是否显示预览信息
+const showDateTimePreview = computed(() => {
+  return formData.startDate && formData.startTime && formData.endDate && formData.endTime;
+});
+
+// 计算完整的开始时间预览
+const startTimePreview = computed(() => {
+  if (!formData.startDate || !formData.startTime) return '';
+  try {
+    const date = new Date(`${formData.startDate}T${formData.startTime}:00`);
+    return `${date.getMonth() + 1}月${date.getDate()}日 ${formData.startTime}`;
+  } catch (e) {
+    return `${formData.startDate} ${formData.startTime}`;
+  }
+});
+
+// 计算完整的结束时间预览
+const endTimePreview = computed(() => {
+  if (!formData.endDate || !formData.endTime) return '';
+  try {
+    const date = new Date(`${formData.endDate}T${formData.endTime}:00`);
+    return `${date.getMonth() + 1}月${date.getDate()}日 ${formData.endTime}`;
+  } catch (e) {
+    return `${formData.endDate} ${formData.endTime}`;
+  }
+});
+
+// 计算完整的开始和结束时间字符串，用于API调用
 const computedStartTime = computed(() => {
   if (!formData.startDate || !formData.startTime) return '';
   return `${formData.startDate}T${formData.startTime}:00`;
@@ -107,27 +134,29 @@ onMounted(() => {
     }, 1500)
   }
   
-  // 延迟初始化时间，确保日期选择器已经加载
-  setTimeout(() => {
-    try {
-      // 初始化时间 - 开始时间为当前时间+1分钟
-      const now = new Date();
-      now.setMinutes(now.getMinutes() + 1); // 当前时间+1分钟
-      
-      // 结束时间为开始时间+45分钟
-      const future = new Date(now.getTime());
-      future.setMinutes(future.getMinutes() + 45); // 开始时间+45分钟
-      
-      // 设置日期和时间
-      formData.startDate = formatDateForPicker(now);
-      formData.startTime = formatTimeForPicker(now);
-      formData.endDate = formatDateForPicker(future);
-      formData.endTime = formatTimeForPicker(future);
-    } catch (err) {
-      console.error('初始化日期失败:', err);
-    }
-  }, 300);
+  initFormData();
 })
+
+// 初始化表单数据
+function initFormData() {
+  try {
+    // 初始化时间 - 开始时间为当前时间+5分钟（给用户更多准备时间）
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + 5); 
+    
+    // 结束时间为开始时间+45分钟
+    const future = new Date(now.getTime());
+    future.setMinutes(future.getMinutes() + 45);
+    
+    // 设置日期和时间
+    formData.startDate = formatDateForPicker(now);
+    formData.startTime = formatTimeForPicker(now);
+    formData.endDate = formatDateForPicker(future);
+    formData.endTime = formatTimeForPicker(future);
+  } catch (err) {
+    console.error('初始化日期失败:', err);
+  }
+}
 
 // 日期时间格式化函数
 function formatDateForPicker(date: Date): string {
@@ -170,9 +199,6 @@ function onEndTimeChange(e: any) {
 // 选择位置
 function chooseLocation() {
   try {
-    // 首先检查平台
-    const systemInfo = uni.getSystemInfoSync();
-    
     // 显示加载提示
     uni.showLoading({
       title: '正在准备位置服务...'
@@ -225,11 +251,10 @@ function chooseLocation() {
           // 打开设置页面引导用户授权
           uni.showModal({
             title: '需要位置权限',
-            content: '请在设置中允许微信获取位置信息',
+            content: '请在设置中允许获取位置信息',
             confirmText: '去设置',
             success(res) {
               if (res.confirm) {
-                // 在微信小程序环境下打开权限设置页面
                 uni.openSetting({
                   success(settingRes) {
                     console.log('设置结果:', settingRes);
@@ -330,7 +355,7 @@ async function submitForm() {
     loading.value = true;
     errorMessage.value = '';
     
-    // 准备API参数，直接使用字符串转换，不进行时区转换
+    // 准备API参数
     const checkinParams = {
       courseId: courseId.value,
       title: formData.name,
@@ -403,13 +428,9 @@ function handleRadiusChange(value: string | number) {
       <view class="title">创建签到任务</view>
       <view class="subtitle">请设置签到参数</view>
     </view>
+    
     <!-- 内容区域 -->
     <view class="content-wrapper">
-      <view class="page-title">
-        <text class="title-text">创建签到任务</text>
-        <text class="subtitle-text">设置签到任务的详细信息</text>
-      </view>
-      
       <view class="form-card">
         <!-- 签到名称 -->
         <view class="form-item">
@@ -512,28 +533,39 @@ function handleRadiusChange(value: string | number) {
             <text>开始时间</text>
             <text class="required">*</text>
           </view>
-          <picker
-            mode="date"
-            :value="formData.startDate"
-            start="2025-01-01"
-            end="2035-12-31"
-            @change="onStartDateChange"
-          >
-            <view class="picker-view">
-              <text>{{ formData.startDate || '请选择日期' }}</text>
-              <wd-icon name="arrow-down" size="24rpx" color="#999" />
+          <view class="datetime-picker-container">
+            <view class="datetime-picker-group">
+              <picker
+                mode="date"
+                :value="formData.startDate"
+                start="2025-01-01"
+                end="2035-12-31"
+                @change="onStartDateChange"
+              >
+                <view class="datetime-picker-view">
+                  <view class="picker-label">日期</view>
+                  <view class="picker-value">
+                    <text>{{ formData.startDate || '选择日期' }}</text>
+                    <wd-icon name="calendar" size="32rpx" color="#6a11cb" />
+                  </view>
+                </view>
+              </picker>
+              
+              <picker
+                mode="time"
+                :value="formData.startTime"
+                @change="onStartTimeChange"
+              >
+                <view class="datetime-picker-view">
+                  <view class="picker-label">时间</view>
+                  <view class="picker-value">
+                    <text>{{ formData.startTime || '选择时间' }}</text>
+                    <wd-icon name="clock" size="32rpx" color="#6a11cb" />
+                  </view>
+                </view>
+              </picker>
             </view>
-          </picker>
-          <picker
-            mode="time"
-            :value="formData.startTime"
-            @change="onStartTimeChange"
-          >
-            <view class="picker-view" style="margin-top: 10rpx;">
-              <text>{{ formData.startTime || '请选择时间' }}</text>
-              <wd-icon name="arrow-down" size="24rpx" color="#999" />
-            </view>
-          </picker>
+          </view>
         </view>
         
         <view class="form-item">
@@ -542,28 +574,57 @@ function handleRadiusChange(value: string | number) {
             <text>结束时间</text>
             <text class="required">*</text>
           </view>
-          <picker
-            mode="date"
-            :value="formData.endDate"
-            start="2023-01-01"
-            end="2030-12-31"
-            @change="onEndDateChange"
-          >
-            <view class="picker-view">
-              <text>{{ formData.endDate || '请选择日期' }}</text>
-              <wd-icon name="arrow-down" size="24rpx" color="#999" />
+          <view class="datetime-picker-container">
+            <view class="datetime-picker-group">
+              <picker
+                mode="date"
+                :value="formData.endDate"
+                start="2025-01-01"
+                end="2035-12-31"
+                @change="onEndDateChange"
+              >
+                <view class="datetime-picker-view">
+                  <view class="picker-label">日期</view>
+                  <view class="picker-value">
+                    <text>{{ formData.endDate || '选择日期' }}</text>
+                    <wd-icon name="calendar" size="32rpx" color="#6a11cb" />
+                  </view>
+                </view>
+              </picker>
+              
+              <picker
+                mode="time"
+                :value="formData.endTime"
+                @change="onEndTimeChange"
+              >
+                <view class="datetime-picker-view">
+                  <view class="picker-label">时间</view>
+                  <view class="picker-value">
+                    <text>{{ formData.endTime || '选择时间' }}</text>
+                    <wd-icon name="clock" size="32rpx" color="#6a11cb" />
+                  </view>
+                </view>
+              </picker>
             </view>
-          </picker>
-          <picker
-            mode="time"
-            :value="formData.endTime"
-            @change="onEndTimeChange"
-          >
-            <view class="picker-view" style="margin-top: 10rpx;">
-              <text>{{ formData.endTime || '请选择时间' }}</text>
-              <wd-icon name="arrow-down" size="24rpx" color="#999" />
+          </view>
+        </view>
+        
+        <!-- 时间预览 -->
+        <view v-if="showDateTimePreview" class="time-preview">
+          <view class="time-preview-header">
+            <wd-icon name="info" size="32rpx" color="#36a2eb" />
+            <text>签到时间预览</text>
+          </view>
+          <view class="time-preview-content">
+            <view class="preview-item">
+              <text class="label">开始：</text>
+              <text class="value">{{ startTimePreview }}</text>
             </view>
-          </picker>
+            <view class="preview-item">
+              <text class="label">结束：</text>
+              <text class="value">{{ endTimePreview }}</text>
+            </view>
+          </view>
         </view>
         
         <!-- 错误信息 -->
@@ -709,24 +770,6 @@ function handleRadiusChange(value: string | number) {
 .content-wrapper {
   padding: 30rpx;
   padding-top: 10rpx;
-}
-
-.page-title {
-  margin: 40rpx 20rpx 60rpx;
-  
-  .title-text {
-    display: block;
-    font-size: 48rpx;
-    font-weight: bold;
-    color: #ffffff;
-    margin-bottom: 16rpx;
-    text-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.2);
-  }
-  
-  .subtitle-text {
-    font-size: 28rpx;
-    color: rgba(255, 255, 255, 0.8);
-  }
 }
 
 .form-card {
@@ -902,14 +945,65 @@ function handleRadiusChange(value: string | number) {
   }
 }
 
-.picker-view {
+.datetime-picker-container {
+  width: 100%;
+  margin-top: 16rpx;
+}
+
+.datetime-picker-group {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 24rpx 30rpx;
+  gap: 20rpx;
+}
+
+.datetime-picker-view {
+  flex: 1;
   background-color: #f8f9fa;
-  border-radius: 8rpx;
+  border-radius: 16rpx;
+  padding: 24rpx;
   border: 1px solid #e0e0e0;
+  transition: all 0.3s ease;
+  
+  &:active {
+    transform: scale(0.99);
+    background-color: #f0f2f5;
+  }
+  
+  .picker-label {
+    font-size: 24rpx;
+    color: #888;
+    margin-bottom: 8rpx;
+  }
+  
+  .picker-value {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    
+    text {
+      font-size: 32rpx;
+      color: #333;
+      font-weight: 500;
+    }
+  }
+}
+
+.wot-theme-dark {
+  .datetime-picker-view {
+    background-color: rgba(50, 50, 65, 0.8);
+    border-color: rgba(80, 80, 100, 0.4);
+    
+    &:active {
+      background-color: rgba(60, 60, 75, 0.8);
+    }
+    
+    .picker-label {
+      color: #a0a0a0;
+    }
+    
+    .picker-value text {
+      color: #e0e0e0;
+    }
+  }
 }
 
 .error-message {
@@ -997,6 +1091,72 @@ function handleRadiusChange(value: string | number) {
     
     .wd-input__inner::placeholder {
       color: rgba(200, 200, 220, 0.5) !important;
+    }
+  }
+}
+
+.time-preview {
+  margin-top: 30rpx;
+  padding: 20rpx;
+  background-color: rgba(54, 162, 235, 0.1);
+  border-radius: 16rpx;
+  border-left: 6rpx solid #36a2eb;
+  
+  .time-preview-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16rpx;
+    
+    text {
+      margin-left: 10rpx;
+      font-size: 28rpx;
+      color: #36a2eb;
+      font-weight: 500;
+    }
+  }
+  
+  .time-preview-content {
+    padding-left: 42rpx;
+  }
+  
+  .preview-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10rpx;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+    
+    .label {
+      font-size: 28rpx;
+      color: #666;
+      width: 100rpx;
+    }
+    
+    .value {
+      font-size: 28rpx;
+      color: #333;
+      font-weight: 500;
+    }
+  }
+}
+
+.wot-theme-dark .time-preview {
+  background-color: rgba(54, 162, 235, 0.15);
+  border-left-color: rgba(54, 162, 235, 0.8);
+  
+  .time-preview-header text {
+    color: rgba(54, 162, 235, 0.9);
+  }
+  
+  .preview-item {
+    .label {
+      color: #a0a0a0;
+    }
+    
+    .value {
+      color: #e0e0e0;
     }
   }
 }
