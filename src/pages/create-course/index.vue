@@ -10,9 +10,11 @@
 <script lang="ts" setup>
 import { ref, reactive } from 'vue'
 import { useUserStore } from '@/store/user'
+import { useThemeStore } from '@/store/theme'
 import { createCourse, type Course } from '@/api/courses'
 
 const userStore = useUserStore()
+const themeStore = useThemeStore() // 引入主题store
 const loading = ref(false)
 const errorMessage = ref('')
 
@@ -102,7 +104,7 @@ function cancelDatePicker() {
 }
 
 // 日期格式化函数
-const formatter = (type: string, value: number) => {
+const formatter = (type: string, value: number): string => {
   if (type === 'year') {
     return `${value}年`;
   }
@@ -112,7 +114,7 @@ const formatter = (type: string, value: number) => {
   if (type === 'day') {
     return `${value}日`;
   }
-  return value;
+  return String(value);
 };
 
 // 提交表单创建课程
@@ -203,7 +205,7 @@ function goBack() {
 </script>
 
 <template>
-  <view class="container">
+  <view class="container" :class="{'wot-theme-dark': themeStore.isDarkMode}">
     
     <!-- 内容区域 -->
     <view class="content-wrapper">
@@ -346,6 +348,57 @@ function goBack() {
   min-height: 100vh;
   background: linear-gradient(145deg, #6a11cb 0%, #2575fc 100%);
   position: relative;
+  transition: all 0.3s ease;
+  
+  // 暗黑模式样式
+  &.wot-theme-dark {
+    background: linear-gradient(145deg, #1e1e2e 0%, #1a2341 100%);
+    
+    .form-card {
+      background: rgba(32, 33, 44, 0.95);
+      box-shadow: 0 20rpx 40rpx rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(80, 80, 100, 0.2);
+      
+      .form-item-title {
+        text {
+          color: #e0e0e0;
+        }
+        
+        .required {
+          color: #ff6b6b;
+        }
+      }
+    }
+    
+    .date-input {
+      background-color: rgba(60, 60, 75, 0.8);
+      border-color: rgba(80, 80, 100, 0.4);
+      
+      text {
+        color: #e0e0e0;
+      }
+    }
+    
+    .error-message {
+      background-color: rgba(100, 40, 40, 0.3);
+      border-left-color: #ff6b6b;
+      
+      text {
+        color: #ff8a8a;
+      }
+    }
+    
+    .form-tips {
+      text {
+        color: rgba(220, 220, 240, 0.9);
+      }
+    }
+    
+    .submit-button {
+      background: linear-gradient(45deg, #5a24b0, #2367e0) !important;
+      box-shadow: 0 8rpx 16rpx rgba(20, 30, 100, 0.4) !important;
+    }
+  }
 }
 
 .content-wrapper {
@@ -509,18 +562,35 @@ function goBack() {
   }
 }
 
-// 优化日期选择器样式
-:deep(.wd-datetime-picker-view) {
-  border-radius: 24rpx 24rpx 0 0;
-  overflow: hidden;
-  
-  .wd-picker-view__header {
-    background-color: #f8f9fa;
+:deep(.wd-textarea) {
+  border-radius: 12rpx !important;
+  background-color: #f8f9fa !important;
+  padding: 20rpx !important;
+
+  // 暗黑模式适配
+  .wot-theme-dark & {
+    background-color: rgba(50, 50, 65, 0.8) !important;
+    color: #e0e0e0 !important;
+    
+    .wd-textarea__textarea::placeholder {
+      color: rgba(200, 200, 220, 0.5) !important;
+    }
   }
+}
+
+:deep(.wd-input) {
+  border-radius: 12rpx !important;
+  background-color: #f8f9fa !important;
+  padding: 12rpx 20rpx !important;
   
-  .wd-picker-view__title {
-    color: #6a11cb;
-    font-weight: 600;
+  // 暗黑模式适配
+  .wot-theme-dark & {
+    background-color: rgba(50, 50, 65, 0.8) !important;
+    color: #e0e0e0 !important;
+    
+    .wd-input__inner::placeholder {
+      color: rgba(200, 200, 220, 0.5) !important;
+    }
   }
 }
 </style>

@@ -1965,10 +1965,16 @@ function handleAvatarError(e) {
               'checkin-type-' + checkin.checkinType.toLowerCase(),
               'status-' + getCheckinStatus(checkin)
             ]" :style="{ '--i': index }">
-              <!-- 修改左侧图标区域，增大尺寸和右边距 -->
-              <view class="checkin-icon">
-                <wd-icon :name="getCheckinTypeIcon(checkin.checkinType)" size="64rpx"
-                  :color="checkin.checkinType === 'QR_CODE' ? '#2196f3' : '#4caf50'" />
+              <!-- 修改左侧图标区域 -->
+              <view class="checkin-icon-container">
+                <view class="checkin-icon" :class="'type-' + checkin.checkinType.toLowerCase()">
+                  <wd-icon :name="getCheckinTypeIcon(checkin.checkinType)" size="64rpx"
+                    :color="checkin.checkinType === 'QR_CODE' ? '#ffffff' : '#ffffff'" />
+                </view>
+                <!-- 添加类型标签 -->
+                <view class="checkin-type-label">
+                  {{ checkin.checkinType === 'QR_CODE' ? '扫码签到' : checkin.checkinType === 'LOCATION' ? '位置签到' : '其他签到' }}
+                </view>
               </view>
               
               <!-- 添加点击区域，排除操作按钮 -->
@@ -1982,18 +1988,26 @@ function handleAvatarError(e) {
                     <wd-icon name="time" size="28rpx" color="#666" />
                     <text>{{ formatCheckinTime(checkin.createdAt, checkin.endTime) }}</text>
                   </view>
+                  <!-- 添加参与人数信息 -->
+                  <view class="checkin-participants" v-if="checkin.participantCount !== undefined">
+                    <wd-icon name="user-talk" size="28rpx" color="#666" />
+                    <text>已有 {{ checkin.participantCount || 0 }} 人参与</text>
+                  </view>
                 </view>
                 
-                <!-- @ts-ignore -->
-                <view v-if="!isStudent" class="checkin-status" :class="getCheckinStatus(checkin)">
-                  {{ getCheckinStatus(checkin) === 'not-started' ? '未开始' :
-                     getCheckinStatus(checkin) === 'in-progress' ? '进行中' : '已结束' }}
+                <!-- 添加状态徽章 -->
+                <view class="checkin-status-badge" :class="getCheckinStatus(checkin)">
+                  <view class="status-dot"></view>
+                  <text>{{ getCheckinStatus(checkin) === 'not-started' ? '未开始' :
+                     getCheckinStatus(checkin) === 'in-progress' ? '进行中' : '已结束' }}</text>
                 </view>
                 
                 <!-- 学生端显示签到状态 -->
                 <!-- @ts-ignore -->
-                <view v-else class="checkin-status" :class="checkin.personalStatus?.toLowerCase()">
-                  {{ checkin.displayStatus }}
+                <view v-if="isStudent" class="checkin-student-status" :class="checkin.personalStatus?.toLowerCase()">
+                  <wd-icon :name="checkin.personalStatus === 'PRESENT' ? 'success' : 'close'" size="28rpx" 
+                    :color="checkin.personalStatus === 'PRESENT' ? '#4caf50' : '#f44336'" />
+                  <text>{{ checkin.displayStatus || '未签到' }}</text>
                 </view>
               </view>
               
@@ -2002,13 +2016,13 @@ function handleAvatarError(e) {
               <view v-if="isTeacher" class="checkin-actions" @click.stop>
                 <!-- 添加导出按钮 -->
                 <wd-button type="primary" size="small"
-                  custom-style="padding: 8rpx 16rpx; min-width: auto; margin-right: 8rpx; background-color: #4caf50;"
+                  custom-class="action-button export-button"
                   @click.stop="handleExportSingleCheckin(checkin)">
                   <wd-icon name="download" size="32rpx" color="#ffffff" />
                 </wd-button>
                 
                 <wd-button type="error" size="small"
-                  custom-style="padding: 8rpx 16rpx; min-width: auto; background-color: #ff4d4f;"
+                  custom-class="action-button delete-button"
                   @click.stop="handleDeleteCheckin(checkin)">
                   <wd-icon name="delete" size="32rpx" color="#ffffff" />
                 </wd-button>
@@ -2051,8 +2065,6 @@ function handleAvatarError(e) {
               <view class="member-info">
                 <!-- @ts-ignore -->
                 <view class="member-name">{{ member.fullName || member.username }}</view>
-                <!-- @ts-ignore -->
-                <view class="member-username">{{ member.username }}</view>
                 <!-- @ts-ignore -->
                 <view class="member-role"
                   :class="{ 'role-teacher': member.role === 'TEACHER', 'role-student': member.role !== 'TEACHER' }">
@@ -2484,29 +2496,72 @@ function handleAvatarError(e) {
 .checkin-list {
   display: flex;
   flex-direction: column;
-  gap: 20rpx;
+  gap: 30rpx;
   will-change: transform;
 }
 
 .checkin-item {
   position: relative;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(249, 250, 254, 0.9) 100%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(249, 250, 254, 0.95) 100%);
   border-radius: 20rpx;
-  padding: 22rpx 18rpx 22rpx 20rpx;
-  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
+  padding: 24rpx;
+  box-shadow: 0 8rpx 20rpx rgba(0, 0, 0, 0.08);
   display: flex;
-  align-items: center;
+  align-items: center; /* 确保垂直居中 */
   animation: fadeIn 0.3s ease forwards;
   animation-delay: calc(var(--i) * 0.05s);
   opacity: 0;
-  border-left: 6rpx solid transparent;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.3s ease;
+  border-left: none;
   overflow: hidden;
 }
 
 .checkin-item:active {
-  transform: translateY(2rpx) scale(0.995);
-  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.03);
+  transform: translateY(2rpx) scale(0.99);
+  box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.05);
+}
+
+.checkin-item:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, transparent 0%, rgba(255, 255, 255, 0.1) 100%);
+  z-index: 0;
+}
+
+.checkin-icon-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-right: 20rpx;
+  align-self: center; /* 确保自身居中 */
+}
+
+.checkin-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 16rpx;
+  background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+  margin-bottom: 10rpx;
+}
+
+.checkin-type-label {
+  font-size: 20rpx;
+  color: #666;
+  padding: 4rpx 10rpx;
+  background-color: #f5f5f5;
+  border-radius: 20rpx;
+  white-space: nowrap;
+  text-align: center;
+  max-width: 110rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .checkin-content {
@@ -2522,30 +2577,36 @@ function handleAvatarError(e) {
   font-size: 32rpx;
   font-weight: bold;
   color: #333;
-  margin-bottom: 14rpx;
+  margin-bottom: 16rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  position: relative;
 }
 
 .checkin-info-row {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12rpx;
+  gap: 16rpx;
   margin: 12rpx 0;
 }
 
-.checkin-time {
+.checkin-time,
+.checkin-participants {
   display: flex;
   align-items: center;
-  gap: 6rpx;
-  background-color: rgba(0, 0, 0, 0.03);
-  padding: 6rpx 10rpx;
+  gap: 8rpx;
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 8rpx 12rpx;
   border-radius: 16rpx;
   max-width: 100%;
   flex: 1;
   min-width: 0;
 }
 
-.checkin-time text {
+.checkin-time text,
+.checkin-participants text {
   font-size: 24rpx;
   color: #666;
   white-space: nowrap;
@@ -2555,119 +2616,204 @@ function handleAvatarError(e) {
   min-width: 0;
 }
 
-.checkin-type-badge {
-  display: flex;
-  align-items: center;
-  gap: 8rpx;
-  padding: 8rpx 12rpx;
-  border-radius: 24rpx;
-  font-weight: 500;
-}
-
-.checkin-type-badge text {
-  font-size: 24rpx;
-  white-space: nowrap;
-}
-
-.checkin-status {
+.checkin-status-badge {
   position: absolute;
   top: 16rpx;
   right: 16rpx;
-  padding: 6rpx 16rpx;
-  border-radius: 50rpx;
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  padding: 6rpx 12rpx;
+  border-radius: 20rpx;
   font-size: 22rpx;
   font-weight: 500;
+  background-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
   z-index: 2;
-  box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
+}
+
+.checkin-status-badge .status-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.checkin-status-badge.not-started {
+  color: #757575;
+  
+  .status-dot {
+    background-color: #757575;
+  }
+}
+
+.checkin-status-badge.in-progress {
+  color: #ff6b00;
+  
+  .status-dot {
+    background-color: #ff6b00;
+    animation: pulse 1.5s infinite;
+  }
+}
+
+.checkin-status-badge.ended {
+  color: #4caf50;
+  
+  .status-dot {
+    background-color: #4caf50;
+  }
+}
+
+.checkin-student-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
+  padding: 6rpx 12rpx;
+  border-radius: 16rpx;
+  font-size: 22rpx;
+  font-weight: 500;
+  margin-top: 8rpx;
+}
+
+.checkin-student-status.present {
+  background-color: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
+}
+
+.checkin-student-status.absent {
+  background-color: rgba(244, 67, 54, 0.1);
+  color: #f44336;
+}
+
+.checkin-student-status.late {
+  background-color: rgba(255, 152, 0, 0.1);
+  color: #ff9800;
 }
 
 .checkin-actions {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   position: relative;
   z-index: 1;
   margin-left: 8rpx;
-  gap: 8rpx;
+  gap: 12rpx;
 }
 
-/* 添加导出按钮样式 */
-.checkin-actions .wd-button {
-  min-width: auto;
-  width: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10rpx;
-  border-radius: 8rpx;
+.action-button {
+  width: 70rpx !important;
+  height: 70rpx !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.3s ease !important;
 }
 
-/* 确保图标颜色统一 */
-.checkin-actions .wd-button--primary .wd-icon {
-  color: #ffffff !important;
-  fill: #ffffff !important;
+.action-button:active {
+  transform: scale(0.9);
 }
 
-.checkin-actions .wd-button--primary {
+.export-button {
   background-color: #4caf50 !important;
   border-color: #4caf50 !important;
 }
 
-.checkin-actions .wd-button--error {
-  background-color: #ff4d4f !important;
-  border-color: #ff4d4f !important;
+.delete-button {
+  background-color: #f44336 !important;
+  border-color: #f44336 !important;
 }
 
-.checkin-actions .wd-button:active {
-  opacity: 0.8;
-  transform: scale(0.95);
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
-/* 根据状态添加卡片背景和样式变化 */
+/* 状态样式 */
 .checkin-item.status-not-started {
-  background: linear-gradient(135deg, rgba(250, 250, 250, 0.9) 0%, rgba(245, 245, 250, 0.9) 100%);
-  border-left-color: #757575;
+  background: linear-gradient(135deg, rgba(250, 250, 250, 0.95) 0%, rgba(245, 245, 245, 0.95) 100%);
+  box-shadow: 0 8rpx 16rpx rgba(0, 0, 0, 0.05);
 }
 
 .checkin-item.status-in-progress {
-  background: linear-gradient(135deg, rgba(255, 243, 224, 0.9) 0%, rgba(255, 236, 217, 0.9) 100%);
-  border-left-color: #ff6b00;
-  box-shadow: 0 6rpx 16rpx rgba(255, 107, 0, 0.1);
+  background: linear-gradient(135deg, rgba(255, 243, 224, 0.95) 0%, rgba(255, 236, 217, 0.95) 100%);
+  box-shadow: 0 8rpx 20rpx rgba(255, 152, 0, 0.15);
+  border: 1px solid rgba(255, 152, 0, 0.1);
 }
 
 .checkin-item.status-ended {
-  background: linear-gradient(135deg, rgba(237, 247, 237, 0.9) 0%, rgba(232, 245, 233, 0.9) 100%);
-  border-left-color: #4caf50;
-  box-shadow: 0 4rpx 12rpx rgba(76, 175, 80, 0.08);
+  background: linear-gradient(135deg, rgba(237, 247, 237, 0.95) 0%, rgba(232, 245, 233, 0.95) 100%);
+  box-shadow: 0 8rpx 16rpx rgba(76, 175, 80, 0.12);
+  border: 1px solid rgba(76, 175, 80, 0.1);
 }
 
-.checkin-item.qr_code {
-  border-left-color: #ff6b00;
-}
-
-.checkin-item.location {
-  border-left-color: #4caf50;
-}
-
-.checkin-item.checkin-type-qr_code .checkin-type-badge {
-  background-color: rgba(255, 107, 0, 0.1);
-  color: #ff6b00;
-}
-
-.checkin-item.checkin-type-location .checkin-type-badge {
-  background-color: rgba(76, 175, 80, 0.1);
-  color: #4caf50;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10rpx);
+/* 暗黑模式适配 */
+.wot-theme-dark {
+  .checkin-item {
+    background: linear-gradient(135deg, rgba(40, 40, 40, 0.95) 0%, rgba(30, 30, 30, 0.95) 100%);
+    box-shadow: 0 8rpx 20rpx rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(60, 60, 60, 0.3);
   }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  
+  .checkin-title {
+    color: #e0e0e0;
+  }
+  
+  .checkin-time, 
+  .checkin-participants {
+    background-color: rgba(255, 255, 255, 0.08);
+    
+    text {
+      color: #b0b0b0;
+    }
+  }
+  
+  .checkin-status-badge {
+    background-color: rgba(40, 40, 40, 0.9);
+    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.2);
+  }
+  
+  .checkin-icon-container {
+    filter: brightness(0.9);
+  }
+  
+  .checkin-item.status-not-started {
+    background: linear-gradient(135deg, rgba(45, 45, 45, 0.95) 0%, rgba(35, 35, 35, 0.95) 100%);
+  }
+  
+  .checkin-item.status-in-progress {
+    background: linear-gradient(135deg, rgba(50, 40, 20, 0.95) 0%, rgba(45, 35, 15, 0.95) 100%);
+    border: 1px solid rgba(255, 152, 0, 0.2);
+  }
+  
+  .checkin-item.status-ended {
+    background: linear-gradient(135deg, rgba(30, 45, 30, 0.95) 0%, rgba(25, 40, 25, 0.95) 100%);
+    border: 1px solid rgba(76, 175, 80, 0.2);
+  }
+  
+  .checkin-student-status.present {
+    background-color: rgba(76, 175, 80, 0.15);
+  }
+  
+  .checkin-student-status.absent {
+    background-color: rgba(244, 67, 54, 0.15);
+  }
+  
+  .checkin-student-status.late {
+    background-color: rgba(255, 152, 0, 0.15);
   }
 }
 
@@ -3531,5 +3677,60 @@ function handleAvatarError(e) {
   border-radius: 50%;
   margin-right: 24rpx;
   flex-shrink: 0;
+}
+
+.checkin-icon-container {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.checkin-type-label {
+  font-size: 24rpx;
+  color: #ffffff;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 4rpx 10rpx;
+  border-radius: 12rpx;
+}
+
+.checkin-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  padding: 6rpx 12rpx;
+  border-radius: 16rpx;
+  font-weight: 500;
+  font-size: 22rpx;
+  box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
+}
+
+.checkin-status-badge .status-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background-color: #ff6b00;
+}
+
+.checkin-student-status {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  padding: 6rpx 12rpx;
+  border-radius: 16rpx;
+  font-weight: 500;
+  font-size: 22rpx;
+  box-shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.1);
+}
+
+.checkin-student-status .wd-icon {
+  width: 24rpx;
+  height: 24rpx;
+}
+
+.checkin-student-status .status-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background-color: #4caf50;
 }
 </style>

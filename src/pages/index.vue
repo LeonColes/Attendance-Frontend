@@ -550,36 +550,50 @@ function navigateToCourseDetail(course) {
           v-for="(course, index) in activeTab === 'active' ? activeCourses : allCourses" 
           :key="course.id" 
           @click="navigateToCourseDetail(course)"
+          :style="{ '--delay': index * 0.05 + 's' }"
         >
-          <view 
-            class="course-card-bg" 
-            :style="{ 
-              opacity: themeStore.isDarkMode ? 0.85 : 0.95 
-            }"
-          ></view>
-          <view class="course-card-content">
-            <view class="course-name">{{ course.name }}</view>
-            <view class="course-detail">
-              <view class="course-detail-item">
-                <wd-icon name="calendar" size="32rpx" color="#ffffff" />
-                <text>{{ course.startDate ? formatDay(course.startDate) : '未设置' }}</text>
+          <view class="course-card-inner">
+            <!-- 卡片左侧 -->
+            <view class="course-card-left">
+              <view class="course-icon">
+                <wd-icon name="bookshelf" size="64rpx" color="#ffffff" />
               </view>
-              <view class="course-detail-item">
-                <wd-icon name="time" size="32rpx" color="#ffffff" />
-                <text>{{ course.endDate ? formatDay(course.endDate) : '未设置' }}</text>
+              <view class="course-code-badge" v-if="course.code">
+                {{ course.code }}
               </view>
             </view>
-            <view class="course-description" v-if="course.description">
-              <wd-icon name="info" size="32rpx" color="#ffffff" />
-              <text>{{ course.description }}</text>
-            </view>
-            <view class="course-teacher" v-if="isStudent && course.creatorFullName">
-              <wd-icon name="user" size="32rpx" color="#ffffff" />
-              <text>{{ course.creatorFullName || '未知教师' }}</text>
-            </view>
-            <view class="course-members" v-if="isTeacher && course.memberCount">
-              <wd-icon name="user-group" size="32rpx" color="#ffffff" />
-              <text>{{ course.memberCount || 0 }}人</text>
+            
+            <!-- 卡片右侧 -->
+            <view class="course-card-content">
+              <view class="course-name">{{ course.name }}</view>
+              
+              <view class="course-meta">
+                <view class="meta-item">
+                  <wd-icon name="calendar" size="28rpx" color="#8590a6" />
+                  <text>{{ course.startDate ? formatDay(course.startDate) : '未设置' }}</text>
+                </view>
+                
+                <view class="meta-item">
+                  <wd-icon name="time" size="28rpx" color="#8590a6" />
+                  <text>{{ course.endDate ? formatDay(course.endDate) : '未设置' }}</text>
+                </view>
+              </view>
+              
+              <view class="course-bottom">
+                <view class="course-teacher" v-if="isStudent && course.creatorFullName">
+                  <wd-icon name="user" size="28rpx" color="#8590a6" />
+                  <text>{{ course.creatorFullName || '未知教师' }}</text>
+                </view>
+                
+                <view class="course-members" v-if="isTeacher && course.memberCount">
+                  <wd-icon name="user-group" size="28rpx" color="#8590a6" />
+                  <text>{{ course.memberCount || 0 }}人</text>
+                </view>
+                
+                <view class="course-status" :class="course.status.toLowerCase()">
+                  {{ course.status === 'ACTIVE' ? '进行中' : '已结束' }}
+                </view>
+              </view>
             </view>
           </view>
         </view>
@@ -750,144 +764,173 @@ function navigateToCourseDetail(course) {
   border-radius: 20rpx;
   margin-bottom: 30rpx;
   overflow: hidden;
-  box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.1);
+  background-color: #ffffff;
+  box-shadow: 0 6rpx 16rpx rgba(0, 0, 0, 0.08);
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transform: translateY(20rpx);
+  opacity: 0;
+  animation: slideUp 0.4s forwards;
+  animation-delay: var(--delay, 0s);
   
   &:active {
     transform: scale(0.98);
-    box-shadow: 0 6rpx 20rpx rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* 添加动画 */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
 .wot-theme-dark .course-card {
-  box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.25);
+  background-color: #252530;
+  box-shadow: 0 6rpx 16rpx rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.course-card-bg {
-  position: absolute;
-  top: 0;
-  left: 0;
+.course-card-inner {
+  display: flex;
+  padding: 24rpx;
   width: 100%;
-  height: 100%;
-  z-index: 1;
-  transition: all 0.4s ease;
-  background-size: cover;
-  background-position: center;
-  opacity: 0.95;
-  background-image: linear-gradient(135deg, #6366F1 0%, #3B82F6 100%);
 }
 
-.wot-theme-dark .course-card-bg {
-  opacity: 0.85;
-  background-image: linear-gradient(135deg, #4338CA 0%, #2563EB 100%);
+.course-card-left {
+  width: 100rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-right: 20rpx;
+}
+
+.course-icon {
+  width: 100rpx;
+  height: 100rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+  border-radius: 16rpx;
+  margin-bottom: 12rpx;
+  box-shadow: 0 4rpx 12rpx rgba(37, 117, 252, 0.2);
+}
+
+.course-code-badge {
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 4rpx 12rpx;
+  border-radius: 30rpx;
+  font-size: 20rpx;
+  color: #666;
+  white-space: nowrap;
+  text-align: center;
+  max-width: 100rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .course-card-content {
-  position: relative;
-  z-index: 2;
-  padding: 30rpx;
-  color: #ffffff;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.4) 100%);
-  height: 100%;
-}
-
-.wot-theme-dark .course-card-content {
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.5) 100%);
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .course-name {
-  font-size: 38rpx;
+  font-size: 36rpx;
   font-weight: bold;
-  margin-bottom: 24rpx;
-  text-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.3);
+  margin-bottom: 16rpx;
+  color: var(--text-color-primary, #303133);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.course-detail {
-  display: flex;
-  margin-bottom: 20rpx;
-  flex-wrap: wrap;
-  gap: 16rpx;
+.wot-theme-dark .course-name {
+  color: #e0e0e0;
 }
 
-.course-detail-item {
+.course-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-bottom: 16rpx;
+}
+
+.meta-item {
   display: flex;
   align-items: center;
-  background-color: rgba(255, 255, 255, 0.15);
-  padding: 8rpx 16rpx;
-  border-radius: 30rpx;
-  backdrop-filter: blur(5rpx);
+  background-color: #f5f7fa;
+  padding: 6rpx 12rpx;
+  border-radius: 12rpx;
   
   text {
     margin-left: 8rpx;
     font-size: 24rpx;
-    font-weight: 500;
+    color: #8590a6;
   }
 }
 
-.course-teacher, .course-members, .course-description, .course-code {
-  display: flex;
-  align-items: center;
-  margin-top: 8rpx;
+.wot-theme-dark .meta-item {
+  background-color: rgba(255, 255, 255, 0.05);
   
   text {
-    margin-left: 10rpx;
-    font-size: 26rpx;
+    color: #a0a0a0;
+  }
+}
+
+.course-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10rpx;
+}
+
+.course-teacher, .course-members {
+  display: flex;
+  align-items: center;
+  
+  text {
+    margin-left: 8rpx;
+    font-size: 24rpx;
+    color: #8590a6;
+    max-width: 200rpx;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 400rpx;
   }
 }
 
-.course-description {
-  margin-top: 14rpx;
-  margin-bottom: 14rpx;
-  padding: 10rpx 16rpx;
-  background-color: rgba(255, 255, 255, 0.1);
-  border-radius: 12rpx;
-  backdrop-filter: blur(5rpx);
-  
-  text {
-    white-space: normal;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    line-height: 1.4;
-  }
-}
-
-.course-code {
-  margin-top: 14rpx;
-  background-color: rgba(255, 255, 255, 0.15);
-  padding: 6rpx 16rpx;
-  border-radius: 30rpx;
-  display: inline-flex;
-  backdrop-filter: blur(5rpx);
-  border: 1rpx solid rgba(255, 255, 255, 0.2);
-  
-  text {
-    font-weight: 500;
-  }
+.wot-theme-dark .course-teacher text,
+.wot-theme-dark .course-members text {
+  color: #a0a0a0;
 }
 
 .course-status {
-  position: relative;
-  z-index: 2;
-  padding: 20rpx 30rpx;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  background-color: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(5rpx);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 22rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 30rpx;
+  background-color: rgba(76, 175, 80, 0.1);
+  color: #43a047;
+}
+
+.course-status.ended {
+  background-color: rgba(158, 158, 158, 0.1);
+  color: #9e9e9e;
 }
 
 .wot-theme-dark .course-status {
-  background-color: rgba(30, 30, 30, 0.3);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: rgba(76, 175, 80, 0.2);
+}
+
+.wot-theme-dark .course-status.ended {
+  background-color: rgba(158, 158, 158, 0.2);
 }
 
 .load-more, .loading-more, .no-more {

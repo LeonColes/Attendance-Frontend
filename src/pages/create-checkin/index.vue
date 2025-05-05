@@ -10,6 +10,7 @@
 <script lang="ts" setup>
 import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { useUserStore } from '@/store/user'
+import { useThemeStore } from '@/store/theme'
 import { CheckInType, createCheckin } from '@/api/attendance'
 
 // 为window.uni声明类型，解决TypeScript错误
@@ -20,6 +21,7 @@ declare global {
 }
 
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 const loading = ref(false)
 const courseId = ref('')
 const errorMessage = ref('')
@@ -396,7 +398,11 @@ function handleRadiusChange(value: string | number) {
 </script>
 
 <template>
-  <view class="container">
+  <view class="container" :class="{'wot-theme-dark': themeStore.isDarkMode}">
+    <view class="header">
+      <view class="title">创建签到任务</view>
+      <view class="subtitle">请设置签到参数</view>
+    </view>
     <!-- 内容区域 -->
     <view class="content-wrapper">
       <view class="page-title">
@@ -597,13 +603,112 @@ function handleRadiusChange(value: string | number) {
   min-height: 100vh;
   background: linear-gradient(145deg, #6a11cb 0%, #2575fc 100%);
   position: relative;
+  transition: all 0.3s ease;
+  
+  // 暗黑模式样式
+  &.wot-theme-dark {
+    background: linear-gradient(145deg, #1e1e2e 0%, #1a2341 100%);
+    
+    .form-card {
+      background: rgba(32, 33, 44, 0.95);
+      box-shadow: 0 20rpx 40rpx rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(80, 80, 100, 0.2);
+      
+      .form-item-title {
+        text {
+          color: #e0e0e0;
+        }
+        
+        .required {
+          color: #ff6b6b;
+        }
+      }
+    }
+    
+    .input-field {
+      background-color: rgba(60, 60, 75, 0.8);
+      border-color: rgba(80, 80, 100, 0.4);
+      
+      text {
+        color: #e0e0e0;
+      }
+    }
+    
+    .error-message {
+      background-color: rgba(100, 40, 40, 0.3);
+      border-left-color: #ff6b6b;
+      
+      text {
+        color: #ff8a8a;
+      }
+    }
+    
+    .location-display {
+      background-color: rgba(50, 50, 65, 0.8);
+      border-color: rgba(80, 80, 100, 0.4);
+      
+      text {
+        color: #e0e0e0;
+      }
+    }
+    
+    .form-tips {
+      text {
+        color: rgba(220, 220, 240, 0.9);
+      }
+    }
+    
+    .submit-button {
+      background: linear-gradient(45deg, #5a24b0, #2367e0) !important;
+      box-shadow: 0 8rpx 16rpx rgba(20, 30, 100, 0.4) !important;
+    }
+    
+    .radius-slider {
+      .slider-track {
+        background-color: rgba(60, 60, 75, 0.8);
+      }
+      
+      .slider-value {
+        color: #e0e0e0;
+      }
+    }
+    
+    .tab-group {
+      .tab-item {
+        background-color: rgba(50, 50, 65, 0.5);
+        color: #a0a0a0;
+        
+        &.active {
+          background-color: rgba(106, 17, 203, 0.3);
+          color: #ffffff;
+          box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.2);
+        }
+      }
+    }
+  }
+}
+
+.header {
+  width: 100%;
+  padding: 40rpx 40rpx 20rpx;
+  
+  .title {
+    font-size: 48rpx;
+    font-weight: bold;
+    color: #ffffff;
+    margin-bottom: 12rpx;
+    text-shadow: 0 4rpx 8rpx rgba(0, 0, 0, 0.2);
+  }
+  
+  .subtitle {
+    font-size: 28rpx;
+    color: rgba(255, 255, 255, 0.8);
+  }
 }
 
 .content-wrapper {
   padding: 30rpx;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
+  padding-top: 10rpx;
 }
 
 .page-title {
@@ -860,6 +965,38 @@ function handleRadiusChange(value: string | number) {
     text {
       font-size: 32rpx;
       font-weight: bold;
+    }
+  }
+}
+
+:deep(.wd-textarea) {
+  border-radius: 12rpx !important;
+  background-color: #f8f9fa !important;
+  padding: 20rpx !important;
+
+  // 暗黑模式适配
+  .wot-theme-dark & {
+    background-color: rgba(50, 50, 65, 0.8) !important;
+    color: #e0e0e0 !important;
+    
+    .wd-textarea__textarea::placeholder {
+      color: rgba(200, 200, 220, 0.5) !important;
+    }
+  }
+}
+
+:deep(.wd-input) {
+  border-radius: 12rpx !important;
+  background-color: #f8f9fa !important;
+  padding: 12rpx 20rpx !important;
+  
+  // 暗黑模式适配
+  .wot-theme-dark & {
+    background-color: rgba(50, 50, 65, 0.8) !important;
+    color: #e0e0e0 !important;
+    
+    .wd-input__inner::placeholder {
+      color: rgba(200, 200, 220, 0.5) !important;
     }
   }
 }

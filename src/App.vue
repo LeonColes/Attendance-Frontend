@@ -123,7 +123,7 @@ page {
 }
 
 /* 修复默认头像路径 - 微信小程序环境中直接设置占位背景色，不使用背景图 */
-image[src="/static/default-avatar.png"] {
+image[src="static/default-avatar.png"] {
   background-color: #FF8800;
   border-radius: 50%;
 }

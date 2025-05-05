@@ -75,8 +75,12 @@ function logout() {
 
 // 前往关于页面
 function goToAbout() {
-  getSafeUni().navigateTo({
-    url: '/pages/about/index'
+  // getSafeUni().navigateTo({
+  //   url: '/pages/about/index'
+  // })
+  getSafeUni().showToast({
+    title: 'leoncole@yeah.net',
+    icon: 'none'
   })
 }
 </script>
@@ -86,7 +90,7 @@ function goToAbout() {
     <!-- 个人信息卡片 -->
     <view class="card user-card">
       <view class="user-info">
-        <image class="avatar" :src="userStore.userInfo?.avatar || '/static/default-avatar.png'" mode="aspectFill" />
+        <image class="avatar" :src="userStore.userInfo?.avatar || 'static/default-avatar.png'" mode="aspectFill" />
         <view class="info">
           <text class="name">{{ userStore.fullName || '未登录' }}</text>
           <text class="role">{{ roleName }}</text>
