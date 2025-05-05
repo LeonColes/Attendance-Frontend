@@ -631,8 +631,8 @@ async function submitLocationCheckin() {
     // 获取设备信息
     const deviceInfo = uni.getSystemInfoSync()
 
-    // 使用当前位置，并确保包含地址信息
-    const locationStr = `${location.latitude},${location.longitude},${location.address || '未知地点'}`
+    // 只使用经纬度，不包含地址信息，符合API要求的格式
+    const locationStr = `${location.latitude},${location.longitude}`
 
     // 准备签到数据
     const checkinData = {

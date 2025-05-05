@@ -381,7 +381,8 @@ function openScanner() {
         console.error('处理扫码结果失败', e)
         getSafeUni().showToast({
           title: '二维码解析失败',
-          icon: 'none'
+          icon: 'none',
+          duration: 1500
         })
       }
     },
@@ -451,7 +452,7 @@ async function processCheckInQRCode(qrContent) {
           v-if="isTeacher" 
           @click="createCourse"
         >
-          <wd-icon name="add1" size="40rpx" />
+          <wd-icon name="add" size="40rpx" />
         </view>
         <view 
           class="search-button" 
@@ -465,7 +466,7 @@ async function processCheckInQRCode(qrContent) {
           v-if="isStudent" 
           @click="goToJoin"
         >
-          <wd-icon name="plus-circle" size="40rpx" />
+          <wd-icon name="add" size="40rpx" />
         </view>
         <view class="search-button" @click="refreshData">
           <wd-icon name="refresh" size="40rpx" />

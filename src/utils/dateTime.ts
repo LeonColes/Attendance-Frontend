@@ -4,42 +4,24 @@
  */
 
 // 中国时区偏移（UTC+8小时）
-const _CHINA_TIMEZONE_OFFSET = 8 * 60 * 60 * 1000;
-const _TIMEZONE_IDENTIFIER = 'Asia/Shanghai';
+// const _CHINA_TIMEZONE_OFFSET = 8 * 60 * 60 * 1000;
+// const _TIMEZONE_IDENTIFIER = 'Asia/Shanghai';
 
 /**
- * 将日期转换为中国时区
+ * 简化的时区处理函数
+ * 由于系统默认就是中国时区，此函数直接返回原始日期
  * @param date 原始日期
- * @returns 转换为中国时区的日期
+ * @returns 日期对象
  */
 export function toChineseTimezone(date: Date): Date {
-  // 创建一个新的日期对象，并将其设置为中国时区
-  try {
-    // 检查date是否为有效日期
-    if (Number.isNaN(date.getTime())) {
-      console.warn('Invalid date passed to toChineseTimezone:', date);
-      return new Date(); // 返回当前日期作为回退
-    }
-    
-    // 使用更可靠的方法转换时区
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const day = date.getDate();
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    const seconds = date.getSeconds();
-    const ms = date.getMilliseconds();
-    
-    // 创建一个新的日期对象，直接使用UTC时间加上8小时偏移
-    const chinaDate = new Date(Date.UTC(year, month, day, hours, minutes, seconds, ms));
-    const offset = date.getTimezoneOffset() + 480; // 中国是UTC+8，偏移为-480分钟
-    chinaDate.setMinutes(chinaDate.getMinutes() + offset);
-    
-    return chinaDate;
-  } catch (e) {
-    console.error('时区转换失败:', e);
-    return new Date(); // 出错时返回当前日期
+  // 检查date是否为有效日期
+  if (Number.isNaN(date.getTime())) {
+    console.warn('Invalid date passed to toChineseTimezone:', date);
+    return new Date(); // 返回当前日期作为回退
   }
+  
+  // 直接返回日期副本，不做时区转换
+  return new Date(date.getTime());
 }
 
 /**
