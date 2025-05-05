@@ -86,7 +86,7 @@ function goToAbout() {
     <!-- 个人信息卡片 -->
     <view class="card user-card">
       <view class="user-info">
-        <image class="avatar" :src="userStore.userInfo?.avatar || '/static/images/default-avatar.png'" mode="aspectFill" />
+        <image class="avatar" :src="userStore.userInfo?.avatar || '/static/default-avatar.png'" mode="aspectFill" />
         <view class="info">
           <text class="name">{{ userStore.fullName || '未登录' }}</text>
           <text class="role">{{ roleName }}</text>
@@ -323,6 +323,22 @@ function goToAbout() {
   
   .setting-tips {
     background-color: var(--background-color-secondary);
+  }
+}
+
+/* 添加浅色模式明确样式 */
+.wot-theme-light {
+  .card {
+    background-color: #ffffff;
+    border: 1px solid #e4e7ed;
+  }
+  
+  .theme-toggle {
+    background-color: #f5f5f5;
+  }
+  
+  .setting-tips {
+    background-color: #f5f5f5;
   }
 }
 </style>

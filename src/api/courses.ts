@@ -165,16 +165,7 @@ export function joinCourse(code: string) {
  * @param courseId 课程ID
  */
 export function getCourseDetail(courseId: string) {
-  return get<{
-    course: Course
-    isMember: boolean
-    memberRole: string
-    memberCount: number
-    teacherInfo: {
-      id: string
-      fullName: string
-    }
-  }>(`/api/courses/detail?id=${courseId}`)
+  return get(`/api/courses/detail?id=${courseId}`)
 }
 
 /**
@@ -183,25 +174,7 @@ export function getCourseDetail(courseId: string) {
  * @param params 分页参数
  */
 export function getCourseMemberList(courseId: string, params: PageQueryParams) {
-  return post<{
-    totalItems: number
-    users: {
-      id: string
-      userId: string
-      username: string
-      fullName: string
-      role: string
-      email: string
-      phone: string | null
-      avatarUrl: string | null
-      bio: string | null
-      enabled: boolean
-      createdAt: string
-      updatedAt: string
-    }[]
-    totalPages: number
-    currentPage: number
-  }>(`/api/courses/members/list?courseId=${courseId}`, params)
+  return post(`/api/courses/members/list?courseId=${courseId}`, params)
 }
 
 /**

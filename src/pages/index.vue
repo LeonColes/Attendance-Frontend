@@ -63,6 +63,7 @@ onShow(() => {
       loadCourseData()
     }
   })
+  // 更新主题，确保TabBar正确显示
   themeStore.updateSystemUITheme()
 })
 
@@ -440,10 +441,32 @@ async function processCheckInQRCode(qrContent) {
   }, 1000)
 }
 
+// 进入课程详情页
+function navigateToCourseDetail(course) {
+  console.log('进入课程详情, ID:', course.id)
+  // 简化传递的数据，只保留必要字段
+  const simplifiedData = {
+    id: course.id,
+    name: course.name,
+    code: course.code,
+    creatorFullName: course.creatorFullName,
+    memberCount: course.memberCount,
+    description: course.description,
+    startDate: course.startDate,
+    endDate: course.endDate,
+    createdAt: course.createdAt
+  }
+  
+  const courseInfo = encodeURIComponent(JSON.stringify(simplifiedData))
+  getSafeUni().navigateTo({
+    url: `/pages/course-detail/index?courseInfo=${courseInfo}`
+  })
+}
+
 </script>
 
 <template>
-  <view class="container" :class="{'wot-theme-dark': themeStore.isDarkMode}">
+  <view class="container" :class="{'wot-theme-dark': themeStore.isDarkMode, 'wot-theme-light': !themeStore.isDarkMode}">
     <view class="header">
       <view class="header-title">我的课程</view>
       <view class="header-action">
@@ -526,7 +549,7 @@ async function processCheckInQRCode(qrContent) {
           class="course-card"
           v-for="(course, index) in activeTab === 'active' ? activeCourses : allCourses" 
           :key="course.id" 
-          @click="goToCourseDetail(course)"
+          @click="navigateToCourseDetail(course)"
         >
           <view 
             class="course-card-bg" 

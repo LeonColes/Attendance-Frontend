@@ -64,14 +64,6 @@ const addressResolutionProgress = ref(0)
 const addressResolutionCount = ref(0)
 const addressResolutionTotal = ref(0)
 
-// 监听activeTab和isStudent，确保学生不能访问考勤统计
-watch([isStudent, activeTab], ([isStudentValue, activeTabValue]) => {
-  // 如果是学生且当前tab是考勤统计，则自动切换到签到任务
-  if (isStudentValue && activeTabValue === 'stats') {
-    activeTab.value = 'checkins'
-  }
-})
-
 // 获取uni对象的安全包装器
 function getSafeUni() {
   return uni as any
@@ -415,17 +407,12 @@ async function loadCourseAttendanceStats() {
 }
 
 // 切换标签页
-function switchTab(tab) {
-  if (activeTab.value === tab) return
-  // 如果学生尝试切换到stats，重定向到checkins
-  if (isStudent.value && tab === 'stats') return
+function switchTab(tab: 'checkins' | 'members') {
   activeTab.value = tab
   
-  // 切换到相应标签时刷新对应数据
-  if (tab === 'members') {
-    loadCourseMembers(true)
-  } else if (tab === 'checkins') {
-    loadCheckinList(true)
+  // 当切换到成员标签并且尚未加载数据时自动加载
+  if (tab === 'members' && membersList.value.length === 0) {
+    loadCourseMembers()
   }
 }
 
@@ -1414,6 +1401,14 @@ onLoad((options) => {
     // 加载成员列表
     loadCourseMembers()
   }
+  
+  // 设置导航栏标题
+  getSafeUni().setNavigationBarTitle({
+    title: '课程详情'
+  })
+  
+  // 应用当前主题到页面和导航栏
+  themeStore.updateSystemUITheme()
 })
 
 // 根据坐标获取地址信息
@@ -1791,12 +1786,40 @@ async function startAddressResolution(records) {
 // 格式化签到时间
 function formatCheckinTime(startTime, endTime) {
   if (!startTime) return '未设置时间'
+
+  // 格式化开始时间
+  const start = formatDateTimeSimple(startTime)
   
-  const start = formatDateTime(startTime)
+  // 如果没有结束时间，只显示开始时间
   if (!endTime) return `${start} 开始`
   
-  const end = formatDateTime(endTime)
+  // 格式化结束时间
+  const end = formatDateTimeSimple(endTime)
   return `${start} ~ ${end}`
+}
+
+// 添加简化的日期时间格式化函数
+function formatDateTimeSimple(dateStr) {
+  if (!dateStr) return '';
+  
+  try {
+    // 将字符串解析为日期对象
+    const date = parseDateSafely(dateStr);
+    
+    // 提取时间部分 - 只显示小时和分钟
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    
+    // 提取日期 - 只显示月和日
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    
+    // 组合显示
+    return `${month}-${day} ${hours}:${minutes}`;
+  } catch (e) {
+    console.error('格式化日期时间失败:', e);
+    return dateStr;
+  }
 }
 
 // 格式化签到状态
@@ -1834,6 +1857,12 @@ function handleViewCheckin(checkin) {
     navigateToCheckinDetail(checkin)
   }
 }
+
+// 处理头像加载错误
+function handleAvatarError(e) {
+  // 当头像加载失败时，设置为默认头像
+  e.target.src = 'static/default-avatar.png'
+}
 </script>
 
 <template>
@@ -1854,7 +1883,7 @@ function handleViewCheckin(checkin) {
         custom-class="course-card" 
         custom-style="margin: 0 0 20rpx 0;"
       >
-        <view slot="content">
+        <template #default>
           <!-- 课程基本信息 -->
           <view class="course-info">
             <!-- 教师信息 -->
@@ -1909,7 +1938,7 @@ function handleViewCheckin(checkin) {
               <text style="margin-left: 8rpx;">{{ isDeletingCourse ? '删除中...' : '删除课程' }}</text>
             </wd-button>
           </view>
-        </view>
+        </template>
       </wd-card>
       
       <!-- 标签栏 -->
@@ -1936,6 +1965,12 @@ function handleViewCheckin(checkin) {
               'checkin-type-' + checkin.checkinType.toLowerCase(),
               'status-' + getCheckinStatus(checkin)
             ]" :style="{ '--i': index }">
+              <!-- 修改左侧图标区域，增大尺寸和右边距 -->
+              <view class="checkin-icon">
+                <wd-icon :name="getCheckinTypeIcon(checkin.checkinType)" size="64rpx"
+                  :color="checkin.checkinType === 'QR_CODE' ? '#2196f3' : '#4caf50'" />
+              </view>
+              
               <!-- 添加点击区域，排除操作按钮 -->
               <!-- @ts-ignore -->
               <view class="checkin-content" @click="handleCheckinClick(checkin)">
@@ -1945,18 +1980,15 @@ function handleViewCheckin(checkin) {
                 <view class="checkin-info-row">
                   <view class="checkin-time">
                     <wd-icon name="time" size="28rpx" color="#666" />
-                    <text>{{ formatCheckinTime(checkin.checkinStartTime, checkin.checkinEndTime) }}</text>
-                  </view>
-                  <view class="checkin-type-badge">
-                    <wd-icon :name="getCheckinTypeIcon(checkin.checkinType)" size="24rpx"
-                      :color="checkin.checkinType === 'QR_CODE' ? '#2196f3' : '#4caf50'" />
-                    <text>{{ getCheckinTypeText(checkin.checkinType) }}</text>
+                    <text>{{ checkin.checkinStartTime }} ~ </text>
+                    <text>{{ checkin.checkinEndTime }}</text>
                   </view>
                 </view>
+                
                 <!-- @ts-ignore -->
                 <view v-if="!isStudent" class="checkin-status" :class="getCheckinStatus(checkin)">
                   {{ getCheckinStatus(checkin) === 'not-started' ? '未开始' :
-                    getCheckinStatus(checkin) === 'in-progress' ? '进行中' : '已结束' }}
+                     getCheckinStatus(checkin) === 'in-progress' ? '进行中' : '已结束' }}
                 </view>
                 
                 <!-- 学生端显示签到状态 -->
@@ -1984,7 +2016,7 @@ function handleViewCheckin(checkin) {
               </view>
             </view>
           </view>
-
+          
           <!-- 无签到任务 -->
           <!-- @ts-ignore -->
           <view v-else class="empty-container">
@@ -2009,8 +2041,12 @@ function handleViewCheckin(checkin) {
               :style="{ '--i': index }">
               <!-- @ts-ignore -->
               <view class="member-avatar">
-                <image :src="member.avatarUrl || 'https://picsum.photos/100/100?random=' + member.id.slice(0, 8)"
-                  mode="aspectFill" />
+                <image 
+                  :src="member.avatar || 'static/default-avatar.png'" 
+                  mode="aspectFill" 
+                  class="member-avatar"
+                  @error="handleAvatarError"
+                />
               </view>
               <!-- @ts-ignore -->
               <view class="member-info">
@@ -2045,82 +2081,6 @@ function handleViewCheckin(checkin) {
             <wd-icon name="info-outline" size="120rpx" color="#cccccc" />
             <!-- @ts-ignore -->
             <text class="empty-text">暂无成员信息</text>
-          </view>
-        </view>
-        
-        <!-- 考勤统计内容 -->
-        <view v-else-if="activeTab === 'stats'" class="stats-content">
-          <view v-if="loading" class="loading-container">
-            <wd-loading color="#ff6b00" size="60rpx" />
-            <text>数据加载中...</text>
-          </view>
-          <view v-else-if="!attendanceStats" class="empty-container">
-            <wd-icon name="info-outline" size="120rpx" color="#cccccc" />
-            <text class="empty-text">暂无考勤数据</text>
-          </view>
-          <view v-else class="stats-wrapper">
-            <!-- 总体统计卡片 -->
-            <view class="stats-card">
-              <view class="stats-header">
-                <wd-icon name="chart" size="40rpx" color="#ff6b00" />
-                <text class="stats-title">总体考勤情况</text>
-              </view>
-              <view class="stats-grid">
-                <view class="stats-item">
-                  <text class="stats-value">{{ attendanceStats.statistics.totalCheckins || 0 }}</text>
-                  <text class="stats-label">总签到次数</text>
-                </view>
-                <view class="stats-item">
-                  <text class="stats-value">{{ attendanceStats.courseInfo.totalStudents || 0 }}</text>
-                  <text class="stats-label">学生总数</text>
-                </view>
-                <view class="stats-item">
-                  <text class="stats-value">{{ attendanceStats.statistics.averageAttendance || 0 }}%</text>
-                  <text class="stats-label">平均出勤率</text>
-                </view>
-                <view class="stats-item">
-                  <text class="stats-value">{{ attendanceStats.statistics.perfectAttendance || 0 }}</text>
-                  <text class="stats-label">全勤人数</text>
-                </view>
-              </view>
-            </view>
-            
-            <!-- 学生考勤列表 -->
-            <view class="students-attendance">
-              <view class="stats-header">
-                <wd-icon name="usergroup" size="40rpx" color="#ff6b00" />
-                <text class="stats-title">学生考勤详情</text>
-              </view>
-              
-              <view class="students-list">
-                <view v-for="(student, index) in getSortedStudents()" :key="student.userId" 
-                  class="student-item" :class="getAttendanceRateClass(student.attendanceRate)">
-                  <view class="student-rank">{{ index + 1 }}</view>
-                  <view class="student-info">
-                    <text class="student-name">{{ student.userName }}</text>
-                    <text class="student-id">{{ student.username }}</text>
-                  </view>
-                  <view class="attendance-info">
-                    <view class="attendance-rate">
-                      <text>{{ student.attendanceRate }}%</text>
-                    </view>
-                    <view class="attendance-detail">
-                      <text>签到: {{ student.checkedIn }}</text>
-                      <text>缺勤: {{ student.missed }}</text>
-                    </view>
-                  </view>
-                </view>
-              </view>
-              
-              <!-- 导出按钮 -->
-              <view class="export-actions">
-                <wd-button type="primary" size="small" @click="handleExportData" 
-                  custom-style="background-color: #4caf50; border-color: #4caf50;">
-                  <wd-icon name="download" size="30rpx" color="#ffffff" />
-                  <text style="margin-left: 8rpx;">导出考勤数据</text>
-                </wd-button>
-              </view>
-            </view>
           </view>
         </view>
       </view>
@@ -2536,7 +2496,6 @@ function handleViewCheckin(checkin) {
   padding: 22rpx 18rpx 22rpx 20rpx;
   box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
   display: flex;
-  justify-content: space-between;
   align-items: center;
   animation: fadeIn 0.3s ease forwards;
   animation-delay: calc(var(--i) * 0.05s);
@@ -3561,5 +3520,17 @@ function handleViewCheckin(checkin) {
 .tab-content-card {
   padding: 30rpx;
   min-height: 400rpx;
+}
+
+.checkin-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100rpx;
+  height: 100rpx;
+  background-color: rgba(0, 0, 0, 0.03);
+  border-radius: 50%;
+  margin-right: 24rpx;
+  flex-shrink: 0;
 }
 </style>

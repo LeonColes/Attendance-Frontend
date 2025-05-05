@@ -25,6 +25,14 @@ const themeCache = {
 export function preloadTheme(mode: 'light' | 'dark') {
   themeCache.preloadedMode = mode
   console.log(`预加载${mode}主题设置`)
+  
+  // 预先加载主题资源，但不立即应用，减少切换时的闪烁
+  const themeValues = themeConfig[mode]
+  
+  // 预加载导航栏颜色
+  const frontColor = themeValues.navTxtStyle === 'white' ? '#ffffff' : '#000000'
+  themeCache.navTextStyle = frontColor
+  themeCache.navBgColor = themeValues.navBgColor
 }
 
 /**
@@ -39,7 +47,7 @@ export function applyThemeToPage(mode: 'light' | 'dark') {
   
   // 防抖控制 - 避免短时间内多次应用主题导致闪烁
   const now = Date.now()
-  if (themeCache.currentTheme === mode && now - themeCache.lastApplyTime < 800) {
+  if (themeCache.currentTheme === mode && now - themeCache.lastApplyTime < 1000) { // 增加到1000ms
     console.log('主题应用过于频繁，跳过本次更新')
     return
   }
@@ -96,7 +104,7 @@ export function applyThemeToPage(mode: 'light' | 'dark') {
         frontColor: frontColor,
         backgroundColor: themeValues.navBgColor,
         animation: {
-          duration: 100,  // 减少动画时间以减少抖动
+          duration: 50,  // 进一步减少动画时间避免抖动
           timingFunc: 'easeIn'
         }
       })
@@ -105,9 +113,12 @@ export function applyThemeToPage(mode: 'light' | 'dark') {
     }
   }
   
-  // 设置TabBar
+  // 设置TabBar - 增强检测逻辑
   try {
-    // 获取当前页面路径
+    // 检查是否为TabBar页面 - 多种方法综合判断
+    let isTabBarPage = false;
+    
+    // 方法1: 通过路径判断
     let currentPath = '';
     try {
       const pages = getCurrentPages();
@@ -115,27 +126,62 @@ export function applyThemeToPage(mode: 'light' | 'dark') {
         const currentPage = pages[pages.length - 1];
         // @ts-ignore
         currentPath = (currentPage.route || '').toLowerCase();
+        // 直接检查常见TabBar页面路径
+        isTabBarPage = currentPath.includes('pages/index') || 
+                       currentPath.includes('pages/settings');
       }
     } catch (e) {
       console.error('获取当前页面路径失败', e);
     }
     
-    // 检查是否为TabBar页面 - 可以根据实际应用配置修改判断逻辑
-    const isTabBarPage = 
-      currentPath.includes('index') || 
-      currentPath.includes('home') || 
-      currentPath.includes('courses') || 
-      currentPath.includes('settings');
+    // 方法2: 通过页面配置判断
+    if (!isTabBarPage) {
+      try {
+        const curPage = getCurrentPages().pop();
+        if (curPage) {
+          // @ts-ignore - 检查页面的$page或route对象中是否有tabBar相关配置
+          const pageConfig = curPage.$page || curPage.$vm?.$options || {};
+          
+          // 检查是否有layout='tabbar'标记
+          // @ts-ignore
+          isTabBarPage = isTabBarPage || 
+                         pageConfig.layout === 'tabbar' || 
+                         pageConfig.$vm?.$options?.layout === 'tabbar';
+        }
+      } catch (e) {
+        console.error('检查页面tabBar配置失败', e);
+      }
+    }
+    
+    // 方法3: 通过route配置判断
+    if (!isTabBarPage) {
+      try {
+        const curPage = getCurrentPages().pop();
+        // @ts-ignore
+        if (curPage && curPage.route) {
+          // 在pages.json中定义的tabBar页面
+          const tabBarPages = ['/pages/index', '/pages/settings/index'];
+          // @ts-ignore
+          isTabBarPage = tabBarPages.some(page => curPage.route.includes(page));
+        }
+      } catch (e) {
+        console.error('通过route检查tabBar配置失败', e);
+      }
+    }
     
     // 只在TabBar页面设置TabBar样式
     if (isTabBarPage) {
-      getSafeUni().setTabBarStyle({
-        color: themeValues.tabFontColor,
-        selectedColor: themeValues.tabSelectedColor,
-        backgroundColor: themeValues.tabBgColor,
-        borderStyle: themeValues.tabBorderStyle
-      });
-      console.log('成功设置TabBar样式');
+      try {
+        getSafeUni().setTabBarStyle({
+          color: themeValues.tabFontColor,
+          selectedColor: themeValues.tabSelectedColor,
+          backgroundColor: themeValues.tabBgColor,
+          borderStyle: themeValues.tabBorderStyle
+        });
+        console.log('成功设置TabBar样式');
+      } catch (e) {
+        console.error('设置TabBar样式失败', e);
+      }
     } else {
       console.log('当前不是TabBar页面，跳过setTabBarStyle调用');
     }
@@ -327,7 +373,7 @@ export function setupPageChangeListener(themeMode: 'light' | 'dark') {
         // 延迟应用主题，等待页面完成动画
         setTimeout(() => {
           applyThemeToPage(themeMode)
-        }, 300)
+        }, 500) // 增加延迟时间
       }
       
       // 监听页面切换事件
@@ -344,7 +390,7 @@ export function setupPageChangeListener(themeMode: 'light' | 'dark') {
             setTimeout(() => {
               console.log('页面切换动画完成，应用主题')
               applyThemeToPage(themeMode)
-            }, 500) // 增加延迟时间以确保页面准备就绪
+            }, 600) // 增加延迟时间避免抖动
           })
         } else {
           console.log('onAppRoute API不可用，无法监听页面路由切换')

@@ -141,25 +141,7 @@ export function createCheckin(params: CheckinCreateParams) {
  * @param params 分页参数
  */
 export function getCheckinList(courseId: string, params: PageQueryParams) {
-  return post<{
-    totalItems: number
-    items: CheckinTask[]
-    totalPages: number
-    currentPage: number
-    courseInfo: {
-      id: string
-      name: string
-      description: string
-      creatorId: string
-      creatorUsername: string
-      creatorFullName: string
-      code: string
-      startDate: string
-      endDate: string
-      type: string
-      status: string
-    }
-  }>(`/api/courses/attendance/list?courseId=${courseId}`, params)
+  return post(`/api/courses/attendance/list?courseId=${courseId}`, params)
 }
 
 /**
