@@ -1980,8 +1980,7 @@ function handleAvatarError(e) {
                 <view class="checkin-info-row">
                   <view class="checkin-time">
                     <wd-icon name="time" size="28rpx" color="#666" />
-                    <text>{{ checkin.checkinStartTime }} ~ </text>
-                    <text>{{ checkin.checkinEndTime }}</text>
+                    <text>{{ formatCheckinTime(checkin.createdAt, checkin.endTime) }}</text>
                   </view>
                 </view>
                 
