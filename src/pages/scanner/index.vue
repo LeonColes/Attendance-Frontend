@@ -318,15 +318,6 @@ function processQRCode(result: string) {
     showResult.value = true
     resultStatus.value = 'processing'
     
-    // 尝试振动反馈
-    try {
-      getSafeUni().vibrateShort({
-        success: () => {
-          console.log('振动反馈成功')
-        }
-      })
-    } catch (e) {}
-    
     // 检查是否是考勤二维码
     if (isAttendanceQRCode(result)) {
       // 处理考勤二维码
@@ -453,12 +444,18 @@ async function submitCheckIn(checkInId: string) {
     showResult.value = true
     resultStatus.value = 'processing'
     
+    // 确保状态更新立即可见（强制UI更新）
+    await new Promise(resolve => setTimeout(resolve, 10))
+    
     // 准备设备信息
     const deviceInfo = getDeviceInfo()
     const deviceData = {
       type: deviceInfo.platform || 'unknown',
       model: deviceInfo.model || '测试设备'
     }
+    
+    // 判断是否是iOS设备
+    const isIOS = deviceInfo.platform && deviceInfo.platform.toLowerCase() === 'ios'
     
     // 准备签到参数 - 确保与API要求匹配
     const checkinParams: any = {
@@ -472,6 +469,7 @@ async function submitCheckIn(checkInId: string) {
     
     console.log('扫码结果:', checkInId)
     console.log('签到API参数:', checkinParams)
+    console.log('设备类型:', deviceInfo.platform)
     
     // 添加重试逻辑
     let retryCount = 0
@@ -486,10 +484,30 @@ async function submitCheckIn(checkInId: string) {
           // 更新成功状态
           resultStatus.value = 'success'
           
-          // 尝试再次振动反馈
+          // 尝试提供反馈 - 针对不同平台使用不同策略
           try {
-            getSafeUni().vibrateLong()
-          } catch (e) {}
+            if (isIOS) {
+              // iOS设备使用视觉反馈代替振动
+              console.log('iOS设备，使用视觉反馈')
+              
+              // iOS上增强视觉反馈
+              getSafeUni().showToast({
+                title: '签到成功',
+                icon: 'success',
+                duration: 2000
+              })
+            } else {
+              // 非iOS设备尝试振动
+              getSafeUni().vibrateLong()
+            }
+          } catch (e) {
+            // 如果振动失败，确保至少有视觉反馈
+            getSafeUni().showToast({
+              title: '签到成功',
+              icon: 'success',
+              duration: 1500
+            })
+          }
           
           // 延迟返回首页
           setTimeout(() => {
@@ -516,6 +534,13 @@ async function submitCheckIn(checkInId: string) {
           if (retryCount === maxRetries - 1) {
             resultStatus.value = 'error'
             resultMessage.value = errorMsg
+            
+            // 显示错误提示
+            getSafeUni().showToast({
+              title: errorMsg,
+              icon: 'error',
+              duration: 2000
+            })
           } else {
             // 否则继续重试
             retryCount++
@@ -531,11 +556,19 @@ async function submitCheckIn(checkInId: string) {
           resultStatus.value = 'error'
           
           // 检查错误类型，提供更有用的提示
+          let errorMessage = '提交考勤失败，请重试'
           if (apiError.errMsg && apiError.errMsg.includes('ERR_CONNECTION_REFUSED')) {
-            resultMessage.value = '无法连接到服务器，请检查网络设置'
-          } else {
-            resultMessage.value = '提交考勤失败，请重试'
+            errorMessage = '无法连接到服务器，请检查网络设置'
           }
+          
+          resultMessage.value = errorMessage
+          
+          // 显示错误提示
+          getSafeUni().showToast({
+            title: errorMessage,
+            icon: 'error',
+            duration: 2000
+          })
         } else {
           // 否则继续重试
           retryCount++
@@ -549,6 +582,13 @@ async function submitCheckIn(checkInId: string) {
     // 更新失败状态
     resultStatus.value = 'error'
     resultMessage.value = '提交考勤失败，请重试'
+    
+    // 显示错误提示
+    getSafeUni().showToast({
+      title: '提交考勤失败，请重试',
+      icon: 'error',
+      duration: 2000
+    })
   }
 }
 

@@ -79,6 +79,14 @@ function getSafeUni() {
 
 // 初始化
 onMounted(() => {
+  // 设置导航栏标题
+  getSafeUni().setNavigationBarTitle({
+    title: '课程详情'
+  })
+
+  // 应用当前主题到导航栏
+  themeStore.updateSystemUITheme();
+  
   // 从路由参数获取课程信息
   const query = getSafeUni().getLaunchOptionsSync().query || {}
   const pages = getCurrentPages()
@@ -109,6 +117,9 @@ onMounted(() => {
 
 // 在页面每次显示时加载最新数据
 onShow(() => {
+  // 应用当前主题到导航栏
+  themeStore.updateSystemUITheme();
+  
   if (courseId.value) {
     // 立即加载所有数据，不等待标签页切换
     loadCheckinList(true)
@@ -842,7 +853,8 @@ async function exportAttendanceToExcel(checkinTask) {
     const checkinInfo = data.checkinInfo || {}
     const statistics = data.statistics || {}
     
-    if (records.length === 0 && (!statistics || !statistics.totalStudents)) {
+    // 修改判断逻辑：只有在没有记录且没有学生统计信息时才提示无可导出数据
+    if (records.length === 0 && (!statistics || !statistics.totalStudents || statistics.totalStudents === 0)) {
       console.log('无可导出的签到记录')
       getSafeUni().hideLoading()
       getSafeUni().showToast({
@@ -941,19 +953,30 @@ async function continueExportProcess(records, checkinInfo, statistics, checkinTa
       'ID', '姓名', '用户名', '签到状态', '签到时间', '设备信息', '位置'
     ]
     
-    // 转换数据为表格行
-    const detailRows = records.map(record => [
-      record.userId || '',
-      record.fullName || '',
-      record.username || '',
-      formatAttendanceStatus(record.status),
-      record.checkInTime ? formatDateTime(record.checkInTime) : '未签到',
-      record.device || '',
-      record.location || ''
-    ])
+    // 创建详细记录工作表 - 即使没有记录也创建表格
+    let detailData: Array<string[]> = []
     
-    // 添加表头
-    const detailData = [detailHeaders, ...detailRows]
+    if (records.length > 0) {
+      // 有记录时，转换数据为表格行
+      const detailRows = records.map(record => [
+        record.userId || '',
+        record.fullName || '',
+        record.username || '',
+        formatAttendanceStatus(record.status),
+        record.checkInTime ? formatDateTime(record.checkInTime) : '未签到',
+        record.device || '',
+        record.location || ''
+      ])
+      
+      // 添加表头
+      detailData = [detailHeaders, ...detailRows]
+    } else {
+      // 没有记录时，只添加表头和提示行
+      detailData = [
+        detailHeaders,
+        ['', '', '', '无签到记录', '', '', '']
+      ]
+    }
     
     // 创建详细记录工作表
     const detailWs = XLSX.utils.aoa_to_sheet(detailData)
@@ -1764,6 +1787,53 @@ async function startAddressResolution(records) {
     return records // 出错时返回原始记录
   }
 }
+
+// 格式化签到时间
+function formatCheckinTime(startTime, endTime) {
+  if (!startTime) return '未设置时间'
+  
+  const start = formatDateTime(startTime)
+  if (!endTime) return `${start} 开始`
+  
+  const end = formatDateTime(endTime)
+  return `${start} ~ ${end}`
+}
+
+// 格式化签到状态
+function formatCheckinStatus(status) {
+  switch (status) {
+    case 'NOT_STARTED':
+      return '未开始'
+    case 'ACTIVE':
+      return '进行中'
+    case 'COMPLETED':
+      return '已结束'
+    default:
+      return '未知状态'
+  }
+}
+
+// 获取签到类型图标
+function getCheckinTypeIcon(type) {
+  switch (type) {
+    case 'QR_CODE':
+      return 'scan'
+    case 'LOCATION':
+      return 'location'
+    case 'PASSWORD':
+      return 'lock'
+    default:
+      return 'time'
+  }
+}
+
+// 处理查看签到详情
+function handleViewCheckin(checkin) {
+  // 原来的handleCheckinClick方法的实现...
+  if (checkin) {
+    navigateToCheckinDetail(checkin)
+  }
+}
 </script>
 
 <template>
@@ -1778,73 +1848,69 @@ async function startAddressResolution(records) {
     <!-- 主要内容 -->
     <!-- @ts-ignore -->
     <view v-else class="content-container">
-      <!-- 课程头部信息 -->
-      <!-- @ts-ignore -->
-      <view class="card course-card">
-        <!-- 课程标题和状态 -->
-        <view class="section-title">
-          {{ courseDetail.name || '课程详情' }}
-          <view class="course-status-badge" :class="courseDetail.status?.toLowerCase()">
-            {{ courseDetail.status === 'ACTIVE' ? '进行中' :
-              courseDetail.status === 'COMPLETED' ? '已结课' : '未知状态' }}
+      <!-- 课程信息卡片 -->
+      <wd-card 
+        title="课程详情" 
+        custom-class="course-card" 
+        custom-style="margin: 0 0 20rpx 0;"
+      >
+        <view slot="content">
+          <!-- 课程基本信息 -->
+          <view class="course-info">
+            <!-- 教师信息 -->
+            <view class="info-item">
+              <wd-icon name="user" size="32rpx" color="#ff6b00" />
+              <text class="info-label">教师</text>
+              <text class="info-value">{{ courseDetail.creatorFullName || courseDetail.creatorUsername || '未知教师' }}</text>
+            </view>
+            
+            <!-- 人数信息 -->
+            <view class="info-item">
+              <wd-icon name="user-talk" size="32rpx" color="#ff6b00" />
+              <text class="info-label">人数</text>
+              <text class="info-value">{{ courseDetail.memberCount || 0 }}人</text>
+            </view>
+            
+            <!-- 起止日期 -->
+            <view class="info-item full-width">
+              <wd-icon name="calendar" size="32rpx" color="#ff6b00" />
+              <text class="info-label">起止日期</text>
+              <text class="info-value">{{ courseDetail.startDate }} ~ {{ courseDetail.endDate }}</text>
+            </view>
+            
+            <!-- 描述信息 -->
+            <view class="info-item full-width">
+              <wd-icon name="lenovo" size="32rpx" color="#ff6b00" />
+              <text class="info-label">描述</text>
+              <text class="info-value description">{{ courseDetail.description || '暂无课程描述' }}</text>
+            </view>
+          </view>
+
+          <!-- 教师功能按钮 -->
+          <view v-if="isTeacher" class="action-row">
+            <wd-button type="primary" size="small" custom-style="height: 70rpx; background-color: #ff6b00; border-color: #ff6b00;"
+              @click="navigateToCreateCheckin">
+              <wd-icon name="add" size="28rpx" color="#ffffff" />
+              <text style="margin-left: 8rpx;">创建签到任务</text>
+            </wd-button>
+
+            <!-- 添加邀请学生按钮 -->
+            <wd-button type="info" size="small" custom-style="height: 70rpx; margin-left: 20rpx; background-color: #ff6b00; border-color: #ff6b00;"
+              @click="openQRCodeModal">
+              <wd-icon name="usergroup-add" size="28rpx" color="#ffffff" />
+              <text style="margin-left: 8rpx;">邀请学生</text>
+            </wd-button>
+
+            <!-- 添加删除课程按钮 -->
+            <wd-button type="error" size="small" custom-style="height: 70rpx; margin-left: 20rpx;"
+              :loading="isDeletingCourse" :disabled="isDeletingCourse" @click="handleDeleteCourse">
+              <wd-icon v-if="!isDeletingCourse" name="delete" size="28rpx" color="#ffffff"
+                style="color: #ffffff !important; fill: #ffffff !important;" />
+              <text style="margin-left: 8rpx;">{{ isDeletingCourse ? '删除中...' : '删除课程' }}</text>
+            </wd-button>
           </view>
         </view>
-
-        <!-- 课程基本信息 -->
-        <view class="course-info">
-          <!-- 教师信息 -->
-          <view class="info-item">
-            <wd-icon name="user" size="32rpx" color="#ff6b00" />
-            <text class="info-label">教师</text>
-            <text class="info-value">{{ courseDetail.creatorFullName || courseDetail.creatorUsername || '未知教师' }}</text>
-          </view>
-          
-          <!-- 人数信息 -->
-          <view class="info-item">
-            <wd-icon name="user-talk" size="32rpx" color="#ff6b00" />
-            <text class="info-label">人数</text>
-            <text class="info-value">{{ courseDetail.memberCount || 0 }}人</text>
-          </view>
-          
-          <!-- 起止日期 -->
-          <view class="info-item full-width">
-            <wd-icon name="calendar" size="32rpx" color="#ff6b00" />
-            <text class="info-label">起止日期</text>
-            <text class="info-value">{{ courseDetail.startDate }} ~ {{ courseDetail.endDate }}</text>
-          </view>
-          
-          <!-- 描述信息 -->
-          <view class="info-item full-width">
-            <wd-icon name="lenovo" size="32rpx" color="#ff6b00" />
-            <text class="info-label">描述</text>
-            <text class="info-value description">{{ courseDetail.description || '暂无课程描述' }}</text>
-          </view>
-        </view>
-
-        <!-- 教师功能按钮 -->
-        <view v-if="isTeacher" class="action-row">
-          <wd-button type="primary" size="small" custom-style="height: 70rpx; background-color: #ff6b00; border-color: #ff6b00;"
-            @click="navigateToCreateCheckin">
-            <wd-icon name="add" size="28rpx" color="#ffffff" />
-            <text style="margin-left: 8rpx;">创建签到任务</text>
-          </wd-button>
-
-          <!-- 添加邀请学生按钮 -->
-          <wd-button type="info" size="small" custom-style="height: 70rpx; margin-left: 20rpx; background-color: #ff6b00; border-color: #ff6b00;"
-            @click="openQRCodeModal">
-            <wd-icon name="usergroup-add" size="28rpx" color="#ffffff" />
-            <text style="margin-left: 8rpx;">邀请学生</text>
-          </wd-button>
-
-          <!-- 添加删除课程按钮 -->
-          <wd-button type="error" size="small" custom-style="height: 70rpx; margin-left: 20rpx;"
-            :loading="isDeletingCourse" :disabled="isDeletingCourse" @click="handleDeleteCourse">
-            <wd-icon v-if="!isDeletingCourse" name="delete" size="28rpx" color="#ffffff"
-              style="color: #ffffff !important; fill: #ffffff !important;" />
-            <text style="margin-left: 8rpx;">{{ isDeletingCourse ? '删除中...' : '删除课程' }}</text>
-          </wd-button>
-        </view>
-      </view>
+      </wd-card>
       
       <!-- 标签栏 -->
       <view class="tabs">
@@ -1858,7 +1924,6 @@ async function startAddressResolution(records) {
         </view>
       </view>
 
-      <!-- 内容区域 -->
       <view class="card tab-content-card">
         <!-- 签到任务列表 -->
         <view v-if="activeTab === 'checkins'" class="checkins-content">
@@ -1880,10 +1945,10 @@ async function startAddressResolution(records) {
                 <view class="checkin-info-row">
                   <view class="checkin-time">
                     <wd-icon name="time" size="28rpx" color="#666" />
-                    <text>{{ checkin.startTime }} ~ {{ checkin.endTime }}</text>
+                    <text>{{ formatCheckinTime(checkin.checkinStartTime, checkin.checkinEndTime) }}</text>
                   </view>
                   <view class="checkin-type-badge">
-                    <wd-icon :name="checkin.checkinType === 'QR_CODE' ? 'scan' : 'location'" size="24rpx"
+                    <wd-icon :name="getCheckinTypeIcon(checkin.checkinType)" size="24rpx"
                       :color="checkin.checkinType === 'QR_CODE' ? '#2196f3' : '#4caf50'" />
                     <text>{{ getCheckinTypeText(checkin.checkinType) }}</text>
                   </view>
@@ -1893,14 +1958,14 @@ async function startAddressResolution(records) {
                   {{ getCheckinStatus(checkin) === 'not-started' ? '未开始' :
                     getCheckinStatus(checkin) === 'in-progress' ? '进行中' : '已结束' }}
                 </view>
-
+                
                 <!-- 学生端显示签到状态 -->
                 <!-- @ts-ignore -->
                 <view v-else class="checkin-status" :class="checkin.personalStatus?.toLowerCase()">
                   {{ checkin.displayStatus }}
                 </view>
               </view>
-
+              
               <!-- 教师可以删除签到任务 -->
               <!-- @ts-ignore -->
               <view v-if="isTeacher" class="checkin-actions" @click.stop>
@@ -1908,15 +1973,13 @@ async function startAddressResolution(records) {
                 <wd-button type="primary" size="small"
                   custom-style="padding: 8rpx 16rpx; min-width: auto; margin-right: 8rpx; background-color: #4caf50;"
                   @click.stop="handleExportSingleCheckin(checkin)">
-                  <wd-icon name="download" size="32rpx" color="#ffffff"
-                    style="color: #ffffff !important; fill: #ffffff !important;" />
+                  <wd-icon name="download" size="32rpx" color="#ffffff" />
                 </wd-button>
                 
                 <wd-button type="error" size="small"
                   custom-style="padding: 8rpx 16rpx; min-width: auto; background-color: #ff4d4f;"
                   @click.stop="handleDeleteCheckin(checkin)">
-                  <wd-icon name="delete" size="32rpx" color="#ffffff"
-                    style="color: #ffffff !important; fill: #ffffff !important;" />
+                  <wd-icon name="delete" size="32rpx" color="#ffffff" />
                 </wd-button>
               </view>
             </view>
@@ -1930,7 +1993,7 @@ async function startAddressResolution(records) {
             <text class="empty-text">暂无签到任务</text>
           </view>
         </view>
-
+        
         <!-- 成员列表 -->
         <view v-else-if="activeTab === 'members'" class="members-content">
           <!-- 成员列表 -->
@@ -1963,26 +2026,101 @@ async function startAddressResolution(records) {
                   <text>{{ member.role === 'TEACHER' ? '教师' : '学生' }}</text>
                 </view>
               </view>
-
+              
               <!-- 教师可以移除学生成员 -->
               <!-- @ts-ignore -->
               <view v-if="isTeacher && member.role !== 'TEACHER'" class="member-actions">
                 <wd-button type="error" size="small"
                   custom-style="padding: 8rpx 16rpx; min-width: auto; background-color: #ff4d4f;"
                   @click="handleRemoveMember(member)">
-                  <wd-icon name="user-clean" size="32rpx" color="#ffffff"
-                    style="color: #ffffff !important; fill: #ffffff !important;" />
+                  <wd-icon name="user-clear" size="32rpx" color="#ffffff" />
                 </wd-button>
               </view>
             </view>
           </view>
-
+          
           <!-- 无成员 -->
           <!-- @ts-ignore -->
           <view v-else class="empty-container">
             <wd-icon name="info-outline" size="120rpx" color="#cccccc" />
             <!-- @ts-ignore -->
             <text class="empty-text">暂无成员信息</text>
+          </view>
+        </view>
+        
+        <!-- 考勤统计内容 -->
+        <view v-else-if="activeTab === 'stats'" class="stats-content">
+          <view v-if="loading" class="loading-container">
+            <wd-loading color="#ff6b00" size="60rpx" />
+            <text>数据加载中...</text>
+          </view>
+          <view v-else-if="!attendanceStats" class="empty-container">
+            <wd-icon name="info-outline" size="120rpx" color="#cccccc" />
+            <text class="empty-text">暂无考勤数据</text>
+          </view>
+          <view v-else class="stats-wrapper">
+            <!-- 总体统计卡片 -->
+            <view class="stats-card">
+              <view class="stats-header">
+                <wd-icon name="chart" size="40rpx" color="#ff6b00" />
+                <text class="stats-title">总体考勤情况</text>
+              </view>
+              <view class="stats-grid">
+                <view class="stats-item">
+                  <text class="stats-value">{{ attendanceStats.statistics.totalCheckins || 0 }}</text>
+                  <text class="stats-label">总签到次数</text>
+                </view>
+                <view class="stats-item">
+                  <text class="stats-value">{{ attendanceStats.courseInfo.totalStudents || 0 }}</text>
+                  <text class="stats-label">学生总数</text>
+                </view>
+                <view class="stats-item">
+                  <text class="stats-value">{{ attendanceStats.statistics.averageAttendance || 0 }}%</text>
+                  <text class="stats-label">平均出勤率</text>
+                </view>
+                <view class="stats-item">
+                  <text class="stats-value">{{ attendanceStats.statistics.perfectAttendance || 0 }}</text>
+                  <text class="stats-label">全勤人数</text>
+                </view>
+              </view>
+            </view>
+            
+            <!-- 学生考勤列表 -->
+            <view class="students-attendance">
+              <view class="stats-header">
+                <wd-icon name="usergroup" size="40rpx" color="#ff6b00" />
+                <text class="stats-title">学生考勤详情</text>
+              </view>
+              
+              <view class="students-list">
+                <view v-for="(student, index) in getSortedStudents()" :key="student.userId" 
+                  class="student-item" :class="getAttendanceRateClass(student.attendanceRate)">
+                  <view class="student-rank">{{ index + 1 }}</view>
+                  <view class="student-info">
+                    <text class="student-name">{{ student.userName }}</text>
+                    <text class="student-id">{{ student.username }}</text>
+                  </view>
+                  <view class="attendance-info">
+                    <view class="attendance-rate">
+                      <text>{{ student.attendanceRate }}%</text>
+                    </view>
+                    <view class="attendance-detail">
+                      <text>签到: {{ student.checkedIn }}</text>
+                      <text>缺勤: {{ student.missed }}</text>
+                    </view>
+                  </view>
+                </view>
+              </view>
+              
+              <!-- 导出按钮 -->
+              <view class="export-actions">
+                <wd-button type="primary" size="small" @click="handleExportData" 
+                  custom-style="background-color: #4caf50; border-color: #4caf50;">
+                  <wd-icon name="download" size="30rpx" color="#ffffff" />
+                  <text style="margin-left: 8rpx;">导出考勤数据</text>
+                </wd-button>
+              </view>
+            </view>
           </view>
         </view>
       </view>
@@ -2110,57 +2248,128 @@ async function startAddressResolution(records) {
     color: var(--text-color-primary, #e5eaf3);
   }
   
-  .card {
-    background-color: var(--card-bg-color, #1e1e1e);
-    color: var(--text-color-primary, #e5eaf3);
-    border-color: var(--border-color, #3e3e3e);
+  .tabs {
+    background-color: var(--background-color-secondary);
   }
   
   .tab-item {
-    color: var(--text-color-secondary, #a3a6ad);
+    color: var(--text-color-secondary);
     
     &.active {
-      color: #ff6b00 !important;
-    }
-  }
-  
-  .course-status-badge {
-    &.active {
-      background: linear-gradient(135deg, rgba(255, 107, 0, 0.2) 0%, rgba(255, 136, 0, 0.2) 100%);
       color: #ff6b00;
     }
   }
+  
+  .card {
+    background-color: var(--background-color-secondary);
+    border: 1px solid var(--border-color);
+  }
+  
+  .checkin-item {
+    background: linear-gradient(135deg, rgba(40, 40, 40, 0.9) 0%, rgba(30, 30, 30, 0.9) 100%);
+    box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.2);
+  }
+  
+  .checkin-title {
+    color: var(--text-color-primary);
+  }
+  
+  .checkin-time {
+    background-color: rgba(255, 255, 255, 0.05);
+    
+    text {
+      color: var(--text-color-secondary);
+    }
+  }
+  
+  .checkin-type-badge {
+    background-color: rgba(255, 255, 255, 0.07);
+  }
+  
+  .checkin-item.status-not-started {
+    background: linear-gradient(135deg, rgba(40, 40, 40, 0.9) 0%, rgba(35, 35, 35, 0.9) 100%);
+    border-left-color: #757575;
+  }
+  
+  .checkin-item.status-in-progress {
+    background: linear-gradient(135deg, rgba(50, 35, 25, 0.9) 0%, rgba(45, 30, 20, 0.9) 100%);
+    border-left-color: #ff6b00;
+    box-shadow: 0 6rpx 16rpx rgba(255, 107, 0, 0.15);
+  }
+  
+  .checkin-item.status-ended {
+    background: linear-gradient(135deg, rgba(30, 45, 30, 0.9) 0%, rgba(25, 40, 25, 0.9) 100%);
+    border-left-color: #4caf50;
+    box-shadow: 0 4rpx 12rpx rgba(76, 175, 80, 0.15);
+  }
+  
+  .member-item {
+    background: linear-gradient(135deg, rgba(40, 40, 40, 0.9) 0%, rgba(30, 30, 30, 0.9) 100%);
+    box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.2);
+    border-left-color: var(--border-color);
+  }
+  
+  .member-name {
+    color: var(--text-color-primary);
+  }
+  
+  .member-username {
+    color: var(--text-color-secondary);
+  }
+  
+  .member-role {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+  
+  .stats-card, .students-attendance {
+    background-color: var(--background-color-secondary);
+    border: 1px solid var(--border-color);
+  }
+  
+  .stats-item {
+    background-color: var(--background-color-tertiary);
+  }
+  
+  .student-item {
+    background-color: var(--background-color-tertiary);
+  }
+  
+  .student-rank {
+    background-color: var(--background-color-secondary);
+    color: var(--text-color-primary);
+  }
+  
+  .info-item {
+    background-color: rgba(60, 60, 60, 0.3);
+    
+    .info-label {
+      color: var(--text-color-secondary);
+    }
+    
+    .info-value {
+      color: var(--text-color-primary);
+    }
+    
+    .info-value.description {
+      background-color: rgba(60, 60, 60, 0.2);
+      color: var(--text-color-secondary);
+    }
+  }
 }
 
-.card {
-  margin-bottom: 30rpx;
-  background-color: var(--card-background, #ffffff);
-  border-radius: 24rpx;
-  padding: 20rpx;
-  box-shadow: var(--card-shadow, 0 8rpx 20rpx rgba(0, 0, 0, 0.05));
+/* 卡片样式 */
+.course-card {
   width: 100%;
-  box-sizing: border-box;
-  backdrop-filter: blur(10rpx);
-  transition: all 0.3s ease;
+  margin-bottom: 30rpx;
+  overflow: hidden;
 }
 
-.section-title {
-  font-size: 32rpx;
-  font-weight: bold;
-  padding: 20rpx;
-  color: var(--text-color-primary, #303133);
-  border-bottom: 1px solid var(--border-color, #e4e7ed);
-  margin-bottom: 10rpx;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
+/* 内容样式 */
 .course-info {
   display: flex;
   flex-wrap: wrap;
   gap: 20rpx;
-  padding: 20rpx;
+  padding: 10rpx 0;
 }
 
 .info-item {
@@ -2168,7 +2377,7 @@ async function startAddressResolution(records) {
   align-items: center;
   width: calc(50% - 10rpx);
   padding: 16rpx;
-  background-color: rgba(255, 255, 255, 0.7);
+  background-color: rgba(245, 247, 250, 0.7);
   border-radius: 12rpx;
   box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.03);
 }
@@ -2179,14 +2388,14 @@ async function startAddressResolution(records) {
 
 .info-label {
   font-size: 26rpx;
-  color: #666;
+  color: var(--text-color-secondary);
   margin: 0 15rpx;
   min-width: 80rpx;
 }
 
 .info-value {
   font-size: 26rpx;
-  color: #333;
+  color: var(--text-color-primary);
   flex: 1;
   word-break: break-word;
 }
@@ -2195,7 +2404,7 @@ async function startAddressResolution(records) {
   white-space: pre-wrap;
   line-height: 1.5;
   font-size: 26rpx;
-  color: #666;
+  color: var(--text-color-secondary);
   margin-top: 6rpx;
   max-height: 160rpx;
   overflow-y: auto;
@@ -2236,18 +2445,19 @@ async function startAddressResolution(records) {
   justify-content: space-around;
   padding: 10rpx 20rpx;
   margin-bottom: 20rpx;
-  background-color: #ffffff;
+  background-color: var(--background-color-primary);
   border-radius: 24rpx;
-  box-shadow: 0 8rpx 20rpx rgba(0, 0, 0, 0.05);
+  box-shadow: var(--card-shadow);
   position: relative;
   overflow: hidden;
+  transition: all 0.3s ease;
 }
 
 .tab-item {
   flex: 1;
   text-align: center;
   padding: 20rpx 0;
-  color: #333;
+  color: var(--text-color-secondary);
   transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
@@ -2284,9 +2494,9 @@ async function startAddressResolution(records) {
   font-weight: 500;
 }
 
-.tab-content-card {
-  padding: 30rpx;
-  min-height: 400rpx;
+.checkins-content, .members-content {
+  width: 100%;
+  min-height: 300rpx;
 }
 
 .loading-container {
@@ -2991,5 +3201,365 @@ async function startAddressResolution(records) {
       background-color: rgba(76, 175, 80, 0.15);
     }
   }
+}
+
+.tab-content {
+  width: 100%;
+  min-height: 400rpx;
+}
+
+.checkin-list, .members-list {
+  width: 100%;
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+
+.cell-icon {
+  margin-right: 10rpx;
+}
+
+.checkin-actions, .member-actions {
+  display: flex;
+  align-items: center;
+}
+
+.action-btn {
+  padding: 10rpx;
+  margin-left: 12rpx;
+}
+
+.empty-container, .loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80rpx 0;
+}
+
+.empty-text {
+  margin-top: 20rpx;
+  font-size: 28rpx;
+  color: var(--text-color-secondary);
+}
+
+/* 课程卡片和信息样式 */
+.course-card {
+  width: 100%;
+  margin-bottom: 30rpx;
+  overflow: hidden;
+}
+
+.course-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+  padding: 10rpx 0;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  width: calc(50% - 10rpx);
+  padding: 16rpx;
+  background-color: rgba(245, 247, 250, 0.7);
+  border-radius: 12rpx;
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.03);
+}
+
+.info-item.full-width {
+  width: 100%;
+}
+
+.info-label {
+  font-size: 26rpx;
+  color: var(--text-color-secondary);
+  margin: 0 15rpx;
+  min-width: 80rpx;
+}
+
+.info-value {
+  font-size: 26rpx;
+  color: var(--text-color-primary);
+  flex: 1;
+  word-break: break-word;
+}
+
+.info-value.description {
+  white-space: pre-wrap;
+  line-height: 1.5;
+  font-size: 26rpx;
+  color: var(--text-color-secondary);
+  margin-top: 6rpx;
+  max-height: 160rpx;
+  overflow-y: auto;
+  padding: 10rpx;
+  background-color: rgba(245, 247, 250, 0.6);
+  border-radius: 8rpx;
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-top: 24rpx;
+  justify-content: flex-start;
+  padding: 0 20rpx 20rpx;
+}
+
+/* 考勤统计样式 */
+.stats-content {
+  width: 100%;
+  min-height: 300rpx;
+}
+
+.stats-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 30rpx;
+}
+
+.stats-card {
+  background-color: var(--background-color-primary);
+  border-radius: 16rpx;
+  padding: 20rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
+}
+
+.stats-header {
+  display: flex;
+  align-items: center;
+  padding-bottom: 20rpx;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 20rpx;
+}
+
+.stats-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  margin-left: 12rpx;
+  color: var(--text-color-primary);
+}
+
+.stats-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+}
+
+.stats-item {
+  flex: 1;
+  min-width: calc(50% - 10rpx);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16rpx;
+  background-color: var(--background-color-secondary);
+  border-radius: 12rpx;
+}
+
+.stats-value {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #ff6b00;
+  margin-bottom: 8rpx;
+}
+
+.stats-label {
+  font-size: 26rpx;
+  color: var(--text-color-secondary);
+}
+
+.students-attendance {
+  background-color: var(--background-color-primary);
+  border-radius: 16rpx;
+  padding: 20rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
+}
+
+.students-list {
+  margin-top: 20rpx;
+}
+
+.student-item {
+  display: flex;
+  align-items: center;
+  padding: 20rpx;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--background-color-secondary);
+  margin-bottom: 10rpx;
+  border-radius: 12rpx;
+}
+
+.student-rank {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 30rpx;
+  background-color: #f0f0f0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #666;
+  margin-right: 20rpx;
+}
+
+.student-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.student-name {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: var(--text-color-primary);
+  margin-bottom: 6rpx;
+  display: block;
+}
+
+.student-id {
+  font-size: 24rpx;
+  color: var(--text-color-secondary);
+}
+
+.attendance-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.attendance-rate {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #4caf50;
+}
+
+.attendance-detail {
+  font-size: 22rpx;
+  color: var(--text-color-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.student-item.excellent .attendance-rate {
+  color: #4caf50;
+}
+
+.student-item.normal .attendance-rate {
+  color: #ff9800;
+}
+
+.student-item.warning .attendance-rate {
+  color: #f44336;
+}
+
+.export-actions {
+  margin-top: 30rpx;
+  display: flex;
+  justify-content: center;
+}
+
+/* 主题支持 - 包括所有卡片的主题适配 */
+.wot-theme-dark {
+  .tabs {
+    background-color: var(--background-color-secondary);
+    box-shadow: var(--card-shadow);
+  }
+  
+  .tab-item {
+    color: var(--text-color-secondary);
+    
+    &.active {
+      color: #ff6b00;
+    }
+  }
+  
+  .checkin-item {
+    background: linear-gradient(135deg, rgba(40, 40, 40, 0.9) 0%, rgba(30, 30, 30, 0.9) 100%);
+    box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.2);
+  }
+  
+  .checkin-title {
+    color: var(--text-color-primary);
+  }
+  
+  .checkin-time {
+    background-color: rgba(255, 255, 255, 0.05);
+    
+    text {
+      color: var(--text-color-secondary);
+    }
+  }
+  
+  .checkin-type-badge {
+    background-color: rgba(255, 255, 255, 0.07);
+  }
+  
+  .member-item {
+    background: linear-gradient(135deg, rgba(40, 40, 40, 0.9) 0%, rgba(30, 30, 30, 0.9) 100%);
+    box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.2);
+  }
+  
+  .member-name {
+    color: var(--text-color-primary);
+  }
+  
+  .member-username {
+    color: var(--text-color-secondary);
+  }
+  
+  .member-role {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+  
+  .stats-card, .students-attendance {
+    background-color: var(--background-color-secondary);
+    border: 1px solid var(--border-color);
+  }
+  
+  .stats-item {
+    background-color: var(--background-color-tertiary);
+  }
+  
+  .student-item {
+    background-color: var(--background-color-tertiary);
+  }
+  
+  .student-rank {
+    background-color: var(--background-color-secondary);
+    color: var(--text-color-primary);
+  }
+  
+  .info-item {
+    background-color: rgba(60, 60, 60, 0.3);
+    
+    .info-label {
+      color: var(--text-color-secondary);
+    }
+    
+    .info-value {
+      color: var(--text-color-primary);
+    }
+    
+    .info-value.description {
+      background-color: rgba(60, 60, 60, 0.2);
+      color: var(--text-color-secondary);
+    }
+  }
+}
+
+.card {
+  background-color: var(--background-color-primary);
+  border-radius: 24rpx;
+  padding: 20rpx;
+  box-shadow: var(--card-shadow);
+  margin-bottom: 30rpx;
+  transition: all 0.3s ease;
+}
+
+.tab-content-card {
+  padding: 30rpx;
+  min-height: 400rpx;
 }
 </style>

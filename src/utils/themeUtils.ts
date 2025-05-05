@@ -8,6 +8,25 @@ function getSafeUni() {
   return typeof window !== 'undefined' && window.uni ? window.uni : uni
 }
 
+// 缓存上次应用的主题设置
+const themeCache = {
+  currentTheme: '',
+  navTextStyle: '',
+  navBgColor: '',
+  lastApplyTime: 0,
+  preloadedMode: ''
+}
+
+/**
+ * 预加载主题，但不立即应用
+ * 用于页面切换前准备主题设置
+ * @param mode 主题模式
+ */
+export function preloadTheme(mode: 'light' | 'dark') {
+  themeCache.preloadedMode = mode
+  console.log(`预加载${mode}主题设置`)
+}
+
 /**
  * 将主题配置应用到CSS变量
  * @param mode 主题模式 'light' | 'dark'
@@ -17,6 +36,17 @@ export function applyThemeToPage(mode: 'light' | 'dark') {
   
   // 获取主题配置
   const themeValues = themeConfig[mode]
+  
+  // 防抖控制 - 避免短时间内多次应用主题导致闪烁
+  const now = Date.now()
+  if (themeCache.currentTheme === mode && now - themeCache.lastApplyTime < 800) {
+    console.log('主题应用过于频繁，跳过本次更新')
+    return
+  }
+  
+  // 更新缓存时间
+  themeCache.lastApplyTime = now
+  themeCache.currentTheme = mode
   
   // 全局设置主题（微信小程序专用API）
   try {
@@ -55,28 +85,60 @@ export function applyThemeToPage(mode: 'light' | 'dark') {
     }
   }
   
-  // 设置导航栏
-  try {
-    getSafeUni().setNavigationBarColor({
-      frontColor: themeValues.navTxtStyle === 'white' ? '#ffffff' : '#000000',
-      backgroundColor: themeValues.navBgColor,
-      animation: {
-        duration: 300,
-        timingFunc: 'easeIn'
-      }
-    })
-  } catch (e) {
-    console.error('设置导航栏样式失败', e)
+  // 设置导航栏 - 仅当颜色发生变化时才设置，避免闪烁
+  const frontColor = themeValues.navTxtStyle === 'white' ? '#ffffff' : '#000000'
+  if (themeCache.navTextStyle !== frontColor || themeCache.navBgColor !== themeValues.navBgColor) {
+    themeCache.navTextStyle = frontColor
+    themeCache.navBgColor = themeValues.navBgColor
+    
+    try {
+      getSafeUni().setNavigationBarColor({
+        frontColor: frontColor,
+        backgroundColor: themeValues.navBgColor,
+        animation: {
+          duration: 100,  // 减少动画时间以减少抖动
+          timingFunc: 'easeIn'
+        }
+      })
+    } catch (e) {
+      console.error('设置导航栏样式失败', e)
+    }
   }
   
   // 设置TabBar
   try {
-    getSafeUni().setTabBarStyle({
-      color: themeValues.tabFontColor,
-      selectedColor: themeValues.tabSelectedColor,
-      backgroundColor: themeValues.tabBgColor,
-      borderStyle: themeValues.tabBorderStyle
-    })
+    // 获取当前页面路径
+    let currentPath = '';
+    try {
+      const pages = getCurrentPages();
+      if (pages && pages.length > 0) {
+        const currentPage = pages[pages.length - 1];
+        // @ts-ignore
+        currentPath = (currentPage.route || '').toLowerCase();
+      }
+    } catch (e) {
+      console.error('获取当前页面路径失败', e);
+    }
+    
+    // 检查是否为TabBar页面 - 可以根据实际应用配置修改判断逻辑
+    const isTabBarPage = 
+      currentPath.includes('index') || 
+      currentPath.includes('home') || 
+      currentPath.includes('courses') || 
+      currentPath.includes('settings');
+    
+    // 只在TabBar页面设置TabBar样式
+    if (isTabBarPage) {
+      getSafeUni().setTabBarStyle({
+        color: themeValues.tabFontColor,
+        selectedColor: themeValues.tabSelectedColor,
+        backgroundColor: themeValues.tabBgColor,
+        borderStyle: themeValues.tabBorderStyle
+      });
+      console.log('成功设置TabBar样式');
+    } else {
+      console.log('当前不是TabBar页面，跳过setTabBarStyle调用');
+    }
   } catch (e) {
     console.error('设置TabBar样式失败', e)
   }
@@ -90,6 +152,9 @@ export function applyThemeToPage(mode: 'light' | 'dark') {
   
   // 设置CSS变量到每个页面的根元素
   applyThemeCSSVariables(mode)
+  
+  // 清除预加载标记
+  themeCache.preloadedMode = ''
 }
 
 /**
@@ -252,11 +317,17 @@ export function setupPageChangeListener(themeMode: 'light' | 'dark') {
   // @ts-ignore
   if (typeof wx !== 'undefined') {
     try {
-      // 监听页面显示事件
+      // 预加载主题设置
+      preloadTheme(themeMode)
+      
+      // 监听页面显示事件 - 使用更长延迟
       // @ts-ignore
       const onPageShow = () => {
         console.log('页面显示，应用当前主题')
-        applyThemeToPage(themeMode)
+        // 延迟应用主题，等待页面完成动画
+        setTimeout(() => {
+          applyThemeToPage(themeMode)
+        }, 300)
       }
       
       // 监听页面切换事件
@@ -266,9 +337,14 @@ export function setupPageChangeListener(themeMode: 'light' | 'dark') {
           // @ts-ignore
           uni.onAppRoute((route) => {
             console.log('页面路由切换:', route)
+            // 预加载主题
+            preloadTheme(themeMode)
+            
+            // 显著增加延迟时间，确保页面动画完全结束后再应用主题
             setTimeout(() => {
+              console.log('页面切换动画完成，应用主题')
               applyThemeToPage(themeMode)
-            }, 50) // 短暂延迟确保页面准备就绪
+            }, 500) // 增加延迟时间以确保页面准备就绪
           })
         } else {
           console.log('onAppRoute API不可用，无法监听页面路由切换')

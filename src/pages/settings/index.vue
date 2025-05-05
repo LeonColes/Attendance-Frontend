@@ -168,7 +168,7 @@ function goToAbout() {
 
 .card {
   margin-bottom: 30rpx;
-  background-color: var(--card-background);
+  background-color: var(--background-color-primary);
   border-radius: 24rpx;
   padding: 20rpx;
   box-shadow: var(--card-shadow);
@@ -219,7 +219,7 @@ function goToAbout() {
       .role {
         font-size: 26rpx;
         color: var(--text-color-secondary);
-        background-color: var(--primary-color-bg);
+        background-color: var(--background-color-tertiary);
         padding: 6rpx 16rpx;
         border-radius: 30rpx;
         display: inline-block;
@@ -231,7 +231,7 @@ function goToAbout() {
     width: 90rpx;
     height: 90rpx;
     border-radius: 50%;
-    background-color: var(--card-background);
+    background-color: var(--background-color-tertiary);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -257,75 +257,72 @@ function goToAbout() {
     border-bottom: none;
   }
   
-  &:active {
-    background-color: var(--hover-color);
-  }
-  
   &.disabled {
     opacity: 0.6;
   }
-}
-
-.setting-label {
-  font-size: 30rpx;
-  color: var(--text-color-primary);
-}
-
-.setting-value {
-  font-size: 28rpx;
-  color: var(--text-color-secondary);
-  display: flex;
-  align-items: center;
   
-  text {
-    margin-right: 10rpx;
+  .setting-label {
+    font-size: 30rpx;
+    color: var(--text-color-primary);
+  }
+  
+  .setting-value {
+    display: flex;
+    align-items: center;
+    color: var(--text-color-secondary);
+    font-size: 28rpx;
+    
+    .arrow-icon {
+      margin-left: 10rpx;
+    }
   }
 }
 
-.arrow-icon {
-  color: var(--text-color-tertiary);
-}
-
+/* 主题模式提示 */
 .setting-tips {
-  font-size: 24rpx;
-  color: var(--text-color-tertiary);
   padding: 20rpx;
+  font-size: 24rpx;
+  color: var(--text-color-secondary);
+  text-align: center;
+  background-color: var(--background-color-tertiary);
+  border-radius: 8rpx;
+  margin: 20rpx;
 }
 
-/* 退出按钮 */
+/* 退出登录按钮 */
 .logout-button-wrapper {
-  margin-top: 40rpx;
-  margin-bottom: 30rpx;
-  text-align: center;
-  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-top: 80rpx;
+  padding: 0 50rpx;
 }
 
 .logout-button {
-  display: inline-block;
-  min-width: 80%;
+  width: 100%;
 }
 
 /* 版本信息 */
 .version-info {
+  margin-top: 60rpx;
   text-align: center;
-  padding: 30rpx 0;
-  width: 100%;
-  
-  text {
-    font-size: 24rpx;
-    color: var(--text-color-tertiary);
-  }
+  font-size: 24rpx;
+  color: var(--text-color-secondary);
+  padding-bottom: 30rpx;
 }
 
-/* 暗黑模式强制样式 */
+/* 暗黑模式覆盖样式 */
 .wot-theme-dark {
-  // 这里的样式将会在wot的暗黑模式下生效
-  background-color: #121212 !important;
-  
   .card {
-    background-color: #1e1e1e !important;
-    box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.2) !important;
-    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    background-color: var(--background-color-secondary);
+    border: 1px solid var(--border-color);
+  }
+  
+  .theme-toggle {
+    background-color: var(--background-color-tertiary);
+  }
+  
+  .setting-tips {
+    background-color: var(--background-color-secondary);
   }
 }
 </style>

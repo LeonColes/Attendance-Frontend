@@ -109,6 +109,7 @@ declare global {
   const onUpdated: typeof import('vue')['onUpdated']
   const pausableWatch: typeof import('@vueuse/core')['pausableWatch']
   const post: typeof import('./utils/request')['post']
+  const preloadTheme: typeof import('./utils/themeUtils')['preloadTheme']
   const provide: typeof import('vue')['provide']
   const provideLocal: typeof import('@vueuse/core')['provideLocal']
   const put: typeof import('./utils/request')['put']
@@ -451,6 +452,7 @@ declare module 'vue' {
     readonly onUpdated: UnwrapRef<typeof import('vue')['onUpdated']>
     readonly pausableWatch: UnwrapRef<typeof import('@vueuse/core')['pausableWatch']>
     readonly post: UnwrapRef<typeof import('./utils/request')['post']>
+    readonly preloadTheme: UnwrapRef<typeof import('./utils/themeUtils')['preloadTheme']>
     readonly provide: UnwrapRef<typeof import('vue')['provide']>
     readonly provideLocal: UnwrapRef<typeof import('@vueuse/core')['provideLocal']>
     readonly put: UnwrapRef<typeof import('./utils/request')['put']>
